@@ -11,7 +11,7 @@ export default function ServiceAreaErrorPage() {
   const { address, city, zip } = useBookingStore();
 
   return (
-    <div className="flex flex-col min-h-screen bg-white max-w-sm mx-auto">
+    <>
       <StepHeader step={2} totalSteps={6} backHref="/residential/address" />
       <ProgressDots currentStep={2} totalSteps={6} />
 
@@ -34,8 +34,8 @@ export default function ServiceAreaErrorPage() {
         </div>
 
         {/* Error banner */}
-        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
-          <span className="text-red-500 mt-0.5">⚠</span>
+        <div role="alert" className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
+          <span className="text-red-500 mt-0.5" role="img" aria-label="Warning">⚠</span>
           <p className="text-sm text-red-700">
             We don&apos;t currently serve this area. Check our service zone or call{" "}
             <span className="font-semibold">(315) 555-CLEAN</span> for a custom quote.
@@ -62,6 +62,6 @@ export default function ServiceAreaErrorPage() {
         label="Try a Different Address"
         onClick={() => router.push("/residential/address")}
       />
-    </div>
+    </>
   );
 }

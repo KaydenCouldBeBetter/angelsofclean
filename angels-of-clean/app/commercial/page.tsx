@@ -1,3 +1,9 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Commercial Quote",
+};
+
 export default function CommercialPage() {
   return (
     <div className="flex min-h-screen items-center justify-center">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
@@ -8,28 +8,24 @@ import BottomCTA from "@/components/booking/BottomCTA";
 import { useBookingStore } from "@/store/bookingStore";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-const SERVICE_AREA_ZIPS = [
-  "13039", // Cicero
-  "13035", // Camillus
-  "13201", "13202", "13203", "13204", "13205", "13206", "13207", "13208", "13210", "13214", "13215", "13219", "13224", // Syracuse
-  "13088", "13090", // Liverpool
-  "13027", // Baldwinsville
-  "13029", // Brewerton
-  "13209", // Solvay
-  "13104", // Manlius
-  "13108", // Marcellus
-];
+import { SERVICE_AREA_ZIPS } from "@/lib/constants";
 
 export default function AddressPage() {
   const router = useRouter();
-  const { setStep2 } = useBookingStore();
+  const store = useBookingStore();
+  const { setStep2 } = store;
 
-  const [address, setAddress] = useState("");
-  const [city, setCity] = useState("");
-  const [zip, setZip] = useState("");
+  useEffect(() => {
+    if (!store.service) router.replace("/residential");
+  }, [store.service, router]);
 
-  const isValid = address.trim() !== "" && city.trim() !== "" && zip.trim() !== "";
+  const [address, setAddress] = useState(store.address || "");
+  const [city, setCity] = useState(store.city || "");
+  const [zip, setZip] = useState(store.zip || "");
+
+  const [touched, setTouched] = useState({ zip: false });
+  const zipValid = /^\d{5}$/.test(zip.trim());
+  const isValid = address.trim() !== "" && city.trim() !== "" && zipValid;
 
   function handleNext() {
     if (!SERVICE_AREA_ZIPS.includes(zip.trim())) {
@@ -42,7 +38,7 @@ export default function AddressPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-white max-w-sm mx-auto">
+    <>
       <StepHeader step={2} totalSteps={6} backHref="/residential" />
       <ProgressDots currentStep={2} totalSteps={6} />
 
@@ -86,10 +82,14 @@ export default function AddressPage() {
               placeholder="Enter ZIP code"
               value={zip}
               onChange={(e) => setZip(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, zip: true }))}
               inputMode="numeric"
               maxLength={5}
               className="h-14"
             />
+            {touched.zip && zip.trim() !== "" && !zipValid && (
+              <p className="text-xs text-red-500">Please enter a valid 5-digit ZIP code.</p>
+            )}
           </div>
 
           <p className="text-xs text-zinc-400">
@@ -99,6 +99,6 @@ export default function AddressPage() {
       </div>
 
       <BottomCTA label="Next" onClick={handleNext} disabled={!isValid} />
-    </div>
+    </>
   );
 }

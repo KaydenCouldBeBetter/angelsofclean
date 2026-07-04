@@ -1,22 +1,19 @@
 "use client";
 
-import Link from "next/link";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useBookingStore } from "@/store/bookingStore";
 import { Button } from "@/components/ui/button";
+import { SERVICE_LABELS, TIME_LABELS } from "@/lib/constants";
 
 export default function ConfirmationPage() {
-  const { service, date, timeSlot, address, city, zip, email, reset } = useBookingStore();
+  const router = useRouter();
+  const { service, date, timeSlot, address, city, zip, email, reset, setSubmitting } = useBookingStore();
 
-  const SERVICE_LABELS: Record<string, string> = {
-    standard: "Standard Clean",
-    deep: "Deep Clean",
-    moveinout: "Move-In / Move-Out",
-  };
-
-  const TIME_LABELS: Record<string, string> = {
-    morning: "Morning (8am–12pm)",
-    afternoon: "Afternoon (12pm–4pm)",
-  };
+  useEffect(() => {
+    if (!service || !email) router.replace("/residential");
+    setSubmitting(false);
+  }, [service, email, router, setSubmitting]);
 
   const formattedDate = date
     ? new Date(date + "T12:00:00").toLocaleDateString("en-US", {
@@ -25,7 +22,7 @@ export default function ConfirmationPage() {
     : "";
 
   return (
-    <div className="flex flex-col min-h-screen bg-white max-w-sm mx-auto">
+    <>
       {/* Header */}
       <div className="flex items-center justify-center h-14 border-b border-zinc-100">
         <span className="font-semibold text-zinc-900">Angels of Clean</span>
@@ -33,8 +30,8 @@ export default function ConfirmationPage() {
 
       <div className="flex flex-col items-center gap-6 px-4 pt-10 pb-10">
         {/* Success icon */}
-        <div className="w-20 h-20 rounded-full border-2 border-teal-500 flex items-center justify-center">
-          <span className="text-3xl text-teal-600">✓</span>
+        <div className="w-20 h-20 rounded-full border-2 border-teal-500 flex items-center justify-center" role="img" aria-label="Booking confirmed">
+          <span className="text-3xl text-teal-600" aria-hidden="true">✓</span>
         </div>
 
         <div className="text-center">
@@ -77,14 +74,16 @@ export default function ConfirmationPage() {
 
         {/* Return home */}
         <Button
-          asChild
           variant="outline"
           className="w-full h-14"
-          onClick={reset}
+          onClick={() => {
+            reset();
+            router.push("/");
+          }}
         >
-          <Link href="/">Return to Home</Link>
+          Return to Home
         </Button>
       </div>
-    </div>
+    </>
   );
 }

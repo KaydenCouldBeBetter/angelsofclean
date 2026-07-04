@@ -13,7 +13,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Angels of Clean",
+  title: {
+    template: "%s | Angels of Clean",
+    default: "Angels of Clean",
+  },
   description: "Book a residential or commercial cleaning in Central New York.",
 };
 

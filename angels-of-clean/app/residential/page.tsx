@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
@@ -37,18 +37,21 @@ const FREQUENCIES = [
 
 export default function ResidentialPage() {
   const router = useRouter();
-  const { setStep1 } = useBookingStore();
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get("returnTo");
+  const store = useBookingStore();
+  const { setStep1 } = store;
 
-  const [selectedService, setSelectedService] = useState<"standard" | "deep" | "moveinout">("standard");
-  const [selectedFrequency, setSelectedFrequency] = useState<"one-time" | "weekly" | "bi-weekly" | "monthly">("one-time");
+  const [selectedService, setSelectedService] = useState<"standard" | "deep" | "moveinout">(store.service ?? "standard");
+  const [selectedFrequency, setSelectedFrequency] = useState<"one-time" | "weekly" | "bi-weekly" | "monthly">(store.frequency ?? "one-time");
 
   function handleNext() {
     setStep1(selectedService, selectedFrequency);
-    router.push("/residential/address");
+    router.push(returnTo === "review" ? "/residential/review" : "/residential/address");
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-white max-w-sm mx-auto">
+    <>
       <StepHeader step={1} totalSteps={6} backHref="/" />
       <ProgressDots currentStep={1} totalSteps={6} />
 
@@ -58,12 +61,14 @@ export default function ResidentialPage() {
         </h1>
 
         {/* Service Cards */}
-        <div className="flex flex-col gap-3">
+        <div role="radiogroup" aria-label="Service type" className="flex flex-col gap-3">
           {SERVICES.map((service) => {
             const isSelected = selectedService === service.id;
             return (
               <button
                 key={service.id}
+                role="radio"
+                aria-checked={isSelected}
                 onClick={() => setSelectedService(service.id)}
                 className={`w-full text-left rounded-xl border-2 p-4 transition-colors ${
                   isSelected
@@ -74,7 +79,7 @@ export default function ResidentialPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     {isSelected && (
-                      <span className="text-teal-600 text-sm font-semibold">✓</span>
+                      <span className="text-teal-600 text-sm font-semibold" aria-hidden="true">✓</span>
                     )}
                     <span className={`font-semibold ${isSelected ? "text-teal-700" : "text-zinc-900"}`}>
                       {service.name}
@@ -93,12 +98,14 @@ export default function ResidentialPage() {
         {/* Frequency */}
         <div className="flex flex-col gap-3">
           <h2 className="text-base font-semibold text-zinc-900">How often?</h2>
-          <div className="flex gap-2 flex-wrap">
+          <div role="radiogroup" aria-label="Cleaning frequency" className="flex gap-2 flex-wrap">
             {FREQUENCIES.map((freq) => {
               const isSelected = selectedFrequency === freq.id;
               return (
                 <button
                   key={freq.id}
+                  role="radio"
+                  aria-checked={isSelected}
                   onClick={() => setSelectedFrequency(freq.id)}
                   className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors ${
                     isSelected
@@ -114,7 +121,7 @@ export default function ResidentialPage() {
         </div>
       </div>
 
-      <BottomCTA label="Next" onClick={handleNext} />
-    </div>
+      <BottomCTA label={returnTo === "review" ? "Save & Return to Review" : "Next"} onClick={handleNext} />
+    </>
   );
 }

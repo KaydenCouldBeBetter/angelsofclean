@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
@@ -9,15 +9,28 @@ import { useBookingStore } from "@/store/bookingStore";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_REGEX = /^\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$/;
+
 export default function ContactPage() {
   const router = useRouter();
-  const { setStep5 } = useBookingStore();
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get("returnTo");
+  const store = useBookingStore();
+  const { setStep5 } = store;
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  useEffect(() => {
+    if (!store.date) router.replace("/residential");
+  }, [store.date, router]);
 
-  const isValid = name.trim() !== "" && email.trim() !== "" && phone.trim() !== "";
+  const [name, setName] = useState(store.name || "");
+  const [email, setEmail] = useState(store.email || "");
+  const [phone, setPhone] = useState(store.phone || "");
+  const [touched, setTouched] = useState({ name: false, email: false, phone: false });
+
+  const emailValid = EMAIL_REGEX.test(email.trim());
+  const phoneValid = PHONE_REGEX.test(phone.trim());
+  const isValid = name.trim() !== "" && emailValid && phoneValid;
 
   function handleNext() {
     setStep5(name, email, phone);
@@ -25,7 +38,7 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-white max-w-sm mx-auto">
+    <>
       <StepHeader step={5} totalSteps={6} backHref="/residential/datetime" />
       <ProgressDots currentStep={5} totalSteps={6} />
 
@@ -47,9 +60,13 @@ export default function ContactPage() {
               placeholder="Enter your full name"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, name: true }))}
               autoComplete="name"
               className="h-14"
             />
+            {touched.name && name.trim() === "" && (
+              <p className="text-xs text-red-500">Full name is required.</p>
+            )}
           </div>
 
           <div className="flex flex-col gap-2">
@@ -60,9 +77,16 @@ export default function ContactPage() {
               placeholder="Enter your email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, email: true }))}
               autoComplete="email"
               className="h-14"
             />
+            {touched.email && email.trim() !== "" && !emailValid && (
+              <p className="text-xs text-red-500">Please enter a valid email address.</p>
+            )}
+            {touched.email && email.trim() === "" && (
+              <p className="text-xs text-red-500">Email is required.</p>
+            )}
           </div>
 
           <div className="flex flex-col gap-2">
@@ -73,10 +97,17 @@ export default function ContactPage() {
               placeholder="(315) 555-0100"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
               autoComplete="tel"
               inputMode="tel"
               className="h-14"
             />
+            {touched.phone && phone.trim() !== "" && !phoneValid && (
+              <p className="text-xs text-red-500">Please enter a valid 10-digit phone number.</p>
+            )}
+            {touched.phone && phone.trim() === "" && (
+              <p className="text-xs text-red-500">Phone number is required.</p>
+            )}
           </div>
 
           <p className="text-xs text-zinc-400">
@@ -85,7 +116,7 @@ export default function ContactPage() {
         </div>
       </div>
 
-      <BottomCTA label="Next" onClick={handleNext} disabled={!isValid} />
-    </div>
+      <BottomCTA label={returnTo === "review" ? "Save & Return to Review" : "Next"} onClick={handleNext} disabled={!isValid} />
+    </>
   );
 }

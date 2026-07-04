@@ -11,12 +11,12 @@ export default function Home() {
           <CardDescription>Select a booking flow to continue</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
-          <Button asChild className="w-full h-14">
-            <Link href="/residential">Book Now — Residential</Link>
-          </Button>
-          <Button asChild variant="outline" className="w-full h-14">
-            <Link href="/commercial">Get a Quote — Commercial</Link>
-          </Button>
+          <Link href="/residential">
+            <Button className="w-full h-14">Book Now — Residential</Button>
+          </Link>
+          <Link href="/commercial">
+            <Button variant="outline" className="w-full h-14">Get a Quote — Commercial</Button>
+          </Link>
         </CardContent>
       </Card>
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
@@ -20,21 +20,23 @@ interface StepperProps {
 function Stepper({ label, value, min, max, onChange }: StepperProps) {
   return (
     <div className="flex flex-col gap-2">
-      <Label>{label}</Label>
-      <div className="flex items-center border-2 border-zinc-200 rounded-xl overflow-hidden h-14">
+      <Label id={`${label}-label`}>{label}</Label>
+      <div className="flex items-center border-2 border-zinc-200 rounded-xl overflow-hidden h-14" role="group" aria-labelledby={`${label}-label`}>
         <button
           onClick={() => onChange(value - 1)}
           disabled={value <= min}
+          aria-label={`Decrease ${label}`}
           className="w-14 h-full flex items-center justify-center text-xl font-semibold text-teal-600 disabled:text-zinc-300 disabled:cursor-not-allowed hover:bg-zinc-50 transition-colors"
         >
           −
         </button>
-        <span className="flex-1 text-center text-xl font-bold text-zinc-900">
+        <span className="flex-1 text-center text-xl font-bold text-zinc-900" aria-live="polite">
           {value}
         </span>
         <button
           onClick={() => onChange(value + 1)}
           disabled={value >= max}
+          aria-label={`Increase ${label}`}
           className="w-14 h-full flex items-center justify-center text-xl font-semibold text-teal-600 disabled:text-zinc-300 disabled:cursor-not-allowed hover:bg-zinc-50 transition-colors"
         >
           +
@@ -46,19 +48,26 @@ function Stepper({ label, value, min, max, onChange }: StepperProps) {
 
 export default function PropertyPage() {
   const router = useRouter();
-  const { setStep3 } = useBookingStore();
+  const searchParams = useSearchParams();
+  const returnTo = searchParams.get("returnTo");
+  const store = useBookingStore();
+  const { setStep3 } = store;
 
-  const [bedrooms, setBedrooms] = useState(2);
-  const [bathrooms, setBathrooms] = useState(1);
-  const [notes, setNotes] = useState("");
+  useEffect(() => {
+    if (!store.address) router.replace("/residential");
+  }, [store.address, router]);
+
+  const [bedrooms, setBedrooms] = useState(store.bedrooms);
+  const [bathrooms, setBathrooms] = useState(store.bathrooms);
+  const [notes, setNotes] = useState(store.notes);
 
   function handleNext() {
     setStep3(bedrooms, bathrooms, notes);
-    router.push("/residential/datetime");
+    router.push(returnTo === "review" ? "/residential/review" : "/residential/datetime");
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-white max-w-sm mx-auto">
+    <>
       <StepHeader step={3} totalSteps={6} backHref="/residential/address" />
       <ProgressDots currentStep={3} totalSteps={6} />
 
@@ -95,7 +104,7 @@ export default function PropertyPage() {
         </div>
       </div>
 
-      <BottomCTA label="Next" onClick={handleNext} />
-    </div>
+      <BottomCTA label={returnTo === "review" ? "Save & Return to Review" : "Next"} onClick={handleNext} />
+    </>
   );
 }
