@@ -4,27 +4,30 @@ import { persist, createJSONStorage } from "zustand/middleware";
 export type ServiceType = "standard" | "deep" | "moveinout" | null;
 export type Frequency = "one-time" | "weekly" | "bi-weekly" | "monthly" | null;
 export type TimeSlot = "morning" | "afternoon" | null;
+export type FacilityType = "office" | "retail" | "medical" | "warehouse/shop" | "other" | null;
+export type SqftRange = "small" | "medium" | "large" | "enterprise" | null; // Placeholders to be replaced by actual values
+
 
 interface BookingState {
-  // Step 1
+  // Residential Step 1
   service: ServiceType;
   frequency: Frequency;
 
-  // Step 2
+  // Residential Step 2
   address: string;
   city: string;
   zip: string;
 
-  // Step 3
+  // Residential Step 3
   bedrooms: number;
   bathrooms: number;
   notes: string;
 
-  // Step 4
+  // Residential Step 4
   date: string;
   timeSlot: TimeSlot;
 
-  // Step 5
+  // Residential Step 5
   name: string;
   email: string;
   phone: string;
@@ -32,12 +35,25 @@ interface BookingState {
   // Submission
   isSubmitting: boolean;
 
+  //Commercial Step 1
+  facilityType: FacilityType
+
+  //Commercial Step 2
+  sqftRange: SqftRange
+  restrooms: number
+
+  //Commercial Step 3
+  businessName: string;
+
   // Actions
   setStep1: (service: ServiceType, frequency: Frequency) => void;
   setStep2: (address: string, city: string, zip: string) => void;
   setStep3: (bedrooms: number, bathrooms: number, notes: string) => void;
   setStep4: (date: string, timeSlot: TimeSlot) => void;
   setStep5: (name: string, email: string, phone: string) => void;
+  setCommercialStep1: (facilityType: FacilityType) => void;
+  setCommercialStep2: (sqftRange: SqftRange, restrooms: number) => void;
+  setCommercialStep3: (businessName: string) => void;
   setSubmitting: (value: boolean) => void;
   reset: () => void;
 }
@@ -56,6 +72,10 @@ const defaultState = {
   name: "",
   email: "",
   phone: "",
+  facilityType: null as FacilityType,
+  sqftRange: null as SqftRange,
+  restrooms: 1,
+  businessName: "",
   isSubmitting: false,
 };
 
@@ -69,6 +89,9 @@ export const useBookingStore = create<BookingState>()(
       setStep3: (bedrooms, bathrooms, notes) => set({ bedrooms, bathrooms, notes }),
       setStep4: (date, timeSlot) => set({ date, timeSlot }),
       setStep5: (name, email, phone) => set({ name, email, phone }),
+      setCommercialStep1: (facilityType) => set({ facilityType }),
+      setCommercialStep2: (sqftRange, restrooms) => set({ sqftRange, restrooms }),
+      setCommercialStep3: (businessName) => set({ businessName }),
       setSubmitting: (value) => set({ isSubmitting: value }),
       reset: () => set(defaultState),
     }),
@@ -89,6 +112,10 @@ export const useBookingStore = create<BookingState>()(
         name: state.name,
         email: state.email,
         phone: state.phone,
+        facilityType: state.facilityType,
+        sqftRange: state.sqftRange,
+        restrooms: state.restrooms,
+        businessName: state.businessName,
       }),
     }
   )
