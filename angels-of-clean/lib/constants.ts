@@ -1,4 +1,4 @@
-import type { ServiceType, Frequency, TimeSlot } from "@/store/bookingStore";
+import type { ServiceType, Frequency, TimeSlot, FacilityType, SqftRange } from "@/store/bookingStore";
 
 export const SERVICE_LABELS: Record<NonNullable<ServiceType>, string> = {
   standard: "Standard Clean",
@@ -35,3 +35,18 @@ export const SERVICE_AREA_ZIPS = [
   "13104", // Manlius
   "13108", // Marcellus
 ];
+
+export const FACILITY_TYPE_LABELS: Record<NonNullable<FacilityType>, string> = {
+  office: "Office",
+  retail: "Retail",
+  medical: "Medical",
+  "warehouse/shop": "Warehouse / Shop",
+  other: "Other",
+};
+
+export const SQFT_RANGE_LABELS: Record<NonNullable<SqftRange>, string> = {
+  small: "Small (under 1,000 sq ft)",
+  medium: "Medium (1,000–5,000 sq ft)",
+  large: "Large (5,000–15,000 sq ft)",
+  enterprise: "Enterprise (15,000+ sq ft)",
+};
