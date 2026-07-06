@@ -53,7 +53,7 @@ interface BookingState {
   setStep5: (name: string, email: string, phone: string) => void;
   setCommercialStep1: (facilityType: FacilityType) => void;
   setCommercialStep2: (sqftRange: SqftRange, restrooms: number) => void;
-  setCommercialStep3: (businessName: string) => void;
+  setCommercialStep3: (businessName: string, frequency: Frequency, notes: string) => void;
   setSubmitting: (value: boolean) => void;
   reset: () => void;
 }
@@ -91,7 +91,7 @@ export const useBookingStore = create<BookingState>()(
       setStep5: (name, email, phone) => set({ name, email, phone }),
       setCommercialStep1: (facilityType) => set({ facilityType }),
       setCommercialStep2: (sqftRange, restrooms) => set({ sqftRange, restrooms }),
-      setCommercialStep3: (businessName) => set({ businessName }),
+      setCommercialStep3: (businessName, frequency, notes) => set({ businessName, frequency, notes }),
       setSubmitting: (value) => set({ isSubmitting: value }),
       reset: () => set(defaultState),
     }),
