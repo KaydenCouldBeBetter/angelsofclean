@@ -29,19 +29,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Nav */}
         <nav className="flex-1 py-2">
           {NAV_ITEMS.map(({ label, href }) => {
-            const isActive = pathname === href || (href === "/admin/calendar" && pathname === "/admin");
-            const isClickable = href === "/admin/calendar";
-
-            if (!isClickable) {
-              return (
-                <div
-                  key={label}
-                  className="flex items-center px-6 h-13 text-[#4a7a72] text-sm cursor-default select-none"
-                >
-                  {label}
-                </div>
-              );
-            }
+            const isActive =
+              pathname === href ||
+              (href === "/admin/dashboard" && pathname === "/admin");
 
             return (
               <Link

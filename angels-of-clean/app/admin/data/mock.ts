@@ -60,6 +60,46 @@ export const JOBS: Job[] = [
     employeeId: "emp-5",
     status: "confirmed",
   },
+  {
+    id: "job-12",
+    client: "Northside Dental",
+    service: "Commercial",
+    address: "88 Erie Blvd, Syracuse",
+    start: "2026-04-14T14:00:00",
+    end:   "2026-04-14T17:00:00",
+    employeeId: null,
+    status: "pending",
+  },
+  {
+    id: "job-13",
+    client: "Lisa K.",
+    service: "Move-Out",
+    address: "22 Pine Ave, Liverpool",
+    start: "2026-04-14T17:00:00",
+    end:   "2026-04-14T20:00:00",
+    employeeId: null,
+    status: "pending",
+  },
+  {
+    id: "job-14",
+    client: "Tom B.",
+    service: "Standard Clean",
+    address: "9 Oak Ln, Baldwinsville",
+    start: "2026-04-14T10:00:00",
+    end:   "2026-04-14T12:00:00",
+    employeeId: "emp-3",
+    status: "done",
+  },
+  {
+    id: "job-15",
+    client: "Karen M.",
+    service: "Deep Clean",
+    address: "33 Cedar Rd, Solvay",
+    start: "2026-04-14T11:00:00",
+    end:   "2026-04-14T14:00:00",
+    employeeId: "emp-4",
+    status: "confirmed",
+  },
   // Tuesday Apr 15
   {
     id: "job-4",
@@ -155,3 +195,12 @@ export const STATUS_CONFIG: Record<JobStatus, { label: string; cardBg: string; b
   confirmed: { label: "Confirmed",  cardBg: "bg-blue-50",    borderColor: "border-l-blue-400",    chipBg: "bg-blue-100",    chipText: "text-blue-700"    },
   pending:   { label: "Pending",    cardBg: "bg-zinc-50",    borderColor: "border-l-zinc-400",    chipBg: "bg-zinc-100",    chipText: "text-zinc-500"    },
 };
+
+export const DASHBOARD_STATUS: Record<JobStatus, { label: string; chipBg: string; chipText: string }> = {
+  done:      { label: "Complete",    chipBg: "bg-[#e1f2e7]", chipText: "text-[#15803d]" },
+  active:    { label: "In Progress", chipBg: "bg-[#fef2e8]", chipText: "text-[#d97706]" },
+  confirmed: { label: "Confirmed",   chipBg: "bg-[#eaeefc]", chipText: "text-[#1d4ed8]" },
+  pending:   { label: "Pending",     chipBg: "bg-[#f7f9f8]", chipText: "text-[#9ca3af]" },
+};
+
+export const MOCK_TODAY = "2026-04-14";
