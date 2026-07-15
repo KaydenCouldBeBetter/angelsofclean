@@ -1,64 +1,106 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 
+// Residential types
 export type ServiceType = "standard" | "deep" | "moveinout" | null;
 export type Frequency = "one-time" | "weekly" | "bi-weekly" | "monthly" | null;
 export type TimeSlot = "morning" | "afternoon" | null;
-export type FacilityType = "office" | "retail" | "medical" | "warehouse/shop" | "other" | null;
-export type SqftRange = "small" | "medium" | "large" | "enterprise" | null; // Placeholders to be replaced by actual values
 
+// Commercial types
+export type CommercialFacilityType =
+  | "office"
+  | "retail"
+  | "medical"
+  | "warehouse"
+  | "school"
+  | "restaurant"
+  | null;
+
+export type CommercialSqftRange = "<1k" | "1k-2k" | "2k-5k" | "5k+" | null;
+
+export type CommercialFrequency =
+  | "daily"
+  | "2-3x"
+  | "weekly"
+  | "bi-weekly"
+  | "monthly"
+  | "one-time"
+  | null;
+
+export type SchedulePreference = "before" | "during" | "after" | "weekends" | null;
 
 interface BookingState {
-  // Residential Step 1
+  // ── Residential Step 1 ──────────────────────────────────────────────
   service: ServiceType;
   frequency: Frequency;
 
-  // Residential Step 2
+  // ── Shared address (Res Step 2 / Com Step 1) ────────────────────────
   address: string;
   city: string;
   zip: string;
 
-  // Residential Step 3
+  // ── Residential Step 3 ──────────────────────────────────────────────
   bedrooms: number;
   bathrooms: number;
   notes: string;
 
-  // Residential Step 4
+  // ── Residential Step 4 ──────────────────────────────────────────────
   date: string;
   timeSlot: TimeSlot;
 
-  // Residential Step 5
+  // ── Shared contact (Res Step 5 / Com Step 3) ────────────────────────
   name: string;
   email: string;
   phone: string;
 
-  // Submission
+  // ── Submission flag ─────────────────────────────────────────────────
   isSubmitting: boolean;
 
-  //Commercial Step 1
-  facilityType: FacilityType
+  // ── Commercial Step 1 ───────────────────────────────────────────────
+  facilityType: CommercialFacilityType;
+  sqftRange: CommercialSqftRange;
 
-  //Commercial Step 2
-  sqftRange: SqftRange
-  restrooms: number
+  // ── Commercial Step 2 ───────────────────────────────────────────────
+  floors: number;
+  serviceAreas: string[];
+  commercialNotes: string;
 
-  //Commercial Step 3
+  // ── Commercial Step 3 ───────────────────────────────────────────────
   businessName: string;
+  commercialFrequency: CommercialFrequency;
+  schedulePreference: SchedulePreference;
 
-  // Actions
+  // ── Residential actions ─────────────────────────────────────────────
   setStep1: (service: ServiceType, frequency: Frequency) => void;
   setStep2: (address: string, city: string, zip: string) => void;
   setStep3: (bedrooms: number, bathrooms: number, notes: string) => void;
   setStep4: (date: string, timeSlot: TimeSlot) => void;
   setStep5: (name: string, email: string, phone: string) => void;
-  setCommercialStep1: (facilityType: FacilityType) => void;
-  setCommercialStep2: (sqftRange: SqftRange, restrooms: number) => void;
-  setCommercialStep3: (businessName: string, frequency: Frequency, notes: string) => void;
+
+  // ── Commercial actions ──────────────────────────────────────────────
+  setCommercialStep1: (
+    facilityType: CommercialFacilityType,
+    sqftRange: CommercialSqftRange,
+    address: string,
+    city: string,
+    zip: string
+  ) => void;
+  setCommercialStep2: (floors: number, serviceAreas: string[], notes: string) => void;
+  setCommercialContact: (
+    name: string,
+    businessName: string,
+    email: string,
+    phone: string,
+    frequency: CommercialFrequency,
+    schedulePreference: SchedulePreference
+  ) => void;
+
   setSubmitting: (value: boolean) => void;
   reset: () => void;
 }
 
 const defaultState = {
+  // Residential
   service: null as ServiceType,
   frequency: null as Frequency,
   address: "",
@@ -72,11 +114,17 @@ const defaultState = {
   name: "",
   email: "",
   phone: "",
-  facilityType: null as FacilityType,
-  sqftRange: null as SqftRange,
-  restrooms: 1,
-  businessName: "",
   isSubmitting: false,
+
+  // Commercial
+  facilityType: null as CommercialFacilityType,
+  sqftRange: null as CommercialSqftRange,
+  floors: 1,
+  serviceAreas: [] as string[],
+  commercialNotes: "",
+  businessName: "",
+  commercialFrequency: null as CommercialFrequency,
+  schedulePreference: null as SchedulePreference,
 };
 
 export const useBookingStore = create<BookingState>()(
@@ -84,14 +132,21 @@ export const useBookingStore = create<BookingState>()(
     (set) => ({
       ...defaultState,
 
+      // Residential
       setStep1: (service, frequency) => set({ service, frequency }),
       setStep2: (address, city, zip) => set({ address, city, zip }),
       setStep3: (bedrooms, bathrooms, notes) => set({ bedrooms, bathrooms, notes }),
       setStep4: (date, timeSlot) => set({ date, timeSlot }),
       setStep5: (name, email, phone) => set({ name, email, phone }),
-      setCommercialStep1: (facilityType) => set({ facilityType }),
-      setCommercialStep2: (sqftRange, restrooms) => set({ sqftRange, restrooms }),
-      setCommercialStep3: (businessName, frequency, notes) => set({ businessName, frequency, notes }),
+
+      // Commercial
+      setCommercialStep1: (facilityType, sqftRange, address, city, zip) =>
+        set({ facilityType, sqftRange, address, city, zip }),
+      setCommercialStep2: (floors, serviceAreas, notes) =>
+        set({ floors, serviceAreas, commercialNotes: notes }),
+      setCommercialContact: (name, businessName, email, phone, frequency, schedulePreference) =>
+        set({ name, businessName, email, phone, commercialFrequency: frequency, schedulePreference }),
+
       setSubmitting: (value) => set({ isSubmitting: value }),
       reset: () => set(defaultState),
     }),
@@ -99,6 +154,7 @@ export const useBookingStore = create<BookingState>()(
       name: "booking-store",
       storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
+        // Residential
         service: state.service,
         frequency: state.frequency,
         address: state.address,
@@ -112,10 +168,15 @@ export const useBookingStore = create<BookingState>()(
         name: state.name,
         email: state.email,
         phone: state.phone,
+        // Commercial
         facilityType: state.facilityType,
         sqftRange: state.sqftRange,
-        restrooms: state.restrooms,
+        floors: state.floors,
+        serviceAreas: state.serviceAreas,
+        commercialNotes: state.commercialNotes,
         businessName: state.businessName,
+        commercialFrequency: state.commercialFrequency,
+        schedulePreference: state.schedulePreference,
       }),
     }
   )
