@@ -17,7 +17,7 @@ const FC_EVENTS = JOBS.map((job) => ({
     service: job.service,
     address: job.address,
     status: job.status,
-    employee: job.employeeId ? EMPLOYEE_MAP[job.employeeId] : null,
+    employee: job.employeeIds.length > 0 ? EMPLOYEE_MAP[job.employeeIds[0]] : null,
   },
 }));
 

@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import ResidentialShell from "@/components/booking/ResidentialShell";
 
 export const metadata: Metadata = {
   title: {
@@ -15,8 +16,8 @@ export default function ResidentialLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col min-h-screen bg-white max-w-sm mx-auto">
+    <ResidentialShell>
       <Suspense>{children}</Suspense>
-    </div>
+    </ResidentialShell>
   );
 }

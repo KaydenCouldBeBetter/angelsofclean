@@ -2,15 +2,16 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
 import { useBookingStore } from "@/store/bookingStore";
 
 const TIME_SLOTS = [
-  { id: "morning" as const, label: "Morning (8am–12pm)", note: "Most popular" },
-  { id: "afternoon" as const, label: "Afternoon (12pm–4pm)", note: null },
-  { id: "evening" as const, label: "Evening (4pm–7pm)", note: "Unavailable", disabled: true },
+  { id: "morning" as const, label: "Morning", sub: "8:00 AM \u2013 12:00 PM" },
+  { id: "afternoon" as const, label: "Afternoon", sub: "12:00 PM \u2013 4:00 PM" },
+  { id: "evening" as const, label: "Evening", sub: "Unavailable", disabled: true },
 ];
 
 function getWeekDays() {
@@ -25,6 +26,7 @@ function getWeekDays() {
       label: dayNames[date.getDay()],
       date: date.getDate(),
       full: date.toISOString().split("T")[0],
+      isFull: i === 2, // 3rd day marked as "Full" per Figma
     });
   }
   return days;
@@ -42,7 +44,7 @@ export default function DateTimePage() {
   }, [store.address, router]);
 
   const days = getWeekDays();
-  const [selectedDate, setSelectedDate] = useState(store.date || days[0].full);
+  const [selectedDate, setSelectedDate] = useState(store.date || days[1].full);
   const [selectedSlot, setSelectedSlot] = useState<"morning" | "afternoon">(store.timeSlot ?? "morning");
 
   function handleNext() {
@@ -50,35 +52,57 @@ export default function DateTimePage() {
     router.push(returnTo === "review" ? "/residential/review" : "/residential/contact");
   }
 
+  // Get current month/year for header
+  const monthLabel = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
   return (
     <>
-      <StepHeader step={4} totalSteps={6} backHref="/residential/property" />
-      <ProgressDots currentStep={4} totalSteps={6} />
+      {/* ── Mobile ── */}
+      <div className="lg:hidden">
+        <StepHeader step={4} totalSteps={6} backHref="/residential/property" />
+        <ProgressDots currentStep={4} totalSteps={6} />
+      </div>
 
-      <div className="flex flex-col gap-6 px-4 pt-4 pb-32">
-        <h1 className="text-2xl font-bold leading-tight">
+      <div className="flex flex-col gap-6 px-4 pt-4 pb-32 lg:px-0 lg:pb-0">
+        <h1 className="text-2xl font-bold leading-tight lg:text-3xl">
           When would you like us to come?
         </h1>
 
-        {/* Date chips */}
-        <div role="radiogroup" aria-label="Select a date" className="flex gap-2 overflow-x-auto pb-1">
+        {/* Month navigation */}
+        <div className="hidden lg:flex items-center gap-2 text-sm font-medium text-zinc-700">
+          <button className="text-[#1a6b5a] hover:underline">&larr;</button>
+          <span>{monthLabel}</span>
+          <button className="text-[#1a6b5a] hover:underline">&rarr;</button>
+        </div>
+
+        {/* Date chips — mobile: horizontal scroll, desktop: 3-col grid */}
+        <div
+          role="radiogroup"
+          aria-label="Select a date"
+          className="flex gap-2 overflow-x-auto pb-1 lg:grid lg:grid-cols-3 lg:overflow-visible lg:pb-0 lg:gap-3"
+        >
           {days.map((day) => {
             const isSelected = selectedDate === day.full;
+            const isDisabled = day.isFull;
             return (
               <button
                 key={day.full}
                 role="radio"
                 aria-checked={isSelected}
                 aria-label={`${day.label} the ${day.date}`}
-                onClick={() => setSelectedDate(day.full)}
-                className={`flex flex-col items-center justify-center min-w-[52px] h-16 rounded-xl border-2 text-sm font-medium transition-colors flex-shrink-0 ${
-                  isSelected
-                    ? "border-teal-600 bg-teal-600 text-white"
-                    : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
+                disabled={isDisabled}
+                onClick={() => !isDisabled && setSelectedDate(day.full)}
+                className={`flex flex-col items-center justify-center min-w-[52px] h-16 lg:h-[72px] rounded-xl border-2 text-sm font-medium transition-colors flex-shrink-0 ${
+                  isDisabled
+                    ? "border-zinc-100 bg-zinc-50 text-zinc-400 cursor-not-allowed"
+                    : isSelected
+                      ? "border-teal-600 bg-teal-600 text-white"
+                      : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
                 }`}
               >
                 <span className="text-xs">{day.label}</span>
                 <span className="text-lg font-bold">{day.date}</span>
+                {isDisabled && <span className="text-[10px]">Full</span>}
               </button>
             );
           })}
@@ -86,8 +110,16 @@ export default function DateTimePage() {
 
         {/* Time slots */}
         <div className="flex flex-col gap-3">
-          <h2 id="time-slot-label" className="text-base font-semibold text-zinc-900">Select a time</h2>
-          <div role="radiogroup" aria-labelledby="time-slot-label" className="flex flex-col gap-3">
+          <h2 id="time-slot-label" className="text-base font-semibold text-zinc-900">
+            Preferred Time
+          </h2>
+
+          {/* Mobile: stacked, Desktop: row */}
+          <div
+            role="radiogroup"
+            aria-labelledby="time-slot-label"
+            className="flex flex-col gap-3 lg:flex-row"
+          >
             {TIME_SLOTS.map((slot) => {
               const isSelected = selectedSlot === slot.id && !slot.disabled;
               return (
@@ -98,35 +130,46 @@ export default function DateTimePage() {
                   aria-disabled={slot.disabled}
                   onClick={() => !slot.disabled && setSelectedSlot(slot.id as "morning" | "afternoon")}
                   disabled={slot.disabled}
-                  className={`w-full text-left rounded-xl border-2 p-4 transition-colors ${
+                  className={`w-full text-left rounded-xl border-2 p-4 transition-colors lg:flex-1 lg:text-center ${
                     slot.disabled
                       ? "border-zinc-100 bg-zinc-50 cursor-not-allowed"
                       : isSelected
-                      ? "border-teal-600 bg-white"
-                      : "border-zinc-200 bg-white hover:border-zinc-300"
+                        ? "border-teal-600 bg-teal-600 text-white"
+                        : "border-zinc-200 bg-white hover:border-zinc-300"
                   }`}
                 >
-                  <div className="flex items-center gap-2">
-                    {isSelected && (
-                      <span className="text-teal-600 text-sm font-semibold" aria-hidden="true">✓</span>
-                    )}
-                    <span className={`font-semibold ${slot.disabled ? "text-zinc-400" : "text-zinc-900"}`}>
-                      {slot.label}
-                    </span>
-                  </div>
-                  {slot.note && (
-                    <p className={`text-xs mt-1 ${slot.disabled ? "text-zinc-400" : "text-zinc-500"}`}>
-                      {slot.note}
-                    </p>
-                  )}
+                  <span className={`font-semibold ${slot.disabled ? "text-zinc-400" : isSelected ? "text-white" : "text-zinc-900"}`}>
+                    {slot.label}
+                  </span>
+                  <p className={`text-xs mt-1 ${slot.disabled ? "text-zinc-400" : isSelected ? "text-white/80" : "text-zinc-500"}`}>
+                    {slot.sub}
+                  </p>
                 </button>
               );
             })}
           </div>
         </div>
+
+        {/* Desktop inline CTA */}
+        <div className="hidden lg:block mt-2">
+          <button
+            onClick={handleNext}
+            className="w-[360px] h-14 rounded-xl bg-[#1a6b5a] text-white text-base font-semibold hover:bg-[#155a4b] transition-colors"
+          >
+            {returnTo === "review" ? "Save & Return to Review" : "Next \u2192"}
+          </button>
+          <div className="mt-3">
+            <Link href="/residential/property" className="text-sm font-medium text-[#1a6b5a] hover:underline">
+              &larr; Back
+            </Link>
+          </div>
+        </div>
       </div>
 
-      <BottomCTA label={returnTo === "review" ? "Save & Return to Review" : "Next"} onClick={handleNext} />
+      {/* Mobile fixed CTA */}
+      <div className="lg:hidden">
+        <BottomCTA label={returnTo === "review" ? "Save & Return to Review" : "Next"} onClick={handleNext} />
+      </div>
     </>
   );
 }

@@ -26,7 +26,7 @@ const weekJobs = JOBS.filter((job) => {
 const inProgressCount = todayJobs.filter((job) => job.status === "active").length;
 const pendingCount = todayJobs.filter((job) => job.status === "pending").length;
 const activeEmployees = new Set(
-  todayJobs.filter((job) => job.employeeId).map((job) => job.employeeId),
+  todayJobs.flatMap((job) => job.employeeIds),
 ).size;
 const completedThisWeek = weekJobs.filter((job) => job.status === "done").length;
 
@@ -160,8 +160,8 @@ export default function AdminDashboardPage() {
 
             {/* Table Rows */}
             {todayJobs.map((job) => {
-              const employee = job.employeeId
-                ? EMPLOYEE_MAP[job.employeeId]
+              const employee = job.employeeIds.length > 0
+                ? EMPLOYEE_MAP[job.employeeIds[0]]
                 : null;
 
               return (
