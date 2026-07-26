@@ -8,7 +8,7 @@ const NAV_ITEMS = [
   { label: "Calendar",  href: "/admin/calendar"  },
   { label: "Bookings",  href: "/admin/bookings"  },
   { label: "Employees", href: "/admin/employees" },
-  { label: "Settings",  href: "/admin/settings"  },
+  { label: "Settings",  href: "/admin/settings"  }, // Added settings link
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
