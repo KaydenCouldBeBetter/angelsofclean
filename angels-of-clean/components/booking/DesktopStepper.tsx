@@ -35,7 +35,7 @@ export default function DesktopStepper({ steps, currentStep }: DesktopStepperPro
                 isCurrent
                   ? "font-semibold text-zinc-900"
                   : isCompleted
-                    ? "font-medium text-zinc-500 line-through"
+                    ? "font-medium text-zinc-500"
                     : "font-medium text-zinc-400"
               }`}
             >

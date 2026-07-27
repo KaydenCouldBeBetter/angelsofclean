@@ -1,14 +1,6 @@
-"use client";
-
 import Link from "next/link";
-import {
-  JOBS,
-  EMPLOYEE_MAP,
-  DASHBOARD_STATUS,
-  MOCK_TODAY,
-  type Job,
-  type JobStatus,
-} from "../data/mock";
+import { getJobs, getEmployees } from "@/lib/supabase/queries";
+import { DASHBOARD_STATUS, type Job, type JobStatus, type Employee } from "../data/mock";
 
 // Group jobs by date
 function groupJobsByDate(jobs: Job[]): { date: string; label: string; jobs: Job[] }[] {
@@ -40,7 +32,6 @@ function formatTime(iso: string) {
   const d = new Date(iso);
   const h = d.getHours();
   const m = d.getMinutes();
-  const suffix = h >= 12 ? "" : "";
   const display = h > 12 ? h - 12 : h === 0 ? 12 : h;
   return `${display}:${m.toString().padStart(2, "0")}`;
 }
@@ -56,13 +47,13 @@ function StatusChip({ status }: { status: JobStatus }) {
   );
 }
 
-function EmployeeDisplay({ job }: { job: Job }) {
+function EmployeeDisplay({ job, employeeMap }: { job: Job; employeeMap: Record<string, Employee> }) {
   if (job.employeeIds.length === 0) {
     return <span className="text-[13px] font-medium text-[#c0392b]">Unassigned</span>;
   }
 
   if (job.employeeIds.length === 1) {
-    const emp = EMPLOYEE_MAP[job.employeeIds[0]];
+    const emp = employeeMap[job.employeeIds[0]];
     return (
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded-full bg-[#1a6b5a] flex items-center justify-center flex-shrink-0">
@@ -74,7 +65,7 @@ function EmployeeDisplay({ job }: { job: Job }) {
   }
 
   // Multiple employees
-  const employees = job.employeeIds.map((id) => EMPLOYEE_MAP[id]);
+  const employees = job.employeeIds.map((id) => employeeMap[id]);
   return (
     <div className="flex items-center gap-2">
       <div className="flex -space-x-2">
@@ -94,7 +85,7 @@ function EmployeeDisplay({ job }: { job: Job }) {
   );
 }
 
-function JobCard({ job }: { job: Job }) {
+function JobCard({ job, employeeMap }: { job: Job; employeeMap: Record<string, Employee> }) {
   const cfg = DASHBOARD_STATUS[job.status];
 
   return (
@@ -125,7 +116,7 @@ function JobCard({ job }: { job: Job }) {
 
         {/* Employee */}
         <div className="flex-1 min-w-0">
-          <EmployeeDisplay job={job} />
+          <EmployeeDisplay job={job} employeeMap={employeeMap} />
         </div>
 
         {/* Status chip */}
@@ -137,14 +128,17 @@ function JobCard({ job }: { job: Job }) {
   );
 }
 
-const allJobs = [...JOBS].sort((a, b) => a.start.localeCompare(b.start));
-const dayGroups = groupJobsByDate(allJobs);
+export default async function AdminBookingsPage() {
+  const [jobs, employees] = await Promise.all([getJobs(), getEmployees()]);
+  const employeeMap = Object.fromEntries(employees.map((e) => [e.id, e]));
 
-export default function AdminBookingsPage() {
-  const displayDate = new Date(`${MOCK_TODAY}T12:00:00`).toLocaleDateString(
-    "en-US",
-    { weekday: "short", month: "long", day: "numeric", year: "numeric" },
-  );
+  const allJobs = [...jobs].sort((a, b) => a.start.localeCompare(b.start));
+  const dayGroups = groupJobsByDate(allJobs);
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  const displayDate = new Date().toLocaleDateString("en-US", {
+    weekday: "short", month: "long", day: "numeric", year: "numeric",
+  });
 
   return (
     <>
@@ -191,40 +185,46 @@ export default function AdminBookingsPage() {
       {/* Content */}
       <div className="flex-1 overflow-auto bg-[#f7f9f8]">
         <div className="p-8">
-          {dayGroups.map((group, groupIdx) => {
-            const isToday = group.date === MOCK_TODAY;
+          {dayGroups.length === 0 ? (
+            <div className="py-16 text-center text-sm text-[#5c5c5e]">
+              No bookings yet.
+            </div>
+          ) : (
+            dayGroups.map((group, groupIdx) => {
+              const isToday = group.date === todayStr;
 
-            return (
-              <div key={group.date} className={groupIdx > 0 ? "mt-6" : ""}>
-                {/* Day divider (not first group) */}
-                {groupIdx > 0 && <div className="h-px bg-[#e2e8e6] mb-4" />}
+              return (
+                <div key={group.date} className={groupIdx > 0 ? "mt-6" : ""}>
+                  {/* Day divider (not first group) */}
+                  {groupIdx > 0 && <div className="h-px bg-[#e2e8e6] mb-4" />}
 
-                {/* Day header */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-[14px] font-semibold text-[#1c1c1e]">
-                      {group.label}
-                    </h3>
-                    {isToday && (
-                      <span className="bg-[#1a6b5a] text-white text-[10px] font-semibold px-3 py-0.5 rounded-full">
-                        Today
-                      </span>
-                    )}
+                  {/* Day header */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-[14px] font-semibold text-[#1c1c1e]">
+                        {group.label}
+                      </h3>
+                      {isToday && (
+                        <span className="bg-[#1a6b5a] text-white text-[10px] font-semibold px-3 py-0.5 rounded-full">
+                          Today
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[12px] text-[#5c5c5e]">
+                      {group.jobs.length} job{group.jobs.length !== 1 ? "s" : ""}
+                    </span>
                   </div>
-                  <span className="text-[12px] text-[#5c5c5e]">
-                    {group.jobs.length} job{group.jobs.length !== 1 ? "s" : ""}
-                  </span>
-                </div>
 
-                {/* Job cards */}
-                <div className="flex flex-col gap-2">
-                  {group.jobs.map((job) => (
-                    <JobCard key={job.id} job={job} />
-                  ))}
+                  {/* Job cards */}
+                  <div className="flex flex-col gap-2">
+                    {group.jobs.map((job) => (
+                      <JobCard key={job.id} job={job} employeeMap={employeeMap} />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </div>
     </>

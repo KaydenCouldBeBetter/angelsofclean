@@ -1,6 +1,7 @@
 "use server";
 
 import { SERVICE_AREA_ZIPS } from "@/lib/constants";
+import { createServiceRoleClient } from "@/lib/supabase/service";
 
 interface BookingData {
   service: string;
@@ -21,6 +22,7 @@ interface BookingData {
 interface BookingResult {
   success: boolean;
   bookingRef?: string;
+  bookingId?: string;
   error?: string;
 }
 
@@ -30,11 +32,12 @@ const VALID_SERVICES = ["standard", "deep", "moveinout"];
 const VALID_FREQUENCIES = ["one-time", "weekly", "bi-weekly", "monthly"];
 const VALID_TIME_SLOTS = ["morning", "afternoon"];
 
-function generateBookingRef(): string {
-  const timestamp = Date.now().toString(36).toUpperCase();
-  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `AOC-${timestamp}-${random}`;
-}
+// Customers pick a slot, not an exact time — fixed windows until Reschedule
+// (which would need a real time picker) is in scope.
+const TIME_SLOT_WINDOWS: Record<string, { start: string; end: string }> = {
+  morning: { start: "09:00:00", end: "11:00:00" },
+  afternoon: { start: "13:00:00", end: "15:00:00" },
+};
 
 export async function submitBooking(data: BookingData): Promise<BookingResult> {
   // Server-side validation
@@ -82,14 +85,51 @@ export async function submitBooking(data: BookingData): Promise<BookingResult> {
     return { success: false, error: "Invalid phone number." };
   }
 
-  // In production, this is where you'd:
-  // - Save to database
-  // - Send confirmation email
-  // - Integrate with scheduling system
-  // For now, simulate a brief processing delay
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  const window = TIME_SLOT_WINDOWS[data.timeSlot];
+  const startAt = new Date(`${data.date}T${window.start}`);
+  const endAt = new Date(`${data.date}T${window.end}`);
 
-  const bookingRef = generateBookingRef();
+  const supabase = createServiceRoleClient();
 
-  return { success: true, bookingRef };
+  const { data: booking, error: insertError } = await supabase
+    .from("bookings")
+    .insert({
+      client_name: data.name.trim(),
+      email: data.email.trim(),
+      phone: data.phone.trim(),
+      service_type: data.service as "standard" | "deep" | "moveinout",
+      frequency: data.frequency as "one-time" | "weekly" | "bi-weekly" | "monthly",
+      address: data.address.trim(),
+      city: data.city.trim(),
+      zip: data.zip.trim(),
+      bedrooms: data.bedrooms,
+      bathrooms: data.bathrooms,
+      notes: data.notes.trim() || null,
+      scheduled_date: data.date,
+      time_slot: data.timeSlot as "morning" | "afternoon",
+      start_at: startAt.toISOString(),
+      end_at: endAt.toISOString(),
+    })
+    .select("id, booking_number")
+    .single();
+
+  if (insertError || !booking) {
+    console.error("submitBooking: insert failed", insertError);
+    return { success: false, error: "Something went wrong. Please try again." };
+  }
+
+  const { error: activityError } = await supabase.from("activity_log").insert({
+    booking_id: booking.id,
+    description: "Booking submitted by client",
+  });
+
+  if (activityError) {
+    console.error("submitBooking: activity log insert failed", activityError);
+  }
+
+  return {
+    success: true,
+    bookingRef: `AOC-${booking.booking_number}`,
+    bookingId: booking.id,
+  };
 }

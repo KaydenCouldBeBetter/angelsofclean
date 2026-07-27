@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useBookingStore } from "@/store/bookingStore";
 import { Button } from "@/components/ui/button";
 import { SERVICE_LABELS, FREQUENCY_LABELS, TIME_LABELS } from "@/lib/constants";
 
 export default function ConfirmationPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const bookingRef = searchParams.get("ref");
   const {
     service, frequency, date, timeSlot,
     address, city, zip,
@@ -53,6 +55,11 @@ export default function ConfirmationPage() {
 
           {/* Booking detail card */}
           <div className="w-full rounded-xl border border-zinc-200 p-4 flex flex-col gap-1">
+            {bookingRef && (
+              <p className="text-xs text-zinc-400 uppercase tracking-wide">
+                Confirmation #{bookingRef}
+              </p>
+            )}
             <p className="font-semibold text-zinc-900">{serviceLabel}</p>
             <p className="text-sm text-zinc-500">{formattedDate} \u00B7 {timeLabel}</p>
             <p className="text-sm text-zinc-500">{address}, {city}, NY {zip}</p>
@@ -102,6 +109,11 @@ export default function ConfirmationPage() {
 
         {/* Detail card */}
         <div className="w-[640px] mt-8 rounded-xl border border-zinc-200 bg-white p-6 flex flex-col gap-2">
+          {bookingRef && (
+            <p className="text-xs text-zinc-400 uppercase tracking-wide">
+              Confirmation #{bookingRef}
+            </p>
+          )}
           <p className="font-semibold text-zinc-900">{serviceLabel}</p>
           <p className="text-sm text-zinc-500">{formattedDate} \u00B7 {timeLabel}</p>
           <p className="text-sm text-zinc-500">{address}, {city}, NY {zip}</p>
