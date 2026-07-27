@@ -1,61 +1,6 @@
-"use client";
-
-import {
-  JOBS,
-  EMPLOYEES,
-  EMPLOYEE_MAP,
-  DASHBOARD_STATUS,
-  MOCK_TODAY,
-  type Job,
-  type JobStatus,
-} from "../data/mock";
-
-const todayJobs = JOBS.filter((job) => job.start.startsWith(MOCK_TODAY)).sort(
-  (a, b) => a.start.localeCompare(b.start),
-);
-
-const weekStart = new Date(`${MOCK_TODAY}T00:00:00`);
-const weekEnd = new Date(weekStart);
-weekEnd.setDate(weekEnd.getDate() + 6);
-const weekJobs = JOBS.filter((job) => {
-  const date = new Date(job.start);
-  return date >= weekStart && date <= weekEnd;
-});
-
-// Stat computations
-const inProgressCount = todayJobs.filter((job) => job.status === "active").length;
-const pendingCount = todayJobs.filter((job) => job.status === "pending").length;
-const activeEmployees = new Set(
-  todayJobs.flatMap((job) => job.employeeIds),
-).size;
-const completedThisWeek = weekJobs.filter((job) => job.status === "done").length;
-
-const STAT_CARDS = [
-  {
-    label: "Today's Bookings",
-    value: String(todayJobs.length),
-    sub: `${inProgressCount} in progress`,
-    accent: "#1a6b5a",
-  },
-  {
-    label: "Pending Confirmation",
-    value: String(pendingCount),
-    sub: "Action required",
-    accent: "#d97706",
-  },
-  {
-    label: "Active Employees",
-    value: `${activeEmployees}/${EMPLOYEES.length}`,
-    sub: `${EMPLOYEES.length - activeEmployees} unavailable today`,
-    accent: "#1d4ed8",
-  },
-  {
-    label: "Completed This Week",
-    value: String(completedThisWeek),
-    sub: "\u2191 4 from last week",
-    accent: "#15803d",
-  },
-];
+import Link from "next/link";
+import { getJobs, getEmployees } from "@/lib/supabase/queries";
+import { DASHBOARD_STATUS, type Job, type JobStatus } from "../data/mock";
 
 function formatTime(iso: string) {
   const d = new Date(iso);
@@ -65,7 +10,7 @@ function formatTime(iso: string) {
 }
 
 function timeRange(job: Job) {
-  return `${formatTime(job.start)}\u2013${formatTime(job.end)}`;
+  return `${formatTime(job.start)}–${formatTime(job.end)}`;
 }
 
 function StatusChip({ status }: { status: JobStatus }) {
@@ -79,11 +24,62 @@ function StatusChip({ status }: { status: JobStatus }) {
   );
 }
 
-export default function AdminDashboardPage() {
-  const displayDate = new Date(`${MOCK_TODAY}T12:00:00`).toLocaleDateString(
-    "en-US",
-    { weekday: "short", month: "long", day: "numeric", year: "numeric" },
-  );
+export default async function AdminDashboardPage() {
+  const [jobs, employees] = await Promise.all([getJobs(), getEmployees()]);
+  const employeeMap = Object.fromEntries(employees.map((e) => [e.id, e]));
+
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+
+  const todayJobs = jobs
+    .filter((job) => job.start.startsWith(todayStr) && job.status !== "cancelled")
+    .sort((a, b) => a.start.localeCompare(b.start));
+
+  const weekStart = new Date(`${todayStr}T00:00:00`);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+  const weekJobs = jobs.filter((job) => {
+    const date = new Date(job.start);
+    return date >= weekStart && date <= weekEnd;
+  });
+
+  const inProgressCount = todayJobs.filter((job) => job.status === "active").length;
+  const pendingCount = todayJobs.filter((job) => job.status === "pending").length;
+  const activeEmployees = new Set(
+    todayJobs.flatMap((job) => job.employeeIds),
+  ).size;
+  const completedThisWeek = weekJobs.filter((job) => job.status === "done").length;
+
+  const STAT_CARDS = [
+    {
+      label: "Today's Bookings",
+      value: String(todayJobs.length),
+      sub: `${inProgressCount} in progress`,
+      accent: "#1a6b5a",
+    },
+    {
+      label: "Pending Confirmation",
+      value: String(pendingCount),
+      sub: "Action required",
+      accent: "#d97706",
+    },
+    {
+      label: "Active Employees",
+      value: `${activeEmployees}/${employees.length}`,
+      sub: `${Math.max(employees.length - activeEmployees, 0)} unavailable today`,
+      accent: "#1d4ed8",
+    },
+    {
+      label: "Completed This Week",
+      value: String(completedThisWeek),
+      sub: "This week",
+      accent: "#15803d",
+    },
+  ];
+
+  const displayDate = now.toLocaleDateString("en-US", {
+    weekday: "short", month: "long", day: "numeric", year: "numeric",
+  });
 
   return (
     <>
@@ -138,65 +134,76 @@ export default function AdminDashboardPage() {
 
           {/* Jobs Table */}
           <div className="bg-white border border-[#e2e8e6] rounded-xl overflow-hidden">
-            {/* Table Header */}
-            <div className="grid grid-cols-[1fr_1fr_1.6fr_0.8fr_1fr_0.8fr_0.5fr] bg-[#f7f9f8] border-b border-[#e2e8e6] px-6 py-3">
-              {[
-                "Client",
-                "Service",
-                "Address",
-                "Time",
-                "Employee",
-                "Status",
-                "",
-              ].map((col) => (
-                <span
-                  key={col}
-                  className="text-[11px] font-semibold text-[#5c5c5e] uppercase tracking-wide"
-                >
-                  {col}
-                </span>
-              ))}
-            </div>
-
-            {/* Table Rows */}
-            {todayJobs.map((job) => {
-              const employee = job.employeeIds.length > 0
-                ? EMPLOYEE_MAP[job.employeeIds[0]]
-                : null;
-
-              return (
-                <div
-                  key={job.id}
-                  className="grid grid-cols-[1fr_1fr_1.6fr_0.8fr_1fr_0.8fr_0.5fr] items-center px-6 py-5 border-b border-[#e2e8e6] last:border-b-0"
-                >
-                  <span className="text-sm font-semibold text-[#1c1c1e]">
-                    {job.client}
-                  </span>
-                  <span className="text-[13px] text-[#5c5c5e]">
-                    {job.service}
-                  </span>
-                  <span className="text-[13px] text-[#5c5c5e]">
-                    {job.address}
-                  </span>
-                  <span className="text-[13px] font-medium text-[#1c1c1e]">
-                    {timeRange(job)}
-                  </span>
-                  <span
-                    className={`text-[13px] ${
-                      employee ? "text-[#1c1c1e]" : "text-[#c0392b]"
-                    }`}
-                  >
-                    {employee ? employee.name : "Unassigned"}
-                  </span>
-                  <StatusChip status={job.status} />
-                  <div className="flex justify-end">
-                    <button className="bg-[#f7f9f8] border border-[#e2e8e6] text-[#1c1c1e] text-xs font-medium px-4 py-1.5 rounded-md hover:bg-[#eef1ef] transition-colors">
-                      View
-                    </button>
-                  </div>
+            {todayJobs.length === 0 ? (
+              <div className="py-16 text-center text-sm text-[#5c5c5e]">
+                No bookings scheduled for today yet.
+              </div>
+            ) : (
+              <>
+                {/* Table Header */}
+                <div className="grid grid-cols-[1fr_1fr_1.6fr_0.8fr_1fr_0.8fr_0.5fr] bg-[#f7f9f8] border-b border-[#e2e8e6] px-6 py-3">
+                  {[
+                    "Client",
+                    "Service",
+                    "Address",
+                    "Time",
+                    "Employee",
+                    "Status",
+                    "",
+                  ].map((col) => (
+                    <span
+                      key={col}
+                      className="text-[11px] font-semibold text-[#5c5c5e] uppercase tracking-wide"
+                    >
+                      {col}
+                    </span>
+                  ))}
                 </div>
-              );
-            })}
+
+                {/* Table Rows */}
+                {todayJobs.map((job) => {
+                  const employee = job.employeeIds.length > 0
+                    ? employeeMap[job.employeeIds[0]]
+                    : null;
+
+                  return (
+                    <div
+                      key={job.id}
+                      className="grid grid-cols-[1fr_1fr_1.6fr_0.8fr_1fr_0.8fr_0.5fr] items-center px-6 py-5 border-b border-[#e2e8e6] last:border-b-0"
+                    >
+                      <span className="text-sm font-semibold text-[#1c1c1e]">
+                        {job.client}
+                      </span>
+                      <span className="text-[13px] text-[#5c5c5e]">
+                        {job.service}
+                      </span>
+                      <span className="text-[13px] text-[#5c5c5e]">
+                        {job.address}
+                      </span>
+                      <span className="text-[13px] font-medium text-[#1c1c1e]">
+                        {timeRange(job)}
+                      </span>
+                      <span
+                        className={`text-[13px] ${
+                          employee ? "text-[#1c1c1e]" : "text-[#c0392b]"
+                        }`}
+                      >
+                        {employee ? employee.name : "Unassigned"}
+                      </span>
+                      <StatusChip status={job.status} />
+                      <div className="flex justify-end">
+                        <Link
+                          href={`/admin/bookings/${job.id}`}
+                          className="bg-[#f7f9f8] border border-[#e2e8e6] text-[#1c1c1e] text-xs font-medium px-4 py-1.5 rounded-md hover:bg-[#eef1ef] transition-colors"
+                        >
+                          View
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
+            )}
           </div>
         </div>
       </div>

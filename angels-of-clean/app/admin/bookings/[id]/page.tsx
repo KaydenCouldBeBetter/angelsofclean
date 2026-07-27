@@ -1,15 +1,7 @@
-"use client";
-
-import { use } from "react";
 import Link from "next/link";
-import {
-  JOB_MAP,
-  EMPLOYEE_MAP,
-  DASHBOARD_STATUS,
-  ACTIVITY_LOGS,
-  MOCK_TODAY,
-  type JobStatus,
-} from "../../data/mock";
+import { getJobById, getActivityLog, getEmployees } from "@/lib/supabase/queries";
+import { DASHBOARD_STATUS } from "../../data/mock";
+import BookingActions from "./BookingActions";
 
 function formatDetailDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", {
@@ -33,18 +25,22 @@ function formatSubmitted(iso: string) {
   const d = new Date(iso);
   const date = d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
   const time = formatDetailTime(iso);
-  return `${date} \u00B7 ${time}`;
+  return `${date} · ${time}`;
 }
 
-export default function BookingDetailPage({
+export default async function BookingDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = use(params);
-  const job = JOB_MAP[id];
+  const { id } = await params;
+  const [job, activityLog, employees] = await Promise.all([
+    getJobById(id),
+    getActivityLog(id),
+    getEmployees(),
+  ]);
 
-  const displayDate = new Date(`${MOCK_TODAY}T12:00:00`).toLocaleDateString(
+  const displayDate = new Date().toLocaleDateString(
     "en-US",
     { weekday: "short", month: "long", day: "numeric", year: "numeric" },
   );
@@ -67,23 +63,23 @@ export default function BookingDetailPage({
     );
   }
 
+  const employeeMap = Object.fromEntries(employees.map((e) => [e.id, e]));
   const cfg = DASHBOARD_STATUS[job.status];
-  const employees = job.employeeIds.map((eid) => EMPLOYEE_MAP[eid]);
-  const employeeLabel = employees.length > 0
-    ? employees.map((e) => e.name).join(", ")
+  const assignedEmployees = job.employeeIds.map((eid) => employeeMap[eid]).filter(Boolean);
+  const employeeLabel = assignedEmployees.length > 0
+    ? assignedEmployees.map((e) => e.name).join(", ")
     : "Unassigned";
-  const activityLog = ACTIVITY_LOGS[job.id] ?? [];
 
-  const subtitle = `${job.service} \u00B7 ${job.client} \u00B7 ${new Date(job.start).toLocaleDateString("en-US", { month: "long", day: "numeric" })}`;
+  const subtitle = `${job.service} · ${job.client} · ${new Date(job.start).toLocaleDateString("en-US", { month: "long", day: "numeric" })}`;
 
   const detailRows = [
     { label: "Client", value: job.client },
     { label: "Email", value: job.email },
     { label: "Phone", value: job.phone },
-    { label: "Service", value: job.frequency ? `${job.service} \u00B7 ${job.frequency}` : job.service },
+    { label: "Service", value: job.frequency ? `${job.service} · ${job.frequency}` : job.service },
     { label: "Address", value: job.address },
     { label: "Date", value: formatDetailDate(job.start) },
-    { label: "Time Slot", value: `${formatDetailTime(job.start)} \u2013 ${formatDetailTime(job.end)}` },
+    { label: "Time Slot", value: `${formatDetailTime(job.start)} – ${formatDetailTime(job.end)}` },
     { label: "Property", value: job.property },
     { label: "Notes", value: job.notes },
     { label: "Submitted", value: job.submittedAt ? formatSubmitted(job.submittedAt) : undefined },
@@ -136,13 +132,14 @@ export default function BookingDetailPage({
                 backgroundColor: job.status === "active" ? "#fef2e8"
                   : job.status === "done" ? "#e1f2e7"
                   : job.status === "confirmed" ? "#eaeefc"
+                  : job.status === "cancelled" ? "#feefee"
                   : "#f7f9f8",
                 borderColor: cfg.accentColor,
               }}
             >
               <p className="text-[11px] text-[#5c5c5e]">Current Status</p>
               <p className="text-[15px] font-semibold mt-0.5" style={{ color: cfg.accentColor }}>
-                {cfg.label} {employees.length > 0 ? `\u00B7 Employee: ${employeeLabel}` : ""}
+                {cfg.label} {assignedEmployees.length > 0 ? `· Employee: ${employeeLabel}` : ""}
               </p>
             </div>
           </div>
@@ -155,25 +152,8 @@ export default function BookingDetailPage({
                 <h2 className="font-semibold text-[17px] text-[#1c1c1e]">Actions</h2>
               </div>
               <div className="h-px bg-[#e2e8e6] mx-6" />
-              <div className="px-6 py-4 flex flex-col gap-2.5">
-                <button className="h-9 w-full rounded-lg bg-[#1a6b5a] text-white text-[13px] font-semibold hover:bg-[#155a4b] transition-colors">
-                  Assign Employee
-                </button>
-                <button className="h-9 w-full rounded-lg border border-[#e2e8e6] bg-[#f7f9f8] text-[#1c1c1e] text-[13px] font-semibold hover:bg-[#eef1ef] transition-colors">
-                  Reschedule
-                </button>
-                <button className="h-9 w-full rounded-lg bg-[#15803d] text-white text-[13px] font-semibold hover:bg-[#116b33] transition-colors">
-                  Mark Complete
-                </button>
-                <button className="h-9 w-full rounded-lg border border-[#e2e8e6] bg-[#feefee] text-[#c0392b] text-[13px] font-semibold hover:bg-[#fde2e0] transition-colors">
-                  Cancel Booking
-                </button>
-                <button className="h-9 w-full rounded-lg border border-[#e2e8e6] bg-[#f7f9f8] text-[#1c1c1e] text-[13px] font-semibold hover:bg-[#eef1ef] transition-colors">
-                  Send Client Message
-                </button>
-                <button className="h-9 w-full rounded-lg border border-[#e2e8e6] bg-[#f7f9f8] text-[#1c1c1e] text-[13px] font-semibold hover:bg-[#eef1ef] transition-colors">
-                  Print / Export
-                </button>
+              <div className="px-6 py-4">
+                <BookingActions job={job} employees={employees} />
               </div>
             </div>
 

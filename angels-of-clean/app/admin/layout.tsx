@@ -2,17 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "./auth-actions";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/admin/dashboard" },
   { label: "Calendar",  href: "/admin/calendar"  },
   { label: "Bookings",  href: "/admin/bookings"  },
   { label: "Employees", href: "/admin/employees" },
-  { label: "Settings",  href: "/admin/settings"  },
+  { label: "Settings",  href: "/admin/settings"  }, // Added settings link
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+
+  // The login page (/admin) renders its own full-page layout — no sidebar chrome
+  // before a session exists.
+  if (pathname === "/admin") {
+    return <>{children}</>;
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#f5f5f5]">
@@ -57,7 +64,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Bottom */}
         <div className="px-6 py-4">
           <p className="text-[#7aada3] text-xs">Admin: Jordan L.</p>
-          <button className="text-[#3ebfb5] text-xs mt-1 hover:underline">Sign out</button>
+          <button
+            onClick={() => signOut()}
+            className="text-[#3ebfb5] text-xs mt-1 hover:underline"
+          >
+            Sign out
+          </button>
         </div>
       </aside>
 

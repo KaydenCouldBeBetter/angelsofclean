@@ -1,36 +1,25 @@
-"use client";
+import { getEmployees, getJobs } from "@/lib/supabase/queries";
+import { EMPLOYEE_STATUS_CONFIG, type Employee, type EmployeeStatus, type Job } from "../data/mock";
 
-import {
-  EMPLOYEES,
-  JOBS,
-  MOCK_TODAY,
-  EMPLOYEE_STATUS_CONFIG,
-  type Employee,
-  type EmployeeStatus,
-} from "../data/mock";
-
-// Compute employee statuses and today's job counts from mock data
-const todayJobs = JOBS.filter((job) => job.start.startsWith(MOCK_TODAY));
-
-function getEmployeeStatus(employeeId: string): EmployeeStatus {
+function getEmployeeStatus(employeeId: string, todayJobs: Job[]): EmployeeStatus {
   const empJobs = todayJobs.filter((job) => job.employeeIds.includes(employeeId));
   if (empJobs.some((job) => job.status === "active")) return "on-a-job";
   if (empJobs.some((job) => job.status === "confirmed")) return "scheduled";
   return "available";
 }
 
-function getEmployeeTodayCount(employeeId: string): number {
+function getEmployeeTodayCount(employeeId: string, todayJobs: Job[]): number {
   return todayJobs.filter((job) => job.employeeIds.includes(employeeId)).length;
 }
 
-function EmployeeCard({ employee }: { employee: Employee }) {
-  const status = getEmployeeStatus(employee.id);
-  const todayCount = getEmployeeTodayCount(employee.id);
+function EmployeeCard({ employee, todayJobs }: { employee: Employee; todayJobs: Job[] }) {
+  const status = getEmployeeStatus(employee.id, todayJobs);
+  const todayCount = getEmployeeTodayCount(employee.id, todayJobs);
   const cfg = EMPLOYEE_STATUS_CONFIG[status];
 
   return (
     <div className="bg-white border border-[#e2e8e6] rounded-xl overflow-hidden">
-      {/* Top section: avatar, name, rating, status */}
+      {/* Top section: avatar, name, status */}
       <div className="px-5 pt-5 pb-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
@@ -43,14 +32,9 @@ function EmployeeCard({ employee }: { employee: Employee }) {
                 className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${cfg.dotColor}`}
               />
             </div>
-            <div>
-              <p className="font-semibold text-[17px] text-[#1c1c1e] leading-tight">
-                {employee.name}
-              </p>
-              <p className="text-[13px] font-medium text-[#e67e22] mt-0.5">
-                &#9733; {employee.rating}
-              </p>
-            </div>
+            <p className="font-semibold text-[17px] text-[#1c1c1e] leading-tight">
+              {employee.name}
+            </p>
           </div>
           {/* Status chip */}
           <span
@@ -67,10 +51,6 @@ function EmployeeCard({ employee }: { employee: Employee }) {
       {/* Details grid */}
       <div className="px-5 pt-3 pb-4">
         <div className="grid grid-cols-2 gap-y-3">
-          <div>
-            <p className="text-[11px] font-semibold text-[#9c9c9d] uppercase">Zone</p>
-            <p className="text-[13px] text-[#1c1c1e] mt-0.5">{employee.zone}</p>
-          </div>
           <div>
             <p className="text-[11px] font-semibold text-[#9c9c9d] uppercase">Phone</p>
             <p className="text-[13px] text-[#1c1c1e] mt-0.5">{employee.phone}</p>
@@ -98,8 +78,13 @@ function EmployeeCard({ employee }: { employee: Employee }) {
   );
 }
 
-export default function AdminEmployeesPage() {
-  const displayDate = new Date(`${MOCK_TODAY}T12:00:00`).toLocaleDateString(
+export default async function AdminEmployeesPage() {
+  const [employees, jobs] = await Promise.all([getEmployees(), getJobs()]);
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayJobs = jobs.filter((job) => job.start.startsWith(todayStr) && job.status !== "cancelled");
+
+  const displayDate = new Date().toLocaleDateString(
     "en-US",
     { weekday: "short", month: "long", day: "numeric", year: "numeric" },
   );
@@ -131,11 +116,17 @@ export default function AdminEmployeesPage() {
           </div>
 
           {/* Employee cards grid */}
-          <div className="grid grid-cols-3 gap-5">
-            {EMPLOYEES.map((employee) => (
-              <EmployeeCard key={employee.id} employee={employee} />
-            ))}
-          </div>
+          {employees.length === 0 ? (
+            <div className="py-16 text-center text-sm text-[#5c5c5e]">
+              No employees yet.
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-5">
+              {employees.map((employee) => (
+                <EmployeeCard key={employee.id} employee={employee} todayJobs={todayJobs} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import StepHeader from "@/components/booking/StepHeader";
@@ -8,10 +8,12 @@ import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
 import { useBookingStore } from "@/store/bookingStore";
 import { SERVICE_LABELS, FREQUENCY_LABELS, TIME_LABELS } from "@/lib/constants";
+import { submitBooking } from "@/app/actions/submitBooking";
 
 export default function ReviewPage() {
   const router = useRouter();
   const store = useBookingStore();
+  const [error, setError] = useState<string | null>(null);
 
   const {
     service, frequency,
@@ -32,10 +34,28 @@ export default function ReviewPage() {
       })
     : "";
 
-  function handleConfirm() {
+  async function handleConfirm() {
     if (isSubmitting) return;
+    setError(null);
     setSubmitting(true);
-    router.push("/residential/confirmation");
+
+    const result = await submitBooking({
+      service: service ?? "",
+      frequency: frequency ?? "",
+      address, city, zip,
+      bedrooms, bathrooms, notes,
+      date,
+      timeSlot: timeSlot ?? "",
+      name, email, phone,
+    });
+
+    if (!result.success) {
+      setSubmitting(false);
+      setError(result.error ?? "Something went wrong. Please try again.");
+      return;
+    }
+
+    router.push(`/residential/confirmation?ref=${result.bookingRef}`);
   }
 
   const reviewCards = [
@@ -144,6 +164,10 @@ export default function ReviewPage() {
             <p className="font-semibold text-[#1a6b5a] mt-2">Quote provided after confirmation</p>
           </div>
         </div>
+
+        {error && (
+          <p className="text-sm text-red-600 text-center">{error}</p>
+        )}
 
         {/* Desktop: full-width confirm button */}
         <div className="hidden lg:block mt-4">
