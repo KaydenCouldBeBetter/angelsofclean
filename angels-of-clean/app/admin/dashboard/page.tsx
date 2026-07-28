@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getJobs, getEmployees } from "@/lib/supabase/queries";
+import { getDashboardStats, getEmployees } from "@/lib/supabase/queries";
 import { DASHBOARD_STATUS, type Job, type JobStatus } from "../data/mock";
 
 function formatTime(iso: string) {
@@ -25,30 +25,15 @@ function StatusChip({ status }: { status: JobStatus }) {
 }
 
 export default async function AdminDashboardPage() {
-  const [jobs, employees] = await Promise.all([getJobs(), getEmployees()]);
+  const [stats, employees] = await Promise.all([getDashboardStats(), getEmployees()]);
   const employeeMap = Object.fromEntries(employees.map((e) => [e.id, e]));
 
-  const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
-
-  const todayJobs = jobs
-    .filter((job) => job.start.startsWith(todayStr) && job.status !== "cancelled")
-    .sort((a, b) => a.start.localeCompare(b.start));
-
-  const weekStart = new Date(`${todayStr}T00:00:00`);
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekEnd.getDate() + 6);
-  const weekJobs = jobs.filter((job) => {
-    const date = new Date(job.start);
-    return date >= weekStart && date <= weekEnd;
-  });
+  const { todayJobs, totalPending, completedThisWeek, totalEmployees } = stats;
 
   const inProgressCount = todayJobs.filter((job) => job.status === "active").length;
-  const pendingCount = todayJobs.filter((job) => job.status === "pending").length;
   const activeEmployees = new Set(
     todayJobs.flatMap((job) => job.employeeIds),
   ).size;
-  const completedThisWeek = weekJobs.filter((job) => job.status === "done").length;
 
   const STAT_CARDS = [
     {
@@ -59,14 +44,14 @@ export default async function AdminDashboardPage() {
     },
     {
       label: "Pending Confirmation",
-      value: String(pendingCount),
+      value: String(totalPending),
       sub: "Action required",
       accent: "#d97706",
     },
     {
       label: "Active Employees",
-      value: `${activeEmployees}/${employees.length}`,
-      sub: `${Math.max(employees.length - activeEmployees, 0)} unavailable today`,
+      value: `${activeEmployees}/${totalEmployees}`,
+      sub: `${Math.max(totalEmployees - activeEmployees, 0)} unavailable today`,
       accent: "#1d4ed8",
     },
     {
@@ -77,7 +62,7 @@ export default async function AdminDashboardPage() {
     },
   ];
 
-  const displayDate = now.toLocaleDateString("en-US", {
+  const displayDate = new Date().toLocaleDateString("en-US", {
     weekday: "short", month: "long", day: "numeric", year: "numeric",
   });
 

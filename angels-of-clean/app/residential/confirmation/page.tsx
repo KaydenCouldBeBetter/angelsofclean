@@ -28,7 +28,7 @@ export default function ConfirmationPage() {
       })
     : "";
 
-  const serviceLabel = `${SERVICE_LABELS[service ?? "standard"]} \u00B7 ${FREQUENCY_LABELS[frequency ?? "one-time"]}`;
+  const serviceLabel = `${SERVICE_LABELS[service ?? "standard"]} · ${FREQUENCY_LABELS[frequency ?? "one-time"]}`;
   const timeLabel = timeSlot ? TIME_LABELS[timeSlot] : "";
 
   return (
@@ -61,7 +61,7 @@ export default function ConfirmationPage() {
               </p>
             )}
             <p className="font-semibold text-zinc-900">{serviceLabel}</p>
-            <p className="text-sm text-zinc-500">{formattedDate} \u00B7 {timeLabel}</p>
+            <p className="text-sm text-zinc-500">{formattedDate} · {timeLabel}</p>
             <p className="text-sm text-zinc-500">{address}, {city}, NY {zip}</p>
           </div>
 
@@ -115,9 +115,9 @@ export default function ConfirmationPage() {
             </p>
           )}
           <p className="font-semibold text-zinc-900">{serviceLabel}</p>
-          <p className="text-sm text-zinc-500">{formattedDate} \u00B7 {timeLabel}</p>
+          <p className="text-sm text-zinc-500">{formattedDate} · {timeLabel}</p>
           <p className="text-sm text-zinc-500">{address}, {city}, NY {zip}</p>
-          <p className="text-sm text-zinc-500">{bedrooms} Bedrooms \u00B7 {bathrooms} Bathroom</p>
+          <p className="text-sm text-zinc-500">{bedrooms} Bedrooms · {bathrooms} Bathroom</p>
         </div>
 
         {/* Calendar buttons — side by side */}

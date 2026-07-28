@@ -87,6 +87,78 @@ export async function getJobs(): Promise<Job[]> {
   return (data as unknown as BookingWithEmployees[]).map(mapBookingToJob);
 }
 
+// ---------- Dashboard-specific queries ----------
+
+/** Local YYYY-MM-DD (avoids UTC date shift). */
+function localDateStr(d: Date = new Date()): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export interface DashboardStats {
+  todayJobs: Job[];
+  totalPending: number;
+  completedThisWeek: number;
+  totalEmployees: number;
+}
+
+export async function getDashboardStats(): Promise<DashboardStats> {
+  const supabase = await createClient();
+  const today = localDateStr();
+
+  // Monday of this week
+  const now = new Date();
+  const dayOfWeek = now.getDay(); // 0=Sun
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + mondayOffset);
+  const weekStart = localDateStr(monday);
+
+  // Sunday end of week
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const weekEnd = localDateStr(sunday);
+
+  const [todayRes, pendingRes, completedRes, employeeRes] = await Promise.all([
+    // Today's bookings (non-cancelled)
+    supabase
+      .from("bookings")
+      .select("*, booking_employees(employee_id)")
+      .eq("scheduled_date", today)
+      .neq("status", "cancelled")
+      .order("start_at"),
+
+    // ALL pending bookings across all dates
+    supabase
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending"),
+
+    // Completed this week
+    supabase
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "done")
+      .gte("scheduled_date", weekStart)
+      .lte("scheduled_date", weekEnd),
+
+    // Total employees
+    supabase
+      .from("employees")
+      .select("id", { count: "exact", head: true }),
+  ]);
+
+  const todayJobs = todayRes.error || !todayRes.data
+    ? []
+    : (todayRes.data as unknown as BookingWithEmployees[]).map(mapBookingToJob);
+
+  return {
+    todayJobs,
+    totalPending: pendingRes.count ?? 0,
+    completedThisWeek: completedRes.count ?? 0,
+    totalEmployees: employeeRes.count ?? 0,
+  };
+}
+
 export async function getJobById(id: string): Promise<Job | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
