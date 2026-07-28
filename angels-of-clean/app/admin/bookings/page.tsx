@@ -2,6 +2,8 @@ import Link from "next/link";
 import { getJobs, getEmployees } from "@/lib/supabase/queries";
 import { DASHBOARD_STATUS, type Job, type JobStatus, type Employee } from "../data/mock";
 
+type FilterTab = "today" | "upcoming" | "past" | "all";
+
 // Group jobs by date
 function groupJobsByDate(jobs: Job[]): { date: string; label: string; jobs: Job[] }[] {
   const groups: Record<string, Job[]> = {};
@@ -128,17 +130,59 @@ function JobCard({ job, employeeMap }: { job: Job; employeeMap: Record<string, E
   );
 }
 
-export default async function AdminBookingsPage() {
+function TabLink({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className={`h-8 px-5 rounded-md text-[12px] font-semibold transition-colors ${
+        active
+          ? "bg-[#1a6b5a] text-white"
+          : "bg-[#f0f0f0] text-[#5c5c5e] font-medium hover:bg-[#e5e5e5]"
+      }`}
+    >
+      {children}
+    </Link>
+  );
+}
+
+export default async function AdminBookingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string }>;
+}) {
+  const params = await searchParams;
+  const activeTab: FilterTab = (params.filter as FilterTab) || "today";
+
   const [jobs, employees] = await Promise.all([getJobs(), getEmployees()]);
   const employeeMap = Object.fromEntries(employees.map((e) => [e.id, e]));
+  const _now = new Date();
+  const todayStr = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-${String(_now.getDate()).padStart(2, "0")}`;
 
-  const allJobs = [...jobs].sort((a, b) => a.start.localeCompare(b.start));
+  const filteredJobs = jobs.filter((job) => {
+    const jobDate = job.start.slice(0, 10);
+    if (activeTab === "today") return jobDate === todayStr;
+    if (activeTab === "upcoming") return jobDate > todayStr;
+    if (activeTab === "past") return jobDate < todayStr;
+    return true;
+  });
+
+  const allJobs = [...filteredJobs].sort((a, b) => {
+    // For past jobs, show most recent first
+    if (activeTab === "past") return b.start.localeCompare(a.start);
+    return a.start.localeCompare(b.start);
+  });
   const dayGroups = groupJobsByDate(allJobs);
-  const todayStr = new Date().toISOString().slice(0, 10);
 
   const displayDate = new Date().toLocaleDateString("en-US", {
     weekday: "short", month: "long", day: "numeric", year: "numeric",
   });
+
+  const emptyMessages: Record<FilterTab, string> = {
+    today: "No bookings scheduled for today.",
+    upcoming: "No upcoming bookings.",
+    past: "No past bookings.",
+    all: "No bookings yet.",
+  };
 
   return (
     <>
@@ -156,15 +200,19 @@ export default async function AdminBookingsPage() {
       {/* Filter bar */}
       <div className="flex-shrink-0 h-14 bg-white border-b border-[#e2e8e6] flex items-center px-8 gap-2">
         {/* Segment tabs */}
-        <button className="h-8 px-5 rounded-md bg-[#1a6b5a] text-white text-[12px] font-semibold">
+        <TabLink href="/admin/bookings?filter=all" active={activeTab === "all"}>
+          All
+        </TabLink>
+        <TabLink href="/admin/bookings?filter=today" active={activeTab === "today"}>
           Today
-        </button>
-        <button className="h-8 px-5 rounded-md bg-[#f0f0f0] text-[#5c5c5e] text-[12px] font-medium hover:bg-[#e5e5e5] transition-colors">
+        </TabLink>
+        <TabLink href="/admin/bookings?filter=upcoming" active={activeTab === "upcoming"}>
           Upcoming
-        </button>
-        <button className="h-8 px-5 rounded-md bg-[#f0f0f0] text-[#5c5c5e] text-[12px] font-medium hover:bg-[#e5e5e5] transition-colors">
+        </TabLink>
+        <TabLink href="/admin/bookings?filter=past" active={activeTab === "past"}>
           Past
-        </button>
+        </TabLink>
+
 
         {/* Dropdown filters */}
         <button className="h-8 px-4 rounded-md border border-[#e2e8e6] bg-white text-[#5c5c5e] text-[12px] font-medium ml-2">
@@ -187,7 +235,7 @@ export default async function AdminBookingsPage() {
         <div className="p-8">
           {dayGroups.length === 0 ? (
             <div className="py-16 text-center text-sm text-[#5c5c5e]">
-              No bookings yet.
+              {emptyMessages[activeTab]}
             </div>
           ) : (
             dayGroups.map((group, groupIdx) => {

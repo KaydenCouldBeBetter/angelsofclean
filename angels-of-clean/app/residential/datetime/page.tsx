@@ -22,10 +22,13 @@ function getWeekDays() {
   for (let i = 0; i < 6; i++) {
     const date = new Date(today);
     date.setDate(today.getDate() + i);
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
     days.push({
       label: dayNames[date.getDay()],
       date: date.getDate(),
-      full: date.toISOString().split("T")[0],
+      full: `${y}-${m}-${d}`,
       isFull: i === 2, // 3rd day marked as "Full" per Figma
     });
   }
