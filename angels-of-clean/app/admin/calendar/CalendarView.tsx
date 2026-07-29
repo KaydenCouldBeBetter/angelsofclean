@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -26,8 +27,11 @@ function JobCard({ info }: { info: EventContentArg }) {
   return (
     <div
       className={`
-        h-full w-full flex flex-col justify-between
+        group h-full w-full flex flex-col justify-between
         border-l-[3px] rounded-sm px-2 py-1.5 overflow-hidden
+        cursor-pointer transition-shadow duration-150
+        hover:shadow-[0_2px_8px_rgba(0,0,0,0.14)]
+        hover:ring-1 hover:ring-inset hover:ring-[#1a6b5a]/40
         ${cfg.cardBg} ${cfg.borderColor}
       `}
     >
@@ -64,12 +68,16 @@ function JobCard({ info }: { info: EventContentArg }) {
 
 export default function CalendarView({ jobs, employeeMap, adminEmail }: CalendarViewProps) {
   const [modalOpen, setModalOpen] = useState(false);
+  const router = useRouter();
 
   const fcEvents = jobs.map((job) => ({
     id: job.id,
     title: job.client,
     start: job.start,
     end: job.end,
+    // Renders each event as a real <a href>, so middle-click / open-in-new-tab
+    // and keyboard focus work. eventClick below takes over for in-app nav.
+    url: `/admin/bookings/${job.id}`,
     extendedProps: {
       service: job.service,
       address: job.address,
@@ -115,6 +123,12 @@ export default function CalendarView({ jobs, employeeMap, adminEmail }: Calendar
       weekends={true}
       events={fcEvents}
       eventContent={(info) => <JobCard info={info} />}
+      eventClick={(info) => {
+        // Let modified clicks (new tab/window) fall through to the browser.
+        if (info.jsEvent.metaKey || info.jsEvent.ctrlKey || info.jsEvent.shiftKey) return;
+        info.jsEvent.preventDefault();
+        if (info.event.url) router.push(info.event.url);
+      }}
       height="100%"
       expandRows={true}
       nowIndicator={true}

@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { createBrowserClient } from "@supabase/ssr";
 import { signOut } from "./auth-actions";
 
 const NAV_ITEMS = [
@@ -14,6 +16,24 @@ const NAV_ITEMS = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [adminEmail, setAdminEmail] = useState<string | null>(null);
+
+  // This layout is a client component (usePathname), so it can't await the
+  // server-side auth call the pages use — read the session from the browser.
+  useEffect(() => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    // getSession() reads the auth cookie directly; getUser() would add a network
+    // round-trip to validate the token, which isn't needed just to show a label
+    // (the middleware already gates access to these routes).
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) console.error("[admin sidebar] getSession failed:", error);
+      else if (!session) console.warn("[admin sidebar] no session cookie visible to the browser");
+      setAdminEmail(session?.user.email ?? null);
+    });
+  }, []);
 
   // The login page (/admin) renders its own full-page layout — no sidebar chrome
   // before a session exists.
@@ -63,7 +83,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Bottom */}
         <div className="px-6 py-4">
-          <p className="text-[#7aada3] text-xs">Admin: Jordan L.</p>
+          {/* Emails are wider than the 240px sidebar, so truncate and expose the
+              full address on hover. */}
+          <p className="text-[#7aada3] text-xs truncate" title={adminEmail ?? undefined}>
+            {adminEmail ? `Admin: ${adminEmail}` : "Admin"}
+          </p>
           <button
             onClick={() => signOut()}
             className="text-[#3ebfb5] text-xs mt-1 hover:underline"

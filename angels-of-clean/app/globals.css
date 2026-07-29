@@ -185,3 +185,9 @@
 .admin-calendar .fc-timegrid-event { border-radius: 4px !important; border: none !important; box-shadow: none !important; padding: 0 !important; background: transparent !important; }
 .admin-calendar .fc-event-main { padding: 0 !important; height: 100%; }
 .admin-calendar .fc-timegrid-event-harness { margin: 0 1px !important; }
+
+/* Events link to their booking page — kill the anchor underline and give
+   keyboard users a focus ring (the hover state lives on the card itself). */
+.admin-calendar a.fc-event { text-decoration: none !important; }
+.admin-calendar a.fc-event:focus { outline: none; }
+.admin-calendar a.fc-event:focus-visible { outline: 2px solid #1a6b5a; outline-offset: 1px; border-radius: 4px; }
