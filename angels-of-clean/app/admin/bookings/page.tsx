@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { getJobs, getEmployees } from "@/lib/supabase/queries";
+import { createClient } from "@/lib/supabase/server";
 import { DASHBOARD_STATUS, type Job, type JobStatus, type Employee } from "../data/mock";
+import { NewBookingButton } from "../NewBookingModal";
 
 type FilterTab = "today" | "upcoming" | "past" | "all";
 
@@ -134,7 +136,7 @@ function TabLink({ href, active, children }: { href: string; active: boolean; ch
   return (
     <Link
       href={href}
-      className={`h-8 px-5 rounded-md text-[12px] font-semibold transition-colors ${
+      className={`inline-flex items-center justify-center h-8 px-5 rounded-md text-[12px] font-semibold transition-colors ${
         active
           ? "bg-[#1a6b5a] text-white"
           : "bg-[#f0f0f0] text-[#5c5c5e] font-medium hover:bg-[#e5e5e5]"
@@ -152,6 +154,10 @@ export default async function AdminBookingsPage({
 }) {
   const params = await searchParams;
   const activeTab: FilterTab = (params.filter as FilterTab) || "today";
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const adminEmail = user?.email ?? "admin";
 
   const [jobs, employees] = await Promise.all([getJobs(), getEmployees()]);
   const employeeMap = Object.fromEntries(employees.map((e) => [e.id, e]));
@@ -194,13 +200,16 @@ export default async function AdminBookingsPage({
           </h1>
           <p className="text-xs text-[#5c5c5e]">All scheduled jobs</p>
         </div>
-        <span className="text-sm text-[#5c5c5e]">{displayDate}</span>
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-[#5c5c5e]">{displayDate}</span>
+          <NewBookingButton adminEmail={adminEmail} />
+        </div>
       </header>
 
       {/* Filter bar */}
       <div className="flex-shrink-0 h-14 bg-white border-b border-[#e2e8e6] flex items-center px-8 gap-2">
         {/* Segment tabs */}
-        <TabLink href="/admin/bookings?filter=all" active={activeTab === "all"}>
+        <TabLink href="/admin/bookings?filter=all" active={activeTab === "all"} >
           All
         </TabLink>
         <TabLink href="/admin/bookings?filter=today" active={activeTab === "today"}>

@@ -1,15 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import type { EventContentArg } from "@fullcalendar/core";
 import { STATUS_CONFIG, type Job, type Employee } from "../data/mock";
+import NewBookingModal from "../NewBookingModal";
 
 interface CalendarViewProps {
   jobs: Job[];
   employeeMap: Record<string, Employee>;
+  adminEmail: string;
 }
 
 function JobCard({ info }: { info: EventContentArg }) {
@@ -59,7 +62,9 @@ function JobCard({ info }: { info: EventContentArg }) {
   );
 }
 
-export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
+export default function CalendarView({ jobs, employeeMap, adminEmail }: CalendarViewProps) {
+  const [modalOpen, setModalOpen] = useState(false);
+
   const fcEvents = jobs.map((job) => ({
     id: job.id,
     title: job.client,
@@ -74,6 +79,7 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
   }));
 
   return (
+    <>
     <FullCalendar
       plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
       initialView="timeGridWeek"
@@ -93,7 +99,7 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
       customButtons={{
         newBooking: {
           text: "+ New Booking",
-          click: () => {},
+          click: () => setModalOpen(true),
         },
       }}
       views={{
@@ -115,5 +121,7 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
       dayHeaderFormat={{ weekday: "short", month: "numeric", day: "numeric", omitCommas: true }}
       eventMinHeight={60}
     />
+    <NewBookingModal open={modalOpen} onClose={() => setModalOpen(false)} adminEmail={adminEmail} />
+    </>
   );
 }

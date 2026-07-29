@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { getDashboardStats, getEmployees } from "@/lib/supabase/queries";
+import { createClient } from "@/lib/supabase/server";
 import { DASHBOARD_STATUS, type Job, type JobStatus } from "../data/mock";
+import { NewBookingButton } from "../NewBookingModal";
 
 function formatTime(iso: string) {
   const d = new Date(iso);
@@ -25,6 +27,10 @@ function StatusChip({ status }: { status: JobStatus }) {
 }
 
 export default async function AdminDashboardPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const adminEmail = user?.email ?? "admin";
+
   const [stats, employees] = await Promise.all([getDashboardStats(), getEmployees()]);
   const employeeMap = Object.fromEntries(employees.map((e) => [e.id, e]));
 
@@ -112,9 +118,7 @@ export default async function AdminDashboardPage() {
             <h2 className="font-semibold text-[17px] text-[#1c1c1e]">
               Today&apos;s Jobs
             </h2>
-            <button className="bg-[#1a6b5a] hover:bg-[#155a4b] text-white text-xs font-semibold px-5 py-2 rounded-lg transition-colors">
-              + New Booking
-            </button>
+            <NewBookingButton adminEmail={adminEmail} />
           </div>
 
           {/* Jobs Table */}
