@@ -1,4 +1,4 @@
-import { getEmployees, getJobs } from "@/lib/supabase/queries";
+import { getEmployees, getTodayJobs } from "@/lib/supabase/queries";
 import { EMPLOYEE_STATUS_CONFIG, type Employee, type EmployeeStatus, type Job } from "../data/mock";
 
 function getEmployeeStatus(employeeId: string, todayJobs: Job[]): EmployeeStatus {
@@ -79,10 +79,7 @@ function EmployeeCard({ employee, todayJobs }: { employee: Employee; todayJobs: 
 }
 
 export default async function AdminEmployeesPage() {
-  const [employees, jobs] = await Promise.all([getEmployees(), getJobs()]);
-
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const todayJobs = jobs.filter((job) => job.start.startsWith(todayStr) && job.status !== "cancelled");
+  const [employees, todayJobs] = await Promise.all([getEmployees(), getTodayJobs()]);
 
   const displayDate = new Date().toLocaleDateString(
     "en-US",

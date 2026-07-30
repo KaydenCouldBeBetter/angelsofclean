@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import type { EventContentArg } from "@fullcalendar/core";
+import type { EventContentArg, DatesSetArg } from "@fullcalendar/core";
 import { STATUS_CONFIG, type Job, type Employee } from "../data/mock";
 import NewBookingModal from "../NewBookingModal";
 
@@ -13,6 +13,11 @@ interface CalendarViewProps {
   jobs: Job[];
   employeeMap: Record<string, Employee>;
   adminEmail: string;
+}
+
+/** Format a Date to YYYY-MM-DD without timezone shift. */
+function toDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function JobCard({ info }: { info: EventContentArg }) {
@@ -64,8 +69,65 @@ function JobCard({ info }: { info: EventContentArg }) {
 
 export default function CalendarView({ jobs, employeeMap, adminEmail }: CalendarViewProps) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [allJobs, setAllJobs] = useState<Job[]>(jobs);
 
-  const fcEvents = jobs.map((job) => ({
+  // Track the date range we've already loaded so we don't re-fetch.
+  const loadedRange = useRef({ from: "", to: "" });
+
+  // Seed the initial loaded range (±2 months from today).
+  if (!loadedRange.current.from) {
+    const now = new Date();
+    const start = new Date(now);
+    start.setMonth(start.getMonth() - 2);
+    const end = new Date(now);
+    end.setMonth(end.getMonth() + 2);
+    loadedRange.current = { from: toDateStr(start), to: toDateStr(end) };
+  }
+
+  // Called whenever FullCalendar changes its visible date range (navigation).
+  const handleDatesSet = useCallback(async (arg: DatesSetArg) => {
+    const viewStart = toDateStr(arg.start);
+    const viewEnd = toDateStr(arg.end);
+
+    // If the visible range is within what we've already loaded, do nothing.
+    if (viewStart >= loadedRange.current.from && viewEnd <= loadedRange.current.to) {
+      return;
+    }
+
+    // Expand the loaded range to cover the new view (with 1-month padding).
+    const newFrom = viewStart < loadedRange.current.from ? viewStart : loadedRange.current.from;
+    const newTo = viewEnd > loadedRange.current.to ? viewEnd : loadedRange.current.to;
+
+    // Add 1-month padding so small navigations don't trigger more fetches.
+    const paddedFrom = new Date(`${newFrom}T00:00:00`);
+    paddedFrom.setMonth(paddedFrom.getMonth() - 1);
+    const paddedTo = new Date(`${newTo}T00:00:00`);
+    paddedTo.setMonth(paddedTo.getMonth() + 1);
+
+    const fetchFrom = toDateStr(paddedFrom);
+    const fetchTo = toDateStr(paddedTo);
+
+    try {
+      const res = await fetch(`/api/admin/jobs?from=${fetchFrom}&to=${fetchTo}`);
+      if (!res.ok) return;
+      const newJobs: Job[] = await res.json();
+
+      // Merge: replace any overlapping jobs (by id) and add new ones.
+      setAllJobs((prev) => {
+        const merged = new Map(prev.map((j) => [j.id, j]));
+        for (const job of newJobs) {
+          merged.set(job.id, job);
+        }
+        return Array.from(merged.values());
+      });
+
+      loadedRange.current = { from: fetchFrom, to: fetchTo };
+    } catch (err) {
+      console.error("Failed to fetch calendar jobs", err);
+    }
+  }, []);
+
+  const fcEvents = allJobs.map((job) => ({
     id: job.id,
     title: job.client,
     start: job.start,
@@ -120,6 +182,7 @@ export default function CalendarView({ jobs, employeeMap, adminEmail }: Calendar
       nowIndicator={true}
       dayHeaderFormat={{ weekday: "short", month: "numeric", day: "numeric", omitCommas: true }}
       eventMinHeight={60}
+      datesSet={handleDatesSet}
     />
     <NewBookingModal open={modalOpen} onClose={() => setModalOpen(false)} adminEmail={adminEmail} />
     </>

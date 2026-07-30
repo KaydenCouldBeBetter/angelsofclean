@@ -87,6 +87,101 @@ export async function getJobs(): Promise<Job[]> {
   return (data as unknown as BookingWithEmployees[]).map(mapBookingToJob);
 }
 
+/**
+ * Fetch bookings filtered by date tab — pushes the filter to Supabase
+ * so only matching rows are transferred.
+ */
+export async function getJobsByDateFilter(
+  filter: "today" | "upcoming" | "past" | "all",
+): Promise<Job[]> {
+  const supabase = await createClient();
+  const today = localDateStr();
+
+  let query = supabase
+    .from("bookings")
+    .select("*, booking_employees(employee_id)");
+
+  if (filter === "today") {
+    query = query.eq("scheduled_date", today);
+  } else if (filter === "upcoming") {
+    query = query.gt("scheduled_date", today);
+  } else if (filter === "past") {
+    query = query.lt("scheduled_date", today);
+  }
+  // "all" — no date filter
+
+  // Past jobs: most recent first. Everything else: chronological.
+  const ascending = filter !== "past";
+  query = query.order("start_at", { ascending });
+
+  const { data, error } = await query;
+
+  if (error || !data) {
+    console.error("getJobsByDateFilter failed", error);
+    return [];
+  }
+
+  return (data as unknown as BookingWithEmployees[]).map(mapBookingToJob);
+}
+
+/**
+ * Fetch only today's non-cancelled bookings — used by the employees page.
+ */
+export async function getTodayJobs(): Promise<Job[]> {
+  const supabase = await createClient();
+  const today = localDateStr();
+
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("*, booking_employees(employee_id)")
+    .eq("scheduled_date", today)
+    .neq("status", "cancelled")
+    .order("start_at");
+
+  if (error || !data) {
+    console.error("getTodayJobs failed", error);
+    return [];
+  }
+
+  return (data as unknown as BookingWithEmployees[]).map(mapBookingToJob);
+}
+
+/**
+ * Fetch bookings within a date window — used by the calendar page.
+ * Defaults to ±2 months from today so the user can navigate without
+ * loading the entire booking history.
+ */
+export async function getJobsInRange(
+  from?: string,
+  to?: string,
+): Promise<Job[]> {
+  const supabase = await createClient();
+
+  if (!from || !to) {
+    const now = new Date();
+    const start = new Date(now);
+    start.setMonth(start.getMonth() - 2);
+    const end = new Date(now);
+    end.setMonth(end.getMonth() + 2);
+    from = localDateStr(start);
+    to = localDateStr(end);
+  }
+
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("*, booking_employees(employee_id)")
+    .gte("scheduled_date", from)
+    .lte("scheduled_date", to)
+    .order("start_at");
+
+  if (error || !data) {
+    console.error("getJobsInRange failed", error);
+    return [];
+  }
+
+  return (data as unknown as BookingWithEmployees[]).map(mapBookingToJob);
+}
+
 // ---------- Dashboard-specific queries ----------
 
 /** Local YYYY-MM-DD (avoids UTC date shift). */

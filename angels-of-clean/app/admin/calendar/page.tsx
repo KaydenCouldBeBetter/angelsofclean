@@ -1,4 +1,4 @@
-import { getJobs, getEmployees } from "@/lib/supabase/queries";
+import { getJobsInRange, getEmployees } from "@/lib/supabase/queries";
 import { createClient } from "@/lib/supabase/server";
 import CalendarView from "./CalendarView";
 
@@ -7,7 +7,7 @@ export default async function AdminCalendarPage() {
   const { data: { user } } = await supabase.auth.getUser();
   const adminEmail = user?.email ?? "admin";
 
-  const [jobs, employees] = await Promise.all([getJobs(), getEmployees()]);
+  const [jobs, employees] = await Promise.all([getJobsInRange(), getEmployees()]);
   const employeeMap = Object.fromEntries(employees.map((e) => [e.id, e]));
 
   return (

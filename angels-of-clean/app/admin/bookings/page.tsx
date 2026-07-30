@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { getJobs, getEmployees } from "@/lib/supabase/queries";
+import { getJobsByDateFilter, getEmployees } from "@/lib/supabase/queries";
 import { createClient } from "@/lib/supabase/server";
 import { DASHBOARD_STATUS, type Job, type JobStatus, type Employee } from "../data/mock";
 import { NewBookingButton } from "../NewBookingModal";
+import BookingsSearch from "./BookingsSearch";
 
 type FilterTab = "today" | "upcoming" | "past" | "all";
 
@@ -150,34 +151,42 @@ function TabLink({ href, active, children }: { href: string; active: boolean; ch
 export default async function AdminBookingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string }>;
+  searchParams: Promise<{ filter?: string; search?: string }>;
 }) {
   const params = await searchParams;
   const activeTab: FilterTab = (params.filter as FilterTab) || "today";
+  const searchQuery = (params.search ?? "").toLowerCase();
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const adminEmail = user?.email ?? "admin";
 
-  const [jobs, employees] = await Promise.all([getJobs(), getEmployees()]);
+  const [jobs, employees] = await Promise.all([getJobsByDateFilter(activeTab), getEmployees()]);
   const employeeMap = Object.fromEntries(employees.map((e) => [e.id, e]));
   const _now = new Date();
   const todayStr = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-${String(_now.getDate()).padStart(2, "0")}`;
 
-  const filteredJobs = jobs.filter((job) => {
-    const jobDate = job.start.slice(0, 10);
-    if (activeTab === "today") return jobDate === todayStr;
-    if (activeTab === "upcoming") return jobDate > todayStr;
-    if (activeTab === "past") return jobDate < todayStr;
-    return true;
-  });
-
-  const allJobs = [...filteredJobs].sort((a, b) => {
-    // For past jobs, show most recent first
-    if (activeTab === "past") return b.start.localeCompare(a.start);
-    return a.start.localeCompare(b.start);
-  });
-  const dayGroups = groupJobsByDate(allJobs);
+  // Date filtering + sorting is now handled by the query.
+  // Only client-side search filtering remains.
+  const filteredJobs = searchQuery
+    ? jobs.filter((job) => {
+        const employeeNames = job.employeeIds
+          .map((id) => employeeMap[id]?.name ?? "")
+          .join(" ")
+          .toLowerCase();
+        return (
+          job.client.toLowerCase().includes(searchQuery) ||
+          job.address.toLowerCase().includes(searchQuery) ||
+          job.service.toLowerCase().includes(searchQuery) ||
+          job.status.toLowerCase().includes(searchQuery) ||
+          String(job.bookingNumber).includes(searchQuery) ||
+          (job.email?.toLowerCase().includes(searchQuery) ?? false) ||
+          (job.phone?.includes(searchQuery) ?? false) ||
+          employeeNames.includes(searchQuery)
+        );
+      })
+    : jobs;
+  const dayGroups = groupJobsByDate(filteredJobs);
 
   const displayDate = new Date().toLocaleDateString("en-US", {
     weekday: "short", month: "long", day: "numeric", year: "numeric",
@@ -232,11 +241,7 @@ export default async function AdminBookingsPage({
         </button>
 
         {/* Search */}
-        <div className="ml-auto">
-          <div className="h-8 w-[148px] rounded-md border border-[#e2e8e6] bg-white flex items-center px-3">
-            <span className="text-[12px] text-[#9ca3af]">&#128269;&nbsp; Search...</span>
-          </div>
-        </div>
+        <BookingsSearch />
       </div>
 
       {/* Content */}
@@ -244,7 +249,9 @@ export default async function AdminBookingsPage({
         <div className="p-8">
           {dayGroups.length === 0 ? (
             <div className="py-16 text-center text-sm text-[#5c5c5e]">
-              {emptyMessages[activeTab]}
+              {searchQuery
+                ? `No bookings matching "${params.search}".`
+                : emptyMessages[activeTab]}
             </div>
           ) : (
             dayGroups.map((group, groupIdx) => {
