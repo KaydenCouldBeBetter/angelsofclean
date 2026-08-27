@@ -7,9 +7,15 @@ function formatHiredDate(iso: string): string {
   return new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { month: "short", year: "numeric" });
 }
 
+// Explicit column lists — avoids transferring columns the app never reads.
+const BOOKING_COLUMNS =
+  "id,booking_number,client_name,email,phone,service_type,frequency,address,city,bedrooms,bathrooms,notes,start_at,end_at,status,submitted_at,booking_employees(employee_id)" as const;
+
+const EMPLOYEE_COLUMNS = "id,name,initials,phone,hired_date" as const;
+
 export async function getEmployees(): Promise<Employee[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("employees").select("*").order("name");
+  const { data, error } = await supabase.from("employees").select(EMPLOYEE_COLUMNS).order("name");
 
   if (error || !data) {
     console.error("getEmployees failed", error);
@@ -76,7 +82,7 @@ export async function getJobs(): Promise<Job[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("bookings")
-    .select("*, booking_employees(employee_id)")
+    .select(BOOKING_COLUMNS)
     .order("start_at");
 
   if (error || !data) {
@@ -99,7 +105,7 @@ export async function getJobsByDateFilter(
 
   let query = supabase
     .from("bookings")
-    .select("*, booking_employees(employee_id)");
+    .select(BOOKING_COLUMNS);
 
   if (filter === "today") {
     query = query.eq("scheduled_date", today);
@@ -133,7 +139,7 @@ export async function getTodayJobs(): Promise<Job[]> {
 
   const { data, error } = await supabase
     .from("bookings")
-    .select("*, booking_employees(employee_id)")
+    .select(BOOKING_COLUMNS)
     .eq("scheduled_date", today)
     .neq("status", "cancelled")
     .order("start_at");
@@ -169,7 +175,7 @@ export async function getJobsInRange(
 
   const { data, error } = await supabase
     .from("bookings")
-    .select("*, booking_employees(employee_id)")
+    .select(BOOKING_COLUMNS)
     .gte("scheduled_date", from)
     .lte("scheduled_date", to)
     .order("start_at");
@@ -217,7 +223,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     // Today's bookings (non-cancelled)
     supabase
       .from("bookings")
-      .select("*, booking_employees(employee_id)")
+      .select(BOOKING_COLUMNS)
       .eq("scheduled_date", today)
       .neq("status", "cancelled")
       .order("start_at"),
@@ -258,7 +264,7 @@ export async function getJobById(id: string): Promise<Job | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("bookings")
-    .select("*, booking_employees(employee_id)")
+    .select(BOOKING_COLUMNS)
     .eq("id", id)
     .maybeSingle();
 
@@ -274,7 +280,7 @@ export async function getActivityLog(bookingId: string): Promise<ActivityEntry[]
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("activity_log")
-    .select("*")
+    .select("description,created_at")
     .eq("booking_id", bookingId)
     .order("created_at", { ascending: true });
 

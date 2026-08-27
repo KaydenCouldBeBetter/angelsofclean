@@ -110,7 +110,7 @@ export default function NewBookingModal({ open, onClose, adminEmail }: NewBookin
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[8vh]">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh]">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/40"

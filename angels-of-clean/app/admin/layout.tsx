@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { createBrowserClient } from "@supabase/ssr";
 import { signOut } from "./auth-actions";
 
 const NAV_ITEMS = [
@@ -14,6 +16,24 @@ const NAV_ITEMS = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [userLabel, setUserLabel] = useState("Admin");
+
+  useEffect(() => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    supabase.auth.getSession().then(({ data }) => {
+      const user = data.session?.user;
+      if (!user) return;
+      const name =
+        user.user_metadata?.full_name ||
+        user.user_metadata?.name ||
+        user.email?.split("@")[0] ||
+        "Admin";
+      setUserLabel(name);
+    });
+  }, []);
 
   // The login page (/admin) renders its own full-page layout — no sidebar chrome
   // before a session exists.
@@ -63,7 +83,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Bottom */}
         <div className="px-6 py-4">
-          <p className="text-[#7aada3] text-xs">Admin: Jordan L.</p>
+          <p className="text-[#7aada3] text-xs">Admin: {userLabel}</p>
           <button
             onClick={() => signOut()}
             className="text-[#3ebfb5] text-xs mt-1 hover:underline"

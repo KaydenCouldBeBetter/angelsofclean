@@ -42,8 +42,8 @@ export default function ConfirmationPage() {
 
         <div className="flex flex-col items-center gap-6 px-4 pt-10 pb-10">
           {/* Success icon */}
-          <div className="w-20 h-20 rounded-full border-2 border-teal-500 flex items-center justify-center" role="img" aria-label="Booking confirmed">
-            <span className="text-3xl text-teal-600" aria-hidden="true">&#10003;</span>
+          <div className="w-20 h-20 rounded-full bg-[#1a6b5a] flex items-center justify-center" role="img" aria-label="Booking confirmed">
+            <span className="text-3xl text-white" aria-hidden="true">&#10003;</span>
           </div>
 
           <div className="text-center">
@@ -98,8 +98,8 @@ export default function ConfirmationPage() {
       {/* ── Desktop ── */}
       <div className="hidden lg:flex flex-col items-center py-10">
         {/* Success icon */}
-        <div className="w-[120px] h-[120px] rounded-full bg-teal-50 flex items-center justify-center mb-6" role="img" aria-label="Booking confirmed">
-          <span className="text-5xl text-[#1a6b5a]" aria-hidden="true">&#10003;</span>
+        <div className="w-[120px] h-[120px] rounded-full bg-[#1a6b5a] flex items-center justify-center mb-6" role="img" aria-label="Booking confirmed">
+          <span className="text-5xl text-white" aria-hidden="true">&#10003;</span>
         </div>
 
         <h1 className="text-3xl font-bold text-zinc-900">Booking Confirmed!</h1>
