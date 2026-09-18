@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireAdmin, NOT_SIGNED_IN_ERROR } from "@/lib/supabase/require-admin";
 import { getJobsInRange } from "@/lib/supabase/queries";
 
 export async function GET(req: NextRequest) {
-  // Verify the user is authenticated
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  // Verify the user is a signed-in admin, not just any authenticated account.
+  const auth = await requireAdmin();
 
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!auth.ok) {
+    const status = auth.error === NOT_SIGNED_IN_ERROR ? 401 : 403;
+    return NextResponse.json({ error: "Unauthorized" }, { status });
   }
 
   const { searchParams } = req.nextUrl;

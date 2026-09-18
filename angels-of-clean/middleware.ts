@@ -7,7 +7,12 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isLoginRoute = pathname === "/admin";
 
-  if (!user && !isLoginRoute) {
+  // Admin pages require the admin role claim, not just a session — any
+  // Supabase account can be signed in, but only app_metadata.role === "admin"
+  // (server-set, never client-editable) may view the admin panel.
+  const isAdmin = user?.app_metadata?.role === "admin";
+
+  if (!isAdmin && !isLoginRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/admin";
     return NextResponse.redirect(url);

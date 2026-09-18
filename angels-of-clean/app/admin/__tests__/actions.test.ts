@@ -10,6 +10,8 @@ const requireAdminMock = vi.fn();
 
 vi.mock("@/lib/supabase/require-admin", () => ({
   requireAdmin: () => requireAdminMock(),
+  NOT_SIGNED_IN_ERROR: "You must be signed in to do this.",
+  NOT_AUTHORIZED_ERROR: "You are not authorized to do this.",
 }));
 
 import { assignEmployees, updateBookingStatus } from "../actions";
@@ -31,9 +33,14 @@ const fromMock = vi.fn((table: string) => {
 });
 
 const ADMIN_CONTEXT = {
+  ok: true,
   supabase: { from: fromMock },
   user: { email: "admin@example.com" },
 };
+
+const SIGNED_OUT = { ok: false, error: "You must be signed in to do this." };
+// A real session exists but app_metadata.role !== "admin".
+const NON_ADMIN = { ok: false, error: "You are not authorized to do this." };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -42,14 +49,27 @@ beforeEach(() => {
 });
 
 describe("assignEmployees", () => {
-  it("rejects when there is no verified admin session, without touching the database", async () => {
-    requireAdminMock.mockResolvedValue(null);
+  it("rejects when there is no session at all, without touching the database", async () => {
+    requireAdminMock.mockResolvedValue(SIGNED_OUT);
 
     const result = await assignEmployees("b-1", ["e-1"]);
 
     expect(result).toEqual({
       success: false,
       error: "You must be signed in to do this.",
+    });
+    expect(fromMock).not.toHaveBeenCalled();
+    expect(revalidatePathMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a signed-in user without the admin role, without touching the database", async () => {
+    requireAdminMock.mockResolvedValue(NON_ADMIN);
+
+    const result = await assignEmployees("b-1", ["e-1"]);
+
+    expect(result).toEqual({
+      success: false,
+      error: "You are not authorized to do this.",
     });
     expect(fromMock).not.toHaveBeenCalled();
     expect(revalidatePathMock).not.toHaveBeenCalled();
@@ -71,14 +91,27 @@ describe("assignEmployees", () => {
 });
 
 describe("updateBookingStatus", () => {
-  it("rejects when there is no verified admin session, without touching the database", async () => {
-    requireAdminMock.mockResolvedValue(null);
+  it("rejects when there is no session at all, without touching the database", async () => {
+    requireAdminMock.mockResolvedValue(SIGNED_OUT);
 
     const result = await updateBookingStatus("b-1", "done");
 
     expect(result).toEqual({
       success: false,
       error: "You must be signed in to do this.",
+    });
+    expect(fromMock).not.toHaveBeenCalled();
+    expect(revalidatePathMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a signed-in user without the admin role, without touching the database", async () => {
+    requireAdminMock.mockResolvedValue(NON_ADMIN);
+
+    const result = await updateBookingStatus("b-1", "done");
+
+    expect(result).toEqual({
+      success: false,
+      error: "You are not authorized to do this.",
     });
     expect(fromMock).not.toHaveBeenCalled();
     expect(revalidatePathMock).not.toHaveBeenCalled();

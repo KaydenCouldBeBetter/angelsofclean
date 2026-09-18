@@ -9,8 +9,6 @@ interface ActionResult {
   error?: string;
 }
 
-const NOT_SIGNED_IN_ERROR = "You must be signed in to do this.";
-
 const STATUS_ACTIVITY_LABEL: Record<JobStatus, string> = {
   pending: "Marked pending",
   confirmed: "Confirmed",
@@ -18,6 +16,15 @@ const STATUS_ACTIVITY_LABEL: Record<JobStatus, string> = {
   done: "Marked complete",
   cancelled: "Booking cancelled",
 };
+
+// Log only the Postgres error code plus a correlation id — full Supabase
+// error objects can echo row data (customer PII) into server logs.
+function logDbError(source: string, error: { code?: string } | null | undefined) {
+  console.error(`${source} failed`, {
+    code: error?.code ?? "unknown",
+    correlationId: crypto.randomUUID(),
+  });
+}
 
 function revalidateBookingPaths(bookingId: string) {
   revalidatePath(`/admin/bookings/${bookingId}`);
@@ -44,8 +51,8 @@ export async function assignEmployees(
   employeeIds: string[],
 ): Promise<ActionResult> {
   const auth = await requireAdmin();
-  if (!auth) {
-    return { success: false, error: NOT_SIGNED_IN_ERROR };
+  if (!auth.ok) {
+    return { success: false, error: auth.error };
   }
   const { supabase } = auth;
 
@@ -55,7 +62,7 @@ export async function assignEmployees(
     .eq("booking_id", bookingId);
 
   if (deleteError) {
-    console.error("assignEmployees: delete failed", deleteError);
+    logDbError("assignEmployees: delete", deleteError);
     return { success: false, error: "Something went wrong. Please try again." };
   }
 
@@ -65,7 +72,7 @@ export async function assignEmployees(
       .insert(employeeIds.map((employee_id) => ({ booking_id: bookingId, employee_id })));
 
     if (insertError) {
-      console.error("assignEmployees: insert failed", insertError);
+      logDbError("assignEmployees: insert", insertError);
       return { success: false, error: "Something went wrong. Please try again." };
     }
   }
@@ -84,8 +91,8 @@ export async function updateBookingStatus(
   status: JobStatus,
 ): Promise<ActionResult> {
   const auth = await requireAdmin();
-  if (!auth) {
-    return { success: false, error: NOT_SIGNED_IN_ERROR };
+  if (!auth.ok) {
+    return { success: false, error: auth.error };
   }
   const { supabase } = auth;
 
@@ -96,7 +103,7 @@ export async function updateBookingStatus(
     .select("id");
 
   if (error) {
-    console.error("updateBookingStatus failed", error);
+    logDbError("updateBookingStatus", error);
     return { success: false, error: "Something went wrong. Please try again." };
   }
 
