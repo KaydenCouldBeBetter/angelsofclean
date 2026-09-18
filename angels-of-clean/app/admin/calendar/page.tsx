@@ -1,12 +1,7 @@
 import { getJobsInRange, getEmployees } from "@/lib/supabase/queries";
-import { createClient } from "@/lib/supabase/server";
 import CalendarView from "./CalendarView";
 
 export default async function AdminCalendarPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const adminEmail = user?.email ?? "admin";
-
   const [jobs, employees] = await Promise.all([getJobsInRange(), getEmployees()]);
   const employeeMap = Object.fromEntries(employees.map((e) => [e.id, e]));
 
@@ -25,7 +20,7 @@ export default async function AdminCalendarPage() {
 
       {/* Calendar */}
       <div className="flex-1 overflow-auto p-0 admin-calendar">
-        <CalendarView jobs={jobs} employeeMap={employeeMap} adminEmail={adminEmail} />
+        <CalendarView jobs={jobs} employeeMap={employeeMap} />
       </div>
     </>
   );

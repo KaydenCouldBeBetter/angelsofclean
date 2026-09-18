@@ -7,10 +7,11 @@ import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
 import { useBookingStore } from "@/store/bookingStore";
+import { TIME_SLOT_WINDOWS } from "@/lib/constants";
 
 const TIME_SLOTS = [
-  { id: "morning" as const, label: "Morning", sub: "8:00 AM \u2013 12:00 PM" },
-  { id: "afternoon" as const, label: "Afternoon", sub: "12:00 PM \u2013 4:00 PM" },
+  { id: "morning" as const, label: TIME_SLOT_WINDOWS.morning.label, sub: TIME_SLOT_WINDOWS.morning.display },
+  { id: "afternoon" as const, label: TIME_SLOT_WINDOWS.afternoon.label, sub: TIME_SLOT_WINDOWS.afternoon.display },
   { id: "evening" as const, label: "Evening", sub: "Unavailable", disabled: true },
 ];
 

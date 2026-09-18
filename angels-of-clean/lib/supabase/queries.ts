@@ -11,14 +11,29 @@ function formatHiredDate(iso: string): string {
 const BOOKING_COLUMNS =
   "id,booking_number,client_name,email,phone,service_type,frequency,address,city,bedrooms,bathrooms,notes,start_at,end_at,status,submitted_at,booking_employees(employee_id)" as const;
 
+// Calendar projection — the calendar UI renders no contact info, so email,
+// phone, and notes must never leave the server for that surface (the API
+// route ships this straight to the browser).
+const CALENDAR_BOOKING_COLUMNS =
+  "id,booking_number,client_name,service_type,frequency,address,city,bedrooms,bathrooms,start_at,end_at,status,submitted_at,booking_employees(employee_id)" as const;
+
 const EMPLOYEE_COLUMNS = "id,name,initials,phone,hired_date" as const;
+
+// Log only the Postgres error code plus a correlation id — full Supabase
+// error objects can echo row data (customer PII) into server logs.
+function logQueryError(source: string, error: { code?: string } | null | undefined) {
+  console.error(`${source} failed`, {
+    code: error?.code ?? "unknown",
+    correlationId: crypto.randomUUID(),
+  });
+}
 
 export async function getEmployees(): Promise<Employee[]> {
   const supabase = await createClient();
   const { data, error } = await supabase.from("employees").select(EMPLOYEE_COLUMNS).order("name");
 
   if (error || !data) {
-    console.error("getEmployees failed", error);
+    logQueryError("getEmployees", error);
     return [];
   }
 
@@ -38,15 +53,16 @@ type BookingWithEmployees = {
   id: string;
   booking_number: number;
   client_name: string;
-  email: string;
-  phone: string;
+  // Absent on the slim calendar projection (CALENDAR_BOOKING_COLUMNS).
+  email?: string;
+  phone?: string;
   service_type: string;
   frequency: string;
   address: string;
   city: string;
   bedrooms: number;
   bathrooms: number;
-  notes: string | null;
+  notes?: string | null;
   start_at: string;
   end_at: string;
   status: JobStatus;
@@ -86,7 +102,7 @@ export async function getJobs(): Promise<Job[]> {
     .order("start_at");
 
   if (error || !data) {
-    console.error("getJobs failed", error);
+    logQueryError("getJobs", error);
     return [];
   }
 
@@ -123,7 +139,7 @@ export async function getJobsByDateFilter(
   const { data, error } = await query;
 
   if (error || !data) {
-    console.error("getJobsByDateFilter failed", error);
+    logQueryError("getJobsByDateFilter", error);
     return [];
   }
 
@@ -145,7 +161,7 @@ export async function getTodayJobs(): Promise<Job[]> {
     .order("start_at");
 
   if (error || !data) {
-    console.error("getTodayJobs failed", error);
+    logQueryError("getTodayJobs", error);
     return [];
   }
 
@@ -175,13 +191,13 @@ export async function getJobsInRange(
 
   const { data, error } = await supabase
     .from("bookings")
-    .select(BOOKING_COLUMNS)
+    .select(CALENDAR_BOOKING_COLUMNS)
     .gte("scheduled_date", from)
     .lte("scheduled_date", to)
     .order("start_at");
 
   if (error || !data) {
-    console.error("getJobsInRange failed", error);
+    logQueryError("getJobsInRange", error);
     return [];
   }
 
@@ -269,7 +285,7 @@ export async function getJobById(id: string): Promise<Job | null> {
     .maybeSingle();
 
   if (error || !data) {
-    if (error) console.error("getJobById failed", error);
+    if (error) logQueryError("getJobById", error);
     return null;
   }
 
@@ -285,7 +301,7 @@ export async function getActivityLog(bookingId: string): Promise<ActivityEntry[]
     .order("created_at", { ascending: true });
 
   if (error || !data) {
-    console.error("getActivityLog failed", error);
+    logQueryError("getActivityLog", error);
     return [];
   }
 

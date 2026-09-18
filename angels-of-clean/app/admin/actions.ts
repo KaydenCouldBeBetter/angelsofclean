@@ -1,13 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { requireAdmin, type AdminContext } from "@/lib/supabase/require-admin";
 import type { JobStatus } from "./data/mock";
 
 interface ActionResult {
   success: boolean;
   error?: string;
 }
+
+const NOT_SIGNED_IN_ERROR = "You must be signed in to do this.";
 
 const STATUS_ACTIVITY_LABEL: Record<JobStatus, string> = {
   pending: "Marked pending",
@@ -26,14 +28,11 @@ function revalidateBookingPaths(bookingId: string) {
 }
 
 async function logActivity(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  { supabase, user }: AdminContext,
   bookingId: string,
   description: string,
 ) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const suffix = user?.email ? ` by ${user.email}` : "";
+  const suffix = user.email ? ` by ${user.email}` : "";
   await supabase.from("activity_log").insert({
     booking_id: bookingId,
     description: `${description}${suffix}`,
@@ -44,7 +43,11 @@ export async function assignEmployees(
   bookingId: string,
   employeeIds: string[],
 ): Promise<ActionResult> {
-  const supabase = await createClient();
+  const auth = await requireAdmin();
+  if (!auth) {
+    return { success: false, error: NOT_SIGNED_IN_ERROR };
+  }
+  const { supabase } = auth;
 
   const { error: deleteError } = await supabase
     .from("booking_employees")
@@ -70,7 +73,7 @@ export async function assignEmployees(
   const description = employeeIds.length > 0
     ? `Employee${employeeIds.length > 1 ? "s" : ""} assigned`
     : "Employees unassigned";
-  await logActivity(supabase, bookingId, description);
+  await logActivity(auth, bookingId, description);
 
   revalidateBookingPaths(bookingId);
   return { success: true };
@@ -80,19 +83,30 @@ export async function updateBookingStatus(
   bookingId: string,
   status: JobStatus,
 ): Promise<ActionResult> {
-  const supabase = await createClient();
+  const auth = await requireAdmin();
+  if (!auth) {
+    return { success: false, error: NOT_SIGNED_IN_ERROR };
+  }
+  const { supabase } = auth;
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("bookings")
     .update({ status, updated_at: new Date().toISOString() })
-    .eq("id", bookingId);
+    .eq("id", bookingId)
+    .select("id");
 
   if (error) {
     console.error("updateBookingStatus failed", error);
     return { success: false, error: "Something went wrong. Please try again." };
   }
 
-  await logActivity(supabase, bookingId, STATUS_ACTIVITY_LABEL[status]);
+  // Zero affected rows means the booking doesn't exist (or RLS blocked the
+  // write) — without .select() Supabase reports that as a silent success.
+  if (!updated || updated.length === 0) {
+    return { success: false, error: "Booking not found." };
+  }
+
+  await logActivity(auth, bookingId, STATUS_ACTIVITY_LABEL[status]);
 
   revalidateBookingPaths(bookingId);
   return { success: true };

@@ -3,6 +3,7 @@ import {
   SERVICE_LABELS,
   FREQUENCY_LABELS,
   TIME_LABELS,
+  TIME_SLOT_WINDOWS,
   PRICE_MAP,
   SERVICE_AREA_ZIPS,
 } from "@/lib/constants";
@@ -31,6 +32,32 @@ describe("TIME_LABELS", () => {
     expect(TIME_LABELS.morning).toContain("Morning");
     expect(TIME_LABELS.afternoon).toContain("Afternoon");
     expect(Object.keys(TIME_LABELS)).toHaveLength(2);
+  });
+});
+
+describe("TIME_SLOT_WINDOWS", () => {
+  it("stores the windows customers are shown: morning 8–12, afternoon 12–4", () => {
+    expect(TIME_SLOT_WINDOWS.morning.start).toBe("08:00:00");
+    expect(TIME_SLOT_WINDOWS.morning.end).toBe("12:00:00");
+    expect(TIME_SLOT_WINDOWS.afternoon.start).toBe("12:00:00");
+    expect(TIME_SLOT_WINDOWS.afternoon.end).toBe("16:00:00");
+  });
+
+  it("display range matches the stored start/end times for every slot", () => {
+    const to12h = (time: string) => {
+      const hour = Number(time.split(":")[0]);
+      const meridiem = hour < 12 ? "AM" : "PM";
+      const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+      return `${hour12}:00 ${meridiem}`;
+    };
+    for (const window of Object.values(TIME_SLOT_WINDOWS)) {
+      expect(window.display).toBe(`${to12h(window.start)} – ${to12h(window.end)}`);
+    }
+  });
+
+  it("TIME_LABELS is derived from the same windows", () => {
+    expect(TIME_LABELS.morning).toBe(`Morning (${TIME_SLOT_WINDOWS.morning.display})`);
+    expect(TIME_LABELS.afternoon).toBe(`Afternoon (${TIME_SLOT_WINDOWS.afternoon.display})`);
   });
 });
 
