@@ -12,7 +12,6 @@ import NewBookingModal from "../NewBookingModal";
 interface CalendarViewProps {
   jobs: Job[];
   employeeMap: Record<string, Employee>;
-  adminEmail: string;
 }
 
 /** Format a Date to YYYY-MM-DD without timezone shift. */
@@ -67,7 +66,7 @@ function JobCard({ info }: { info: EventContentArg }) {
   );
 }
 
-export default function CalendarView({ jobs, employeeMap, adminEmail }: CalendarViewProps) {
+export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [allJobs, setAllJobs] = useState<Job[]>(jobs);
 
@@ -184,7 +183,7 @@ export default function CalendarView({ jobs, employeeMap, adminEmail }: Calendar
       eventMinHeight={60}
       datesSet={handleDatesSet}
     />
-    <NewBookingModal open={modalOpen} onClose={() => setModalOpen(false)} adminEmail={adminEmail} />
+    <NewBookingModal open={modalOpen} onClose={() => setModalOpen(false)} />
     </>
   );
 }

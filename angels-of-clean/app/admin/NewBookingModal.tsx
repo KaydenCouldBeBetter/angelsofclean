@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { adminCreateBooking } from "@/app/actions/submitBooking";
+import { TIME_LABELS } from "@/lib/constants";
 
 const SERVICES = [
   { value: "standard", label: "Standard Clean" },
@@ -21,18 +22,14 @@ const FREQUENCIES = [
   { value: "monthly", label: "Monthly" },
 ] as const;
 
-const TIME_SLOTS = [
-  { value: "morning", label: "Morning (9am–11am)" },
-  { value: "afternoon", label: "Afternoon (1pm–3pm)" },
-] as const;
+const TIME_SLOTS = Object.entries(TIME_LABELS).map(([value, label]) => ({ value, label }));
 
 interface NewBookingModalProps {
   open: boolean;
   onClose: () => void;
-  adminEmail: string;
 }
 
-export default function NewBookingModal({ open, onClose, adminEmail }: NewBookingModalProps) {
+export default function NewBookingModal({ open, onClose }: NewBookingModalProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -93,7 +90,6 @@ export default function NewBookingModal({ open, onClose, adminEmail }: NewBookin
     startTransition(async () => {
       const result = await adminCreateBooking(
         { service, frequency, address, city, zip, bedrooms, bathrooms, notes, date, timeSlot, name, email, phone },
-        adminEmail,
       );
 
       if (!result.success) {
@@ -302,7 +298,7 @@ export default function NewBookingModal({ open, onClose, adminEmail }: NewBookin
 }
 
 /** Small client wrapper — drop into any server component page. */
-export function NewBookingButton({ adminEmail }: { adminEmail: string }) {
+export function NewBookingButton() {
   const [open, setOpen] = useState(false);
 
   return (
@@ -313,7 +309,7 @@ export function NewBookingButton({ adminEmail }: { adminEmail: string }) {
       >
         + New Booking
       </button>
-      <NewBookingModal open={open} onClose={() => setOpen(false)} adminEmail={adminEmail} />
+      <NewBookingModal open={open} onClose={() => setOpen(false)} />
     </>
   );
 }

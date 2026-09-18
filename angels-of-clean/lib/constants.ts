@@ -23,9 +23,19 @@ export const FREQUENCY_LABELS: Record<NonNullable<Frequency>, string> = {
   monthly: "Monthly",
 };
 
+// Single source of truth for slot windows: the customer picker, the admin
+// New Booking modal, and the stored start_at/end_at must all agree.
+export const TIME_SLOT_WINDOWS: Record<
+  NonNullable<TimeSlot>,
+  { label: string; display: string; start: string; end: string }
+> = {
+  morning:   { label: "Morning",   display: "8:00 AM – 12:00 PM", start: "08:00:00", end: "12:00:00" },
+  afternoon: { label: "Afternoon", display: "12:00 PM – 4:00 PM", start: "12:00:00", end: "16:00:00" },
+};
+
 export const TIME_LABELS: Record<NonNullable<TimeSlot>, string> = {
-  morning: "Morning (8am–12pm)",
-  afternoon: "Afternoon (12pm–4pm)",
+  morning: `Morning (${TIME_SLOT_WINDOWS.morning.display})`,
+  afternoon: `Afternoon (${TIME_SLOT_WINDOWS.afternoon.display})`,
 };
 
 export const PRICE_MAP: Record<NonNullable<ServiceType>, string> = {
