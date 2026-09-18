@@ -153,8 +153,8 @@ export async function submitBooking(data: BookingData): Promise<BookingResult> {
  */
 export async function adminCreateBooking(data: BookingData): Promise<BookingResult> {
   const auth = await requireAdmin();
-  if (!auth) {
-    return { success: false, error: "You must be signed in to do this." };
+  if (!auth.ok) {
+    return { success: false, error: auth.error };
   }
   return createBooking(
     data,

@@ -8,7 +8,9 @@ export default async function AdminIndexPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (user) {
+  // Only admins skip the login form — middleware bounces non-admins back
+  // here, so redirecting them to the dashboard would loop.
+  if (user?.app_metadata?.role === "admin") {
     redirect("/admin/dashboard");
   }
 

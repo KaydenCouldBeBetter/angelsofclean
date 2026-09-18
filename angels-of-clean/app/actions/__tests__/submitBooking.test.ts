@@ -18,7 +18,7 @@ vi.mock("@/lib/supabase/service", () => ({
 // adminCreateBooking derives the actor from the verified session.
 vi.mock("@/lib/supabase/require-admin", () => ({
   requireAdmin: vi.fn(() =>
-    Promise.resolve({ user: { email: "admin@example.com" } }),
+    Promise.resolve({ ok: true, user: { email: "admin@example.com" } }),
   ),
 }));
 
@@ -183,14 +183,33 @@ describe("submitBooking", () => {
 });
 
 describe("adminCreateBooking", () => {
-  it("rejects when there is no verified admin session, without touching the database", async () => {
-    vi.mocked(requireAdmin).mockResolvedValueOnce(null);
+  it("rejects when there is no session at all, without touching the database", async () => {
+    vi.mocked(requireAdmin).mockResolvedValueOnce({
+      ok: false,
+      error: "You must be signed in to do this.",
+    });
 
     const result = await adminCreateBooking(VALID_INPUT);
 
     expect(result).toEqual({
       success: false,
       error: "You must be signed in to do this.",
+    });
+    expect(bookingsInsertMock).not.toHaveBeenCalled();
+    expect(activityLogInsertMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a signed-in user without the admin role, without touching the database", async () => {
+    vi.mocked(requireAdmin).mockResolvedValueOnce({
+      ok: false,
+      error: "You are not authorized to do this.",
+    });
+
+    const result = await adminCreateBooking(VALID_INPUT);
+
+    expect(result).toEqual({
+      success: false,
+      error: "You are not authorized to do this.",
     });
     expect(bookingsInsertMock).not.toHaveBeenCalled();
     expect(activityLogInsertMock).not.toHaveBeenCalled();

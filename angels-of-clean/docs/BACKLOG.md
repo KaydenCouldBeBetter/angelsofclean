@@ -70,11 +70,13 @@ These are code items that need no decision, most important first. **One item per
   *Done 2026-09-18:* `requireAdmin()` (`lib/supabase/require-admin.ts`) verifies the session via `auth.getUser()` at the top of `adminCreateBooking`, `assignEmployees`, and `updateBookingStatus`; the actor email now comes from the session, and the forgeable `adminEmail` argument/prop was removed end-to-end (modal, calendar, and the three admin pages). `updateBookingStatus` uses `.select("id")` and returns "Booking not found." on zero affected rows. Tests: `app/actions/__tests__/submitBooking.test.ts`, `app/admin/__tests__/actions.test.ts`. Action-level auth only — B2 (role claim + RLS) is still open.
   </details>
 
-- [ ] **B2 · Add a real admin role, lock down database rules, disable public signups** · `code` · **M**
+- [x] **B2 · Add a real admin role, lock down database rules, disable public signups** · `code` · **M**
   **Why it matters:** Anyone who creates any account can read every customer's address, phone, and door code.
   <details><summary>Details</summary>
 
   RLS grants on `auth.role() = 'authenticated'` alone (`supabase/001_initial_schema.sql:63-77`). Add a role claim (`app_metadata.role = 'admin'`) and rewrite the policies and server checks against it. Prerequisite for any employee or client login. *Needs verification:* whether email signups are enabled in the Supabase dashboard. *Source: code C2*
+
+  *Done 2026-09-18 (code side):* `supabase/002_admin_role_rls.sql` drops the five `authenticated` policies and recreates them requiring `(auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'`; public bookings are unaffected (service-role insert, no anon policy). `requireAdmin()` (`lib/supabase/require-admin.ts`) now also checks `app_metadata.role === "admin"` and distinguishes "not signed in" from "not authorized"; `middleware.ts`, `app/admin/page.tsx`, `signIn()`, and `/api/admin/jobs` all check the role claim too. Tests: `lib/supabase/__tests__/require-admin.test.ts` plus non-admin refusal cases in both action test files. **Still manual:** run the migration + role-grant SQL in Supabase, and disable public email signups in the dashboard (Authentication → Providers → Email).
   </details>
 
 - [ ] **B3 · Fix or pull the commercial quote flow** · `both` · **M**
