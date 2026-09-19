@@ -2,9 +2,26 @@ import { createClient } from "./server";
 import type { Employee, Job, ActivityEntry, JobStatus } from "@/app/admin/data/mock";
 import { SERVICE_LABELS, FREQUENCY_LABELS } from "@/lib/constants";
 import type { ServiceType, Frequency } from "@/store/bookingStore";
+import { formatNy, formatNyDateTime, nyTodayStr } from "@/lib/datetime";
 
+// hired_date is a plain date (no time). Anchor it at noon UTC — safely inside
+// the same calendar day for New York — before formatting in the NY zone.
 function formatHiredDate(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  return formatNy(`${iso}T12:00:00Z`, { month: "short", year: "numeric" });
+}
+
+// Date-string arithmetic done in UTC so it never depends on the process zone.
+// Inputs/outputs are "YYYY-MM-DD"; the anchor day is fixed by the string.
+function shiftDays(dateStr: string, n: number): string {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+function shiftMonths(dateStr: string, n: number): string {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  d.setUTCMonth(d.getUTCMonth() + n);
+  return d.toISOString().slice(0, 10);
 }
 
 // Explicit column lists — avoids transferring columns the app never reads.
@@ -117,7 +134,7 @@ export async function getJobsByDateFilter(
   filter: "today" | "upcoming" | "past" | "all",
 ): Promise<Job[]> {
   const supabase = await createClient();
-  const today = localDateStr();
+  const today = nyTodayStr();
 
   let query = supabase
     .from("bookings")
@@ -151,7 +168,7 @@ export async function getJobsByDateFilter(
  */
 export async function getTodayJobs(): Promise<Job[]> {
   const supabase = await createClient();
-  const today = localDateStr();
+  const today = nyTodayStr();
 
   const { data, error } = await supabase
     .from("bookings")
@@ -180,13 +197,9 @@ export async function getJobsInRange(
   const supabase = await createClient();
 
   if (!from || !to) {
-    const now = new Date();
-    const start = new Date(now);
-    start.setMonth(start.getMonth() - 2);
-    const end = new Date(now);
-    end.setMonth(end.getMonth() + 2);
-    from = localDateStr(start);
-    to = localDateStr(end);
+    const today = nyTodayStr();
+    from = shiftMonths(today, -2);
+    to = shiftMonths(today, 2);
   }
 
   const { data, error } = await supabase
@@ -206,11 +219,6 @@ export async function getJobsInRange(
 
 // ---------- Dashboard-specific queries ----------
 
-/** Local YYYY-MM-DD (avoids UTC date shift). */
-function localDateStr(d: Date = new Date()): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
 export interface DashboardStats {
   todayJobs: Job[];
   totalPending: number;
@@ -220,20 +228,13 @@ export interface DashboardStats {
 
 export async function getDashboardStats(): Promise<DashboardStats> {
   const supabase = await createClient();
-  const today = localDateStr();
+  const today = nyTodayStr();
 
-  // Monday of this week
-  const now = new Date();
-  const dayOfWeek = now.getDay(); // 0=Sun
+  // This week's Monday…Sunday, anchored on New York's "today".
+  const dayOfWeek = new Date(`${today}T00:00:00Z`).getUTCDay(); // 0=Sun
   const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() + mondayOffset);
-  const weekStart = localDateStr(monday);
-
-  // Sunday end of week
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  const weekEnd = localDateStr(sunday);
+  const weekStart = shiftDays(today, mondayOffset);
+  const weekEnd = shiftDays(weekStart, 6);
 
   const [todayRes, pendingRes, completedRes, employeeRes] = await Promise.all([
     // Today's bookings (non-cancelled)
@@ -306,12 +307,7 @@ export async function getActivityLog(bookingId: string): Promise<ActivityEntry[]
   }
 
   return data.map((row) => ({
-    timestamp: new Date(row.created_at).toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    }),
+    timestamp: formatNyDateTime(row.created_at),
     description: row.description,
   }));
 }

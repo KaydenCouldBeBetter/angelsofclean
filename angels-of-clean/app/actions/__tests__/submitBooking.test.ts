@@ -149,7 +149,10 @@ describe("submitBooking", () => {
     });
   });
 
-  it("stores start/end matching the advertised morning window (8–12), not the old 9–11", async () => {
+  // Aug 1 is EDT (UTC-4), so New York 8:00 AM = 12:00 UTC. These literals are
+  // process-timezone-independent and prove the window is stored as New York
+  // wall-clock time, not the server's local time.
+  it("stores the morning window (8 AM–12 PM New York) as the correct UTC instants", async () => {
     singleMock.mockResolvedValue({
       data: { id: "abc-123", booking_number: 1042 },
       error: null,
@@ -159,13 +162,13 @@ describe("submitBooking", () => {
 
     expect(bookingsInsertMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        start_at: new Date("2026-08-01T08:00:00").toISOString(),
-        end_at: new Date("2026-08-01T12:00:00").toISOString(),
+        start_at: "2026-08-01T12:00:00.000Z",
+        end_at: "2026-08-01T16:00:00.000Z",
       }),
     );
   });
 
-  it("stores start/end matching the advertised afternoon window (12–4), not the old 1–3", async () => {
+  it("stores the afternoon window (12 PM–4 PM New York) as the correct UTC instants", async () => {
     singleMock.mockResolvedValue({
       data: { id: "abc-123", booking_number: 1042 },
       error: null,
@@ -175,9 +178,47 @@ describe("submitBooking", () => {
 
     expect(bookingsInsertMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        start_at: new Date("2026-08-01T12:00:00").toISOString(),
-        end_at: new Date("2026-08-01T16:00:00").toISOString(),
+        start_at: "2026-08-01T16:00:00.000Z",
+        end_at: "2026-08-01T20:00:00.000Z",
       }),
+    );
+  });
+
+  it("stores the correct UTC offsets on both sides of the fall DST change (Nov 1, 2026)", async () => {
+    singleMock.mockResolvedValue({
+      data: { id: "abc-123", booking_number: 1042 },
+      error: null,
+    });
+
+    // Oct 31 is still EDT (UTC-4): 8 AM NY = 12:00 UTC.
+    await submitBooking({ ...VALID_INPUT, date: "2026-10-31" });
+    expect(bookingsInsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ start_at: "2026-10-31T12:00:00.000Z" }),
+    );
+
+    // Nov 1 has fallen back to EST (UTC-5): 8 AM NY = 13:00 UTC.
+    await submitBooking({ ...VALID_INPUT, date: "2026-11-01" });
+    expect(bookingsInsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ start_at: "2026-11-01T13:00:00.000Z" }),
+    );
+  });
+
+  it("stores the correct UTC offsets on both sides of the spring DST change (Mar 14, 2027)", async () => {
+    singleMock.mockResolvedValue({
+      data: { id: "abc-123", booking_number: 1042 },
+      error: null,
+    });
+
+    // Mar 13 is still EST (UTC-5): 8 AM NY = 13:00 UTC.
+    await submitBooking({ ...VALID_INPUT, date: "2027-03-13" });
+    expect(bookingsInsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ start_at: "2027-03-13T13:00:00.000Z" }),
+    );
+
+    // Mar 14 has sprung forward to EDT (UTC-4): 8 AM NY = 12:00 UTC.
+    await submitBooking({ ...VALID_INPUT, date: "2027-03-14" });
+    expect(bookingsInsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ start_at: "2027-03-14T12:00:00.000Z" }),
     );
   });
 });

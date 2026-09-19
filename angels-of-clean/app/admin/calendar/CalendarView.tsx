@@ -8,15 +8,21 @@ import interactionPlugin from "@fullcalendar/interaction";
 import type { EventContentArg, DatesSetArg } from "@fullcalendar/core";
 import { STATUS_CONFIG, type Job, type Employee } from "../data/mock";
 import NewBookingModal from "../NewBookingModal";
+import { nyTodayStr, nyWallClockISO } from "@/lib/datetime";
 
 interface CalendarViewProps {
   jobs: Job[];
   employeeMap: Record<string, Employee>;
 }
 
-/** Format a Date to YYYY-MM-DD without timezone shift. */
+// FullCalendar is configured with timeZone="UTC" (UTC-coercion — no timezone
+// plugin needed). We feed it each job's New York wall-clock time as an
+// offset-less ISO string, so an 8 AM New York job always renders at the 8:00
+// slot regardless of the viewer's browser zone. In this mode FullCalendar's
+// own Date objects (e.g. from datesSet) are UTC-flavored, so read them with
+// getUTC* methods.
 function toDateStr(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 }
 
 function JobCard({ info }: { info: EventContentArg }) {
@@ -73,13 +79,14 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
   // Track the date range we've already loaded so we don't re-fetch.
   const loadedRange = useRef({ from: "", to: "" });
 
-  // Seed the initial loaded range (±2 months from today).
+  // Seed the initial loaded range (±2 months from New York's today) to match
+  // getJobsInRange's server-side default.
   if (!loadedRange.current.from) {
-    const now = new Date();
-    const start = new Date(now);
-    start.setMonth(start.getMonth() - 2);
-    const end = new Date(now);
-    end.setMonth(end.getMonth() + 2);
+    const anchor = new Date(`${nyTodayStr()}T00:00:00Z`);
+    const start = new Date(anchor);
+    start.setUTCMonth(start.getUTCMonth() - 2);
+    const end = new Date(anchor);
+    end.setUTCMonth(end.getUTCMonth() + 2);
     loadedRange.current = { from: toDateStr(start), to: toDateStr(end) };
   }
 
@@ -98,10 +105,10 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
     const newTo = viewEnd > loadedRange.current.to ? viewEnd : loadedRange.current.to;
 
     // Add 1-month padding so small navigations don't trigger more fetches.
-    const paddedFrom = new Date(`${newFrom}T00:00:00`);
-    paddedFrom.setMonth(paddedFrom.getMonth() - 1);
-    const paddedTo = new Date(`${newTo}T00:00:00`);
-    paddedTo.setMonth(paddedTo.getMonth() + 1);
+    const paddedFrom = new Date(`${newFrom}T00:00:00Z`);
+    paddedFrom.setUTCMonth(paddedFrom.getUTCMonth() - 1);
+    const paddedTo = new Date(`${newTo}T00:00:00Z`);
+    paddedTo.setUTCMonth(paddedTo.getUTCMonth() + 1);
 
     const fetchFrom = toDateStr(paddedFrom);
     const fetchTo = toDateStr(paddedTo);
@@ -129,8 +136,9 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
   const fcEvents = allJobs.map((job) => ({
     id: job.id,
     title: job.client,
-    start: job.start,
-    end: job.end,
+    // Offset-less New York wall-clock time — see timeZone="UTC" note above.
+    start: nyWallClockISO(job.start),
+    end: nyWallClockISO(job.end),
     extendedProps: {
       service: job.service,
       address: job.address,
@@ -144,7 +152,11 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
     <FullCalendar
       plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
       initialView="timeGridWeek"
-      initialDate={new Date().toISOString().slice(0, 10)}
+      // Events carry New York wall-clock times (offset stripped); UTC-coercion
+      // then places them at their New York clock position for every viewer.
+      timeZone="UTC"
+      now={() => nyWallClockISO(new Date())}
+      initialDate={nyTodayStr()}
       headerToolbar={{
         left:   "title prev,next today",
         center: "",

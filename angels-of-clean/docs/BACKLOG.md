@@ -118,11 +118,13 @@ These are code items that need no decision, most important first. **One item per
 
 ## 2. Booking correctness
 
-- [ ] **B8 · Store and show all times in America/New_York** · `code` · **M**
+- [x] **B8 · Store and show all times in America/New_York** · `code` · **M**
   **Why it matters:** Depending on the server's timezone, bookings can be saved at the wrong hour, and morning jobs can vanish from the admin calendar.
   <details><summary>Details</summary>
 
   `start_at`/`end_at` parse in the server's local zone (`app/actions/submitBooking.ts:89-90, 178-179`). `localDateStr()` uses server-local "today" (`lib/supabase/queries.ts:193-196`). Timestamps format without `timeZone` or AM/PM (`app/admin/bookings/page.tsx:36-42`, `app/admin/dashboard/page.tsx:7-12`, `queries.ts:292-299`). FullCalendar renders in the viewer's timezone with `slotMinTime="07:00"`, hiding mis-stored morning jobs (`app/admin/calendar/CalendarView.tsx:145-186`). Add a test pinned to a non-Eastern server timezone. *Source: code C4, S1*
+
+  *Done 2026-09-18:* New `lib/datetime.ts` centralizes all New York time logic on `Intl` (no new dependency), so it behaves identically under any process/browser zone. `submitBooking.ts` now builds `start_at`/`end_at` with `nyWallClockToInstant()` (DST-correct). `queries.ts` uses `nyTodayStr()` for the "today"/"upcoming"/"past" filters and the dashboard week window, and formats the activity log with `formatNyDateTime()`. All admin instant formatters (dashboard, bookings list, booking detail, header dates) go through the shared `formatNy*` helpers — always New York, always with AM/PM. `CalendarView.tsx` uses `timeZone="UTC"` UTC-coercion fed New York wall-clock times via `nyWallClockISO()`, plus a New York `now`/`initialDate`, so morning jobs always land at the 8:00 slot regardless of viewer zone. Tests: `lib/__tests__/datetime.test.ts` (normal + both DST changes + 11:30 PM NY "today" + AM/PM formatting) and updated `app/actions/__tests__/submitBooking.test.ts` (morning/afternoon + Nov 1 2026 / Mar 14 2027 UTC offsets). Suite defaults to `TZ=UTC` (`vitest.config.ts`); 62 tests pass under both `TZ=UTC` and `TZ=America/Los_Angeles`; `tsc --noEmit` clean. **Still manual:** existing rows created under a UTC server are stored 4–5h early — run the diagnostic in `supabase/003_fix_booking_times_tz.sql`, then its correction UPDATE if rows are found. The customer date picker's browser-local "today" is left to B10/B11 (availability + server-side date validation), per that item's scope.
   </details>
 
 - [ ] **B9 · One definition of each time slot** · `both` · **S**
