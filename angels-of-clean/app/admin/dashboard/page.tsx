@@ -2,16 +2,10 @@ import Link from "next/link";
 import { getDashboardStats, getEmployees } from "@/lib/supabase/queries";
 import { DASHBOARD_STATUS, type Job, type JobStatus } from "../data/mock";
 import { NewBookingButton } from "../NewBookingModal";
-
-function formatTime(iso: string) {
-  const d = new Date(iso);
-  const h = d.getHours();
-  const m = d.getMinutes();
-  return `${h > 12 ? h - 12 : h}:${m.toString().padStart(2, "0")}`;
-}
+import { formatNy, formatNyTimeRange } from "@/lib/datetime";
 
 function timeRange(job: Job) {
-  return `${formatTime(job.start)}–${formatTime(job.end)}`;
+  return formatNyTimeRange(job.start, job.end);
 }
 
 function StatusChip({ status }: { status: JobStatus }) {
@@ -63,7 +57,7 @@ export default async function AdminDashboardPage() {
     },
   ];
 
-  const displayDate = new Date().toLocaleDateString("en-US", {
+  const displayDate = formatNy(new Date(), {
     weekday: "short", month: "long", day: "numeric", year: "numeric",
   });
 

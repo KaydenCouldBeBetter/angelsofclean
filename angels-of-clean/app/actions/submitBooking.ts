@@ -3,6 +3,7 @@
 import { SERVICE_AREA_ZIPS, TIME_SLOT_WINDOWS } from "@/lib/constants";
 import { createServiceRoleClient } from "@/lib/supabase/service";
 import { requireAdmin } from "@/lib/supabase/require-admin";
+import { nyWallClockToInstant } from "@/lib/datetime";
 
 export interface BookingData {
   service: string;
@@ -94,9 +95,12 @@ async function createBooking(
     return { success: false, error: "Invalid phone number." };
   }
 
+  // The slot window is New York wall-clock time. Convert to a UTC instant via
+  // the NY zone (not the server's local zone) so start_at/end_at are correct
+  // no matter where the process runs, and correct across DST.
   const window = TIME_SLOT_WINDOWS[data.timeSlot as keyof typeof TIME_SLOT_WINDOWS];
-  const startAt = new Date(`${data.date}T${window.start}`);
-  const endAt = new Date(`${data.date}T${window.end}`);
+  const startAt = nyWallClockToInstant(data.date, window.start);
+  const endAt = nyWallClockToInstant(data.date, window.end);
 
   const supabase = createServiceRoleClient();
 

@@ -1,5 +1,6 @@
 import { getJobsByDateFilter, getEmployees } from "@/lib/supabase/queries";
 import { NewBookingButton } from "../NewBookingModal";
+import { formatNy } from "@/lib/datetime";
 import BookingsList, { type FilterTab } from "./BookingsList";
 
 export default async function AdminBookingsPage({
@@ -13,7 +14,7 @@ export default async function AdminBookingsPage({
   const [jobs, employees] = await Promise.all([getJobsByDateFilter(activeTab), getEmployees()]);
   const employeeMap = Object.fromEntries(employees.map((e) => [e.id, e]));
 
-  const displayDate = new Date().toLocaleDateString("en-US", {
+  const displayDate = formatNy(new Date(), {
     weekday: "short", month: "long", day: "numeric", year: "numeric",
   });
 

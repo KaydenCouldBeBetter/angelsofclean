@@ -3,42 +3,36 @@
 import { useState } from "react";
 import Link from "next/link";
 import { DASHBOARD_STATUS, type Job, type JobStatus, type Employee } from "../data/mock";
+import { formatNy, formatNyTime, nyDateStr, nyTodayStr } from "@/lib/datetime";
 import BookingsSearch from "./BookingsSearch";
 
 export type FilterTab = "today" | "upcoming" | "past" | "all";
 
-// Group jobs by date
+// Group jobs by their New York calendar date (the stored instants are UTC).
 function groupJobsByDate(jobs: Job[]): { date: string; label: string; jobs: Job[] }[] {
   const groups: Record<string, Job[]> = {};
   for (const job of jobs) {
-    const dateKey = job.start.slice(0, 10);
+    const dateKey = nyDateStr(job.start);
     if (!groups[dateKey]) groups[dateKey] = [];
     groups[dateKey].push(job);
   }
 
   return Object.entries(groups)
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([dateKey, dateJobs]) => {
-      const d = new Date(`${dateKey}T12:00:00`);
-      const label = d.toLocaleDateString("en-US", {
+    .map(([dateKey, dateJobs]) => ({
+      date: dateKey,
+      // Anchor the date-only key at noon UTC before formatting in New York.
+      label: formatNy(`${dateKey}T12:00:00Z`, {
         weekday: "long",
         month: "long",
         day: "numeric",
-      });
-      return {
-        date: dateKey,
-        label,
-        jobs: dateJobs.sort((a, b) => a.start.localeCompare(b.start)),
-      };
-    });
+      }),
+      jobs: dateJobs.sort((a, b) => a.start.localeCompare(b.start)),
+    }));
 }
 
 function formatTime(iso: string) {
-  const d = new Date(iso);
-  const h = d.getHours();
-  const m = d.getMinutes();
-  const display = h > 12 ? h - 12 : h === 0 ? 12 : h;
-  return `${display}:${m.toString().padStart(2, "0")}`;
+  return formatNyTime(iso);
 }
 
 function StatusChip({ status }: { status: JobStatus }) {
@@ -169,8 +163,7 @@ export default function BookingsList({
   const [search, setSearch] = useState("");
   const searchQuery = search.trim().toLowerCase();
 
-  const _now = new Date();
-  const todayStr = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-${String(_now.getDate()).padStart(2, "0")}`;
+  const todayStr = nyTodayStr();
 
   // Date filtering + sorting is handled by the query.
   // Only client-side search filtering remains.

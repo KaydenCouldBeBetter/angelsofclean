@@ -1,5 +1,6 @@
 import { getEmployees, getTodayJobs } from "@/lib/supabase/queries";
 import { EMPLOYEE_STATUS_CONFIG, type Employee, type EmployeeStatus, type Job } from "../data/mock";
+import { formatNy } from "@/lib/datetime";
 
 function getEmployeeStatus(employeeId: string, todayJobs: Job[]): EmployeeStatus {
   const empJobs = todayJobs.filter((job) => job.employeeIds.includes(employeeId));
@@ -81,10 +82,9 @@ function EmployeeCard({ employee, todayJobs }: { employee: Employee; todayJobs: 
 export default async function AdminEmployeesPage() {
   const [employees, todayJobs] = await Promise.all([getEmployees(), getTodayJobs()]);
 
-  const displayDate = new Date().toLocaleDateString(
-    "en-US",
-    { weekday: "short", month: "long", day: "numeric", year: "numeric" },
-  );
+  const displayDate = formatNy(new Date(), {
+    weekday: "short", month: "long", day: "numeric", year: "numeric",
+  });
 
   return (
     <>

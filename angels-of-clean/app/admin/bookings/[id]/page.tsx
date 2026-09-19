@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { getJobById, getActivityLog, getEmployees } from "@/lib/supabase/queries";
 import { DASHBOARD_STATUS } from "../../data/mock";
+import { formatNy, formatNyTime } from "@/lib/datetime";
 import BookingActions from "./BookingActions";
 
 function formatDetailDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", {
+  return formatNy(iso, {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -12,20 +13,9 @@ function formatDetailDate(iso: string) {
   });
 }
 
-function formatDetailTime(iso: string) {
-  const d = new Date(iso);
-  const h = d.getHours();
-  const m = d.getMinutes();
-  const ampm = h >= 12 ? "PM" : "AM";
-  const display = h > 12 ? h - 12 : h === 0 ? 12 : h;
-  return `${display}:${m.toString().padStart(2, "0")} ${ampm}`;
-}
-
 function formatSubmitted(iso: string) {
-  const d = new Date(iso);
-  const date = d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-  const time = formatDetailTime(iso);
-  return `${date} · ${time}`;
+  const date = formatNy(iso, { month: "long", day: "numeric", year: "numeric" });
+  return `${date} · ${formatNyTime(iso)}`;
 }
 
 export default async function BookingDetailPage({
@@ -40,10 +30,9 @@ export default async function BookingDetailPage({
     getEmployees(),
   ]);
 
-  const displayDate = new Date().toLocaleDateString(
-    "en-US",
-    { weekday: "short", month: "long", day: "numeric", year: "numeric" },
-  );
+  const displayDate = formatNy(new Date(), {
+    weekday: "short", month: "long", day: "numeric", year: "numeric",
+  });
 
   if (!job) {
     return (
@@ -70,7 +59,7 @@ export default async function BookingDetailPage({
     ? assignedEmployees.map((e) => e.name).join(", ")
     : "Unassigned";
 
-  const subtitle = `${job.service} · ${job.client} · ${new Date(job.start).toLocaleDateString("en-US", { month: "long", day: "numeric" })}`;
+  const subtitle = `${job.service} · ${job.client} · ${formatNy(job.start, { month: "long", day: "numeric" })}`;
 
   const detailRows = [
     { label: "Client", value: job.client },
@@ -79,7 +68,7 @@ export default async function BookingDetailPage({
     { label: "Service", value: job.frequency ? `${job.service} · ${job.frequency}` : job.service },
     { label: "Address", value: job.address },
     { label: "Date", value: formatDetailDate(job.start) },
-    { label: "Time Slot", value: `${formatDetailTime(job.start)} – ${formatDetailTime(job.end)}` },
+    { label: "Time Slot", value: `${formatNyTime(job.start)} – ${formatNyTime(job.end)}` },
     { label: "Property", value: job.property },
     { label: "Notes", value: job.notes },
     { label: "Submitted", value: job.submittedAt ? formatSubmitted(job.submittedAt) : undefined },

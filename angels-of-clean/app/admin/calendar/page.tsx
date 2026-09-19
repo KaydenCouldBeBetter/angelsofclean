@@ -1,4 +1,5 @@
 import { getJobsInRange, getEmployees } from "@/lib/supabase/queries";
+import { formatNy } from "@/lib/datetime";
 import CalendarView from "./CalendarView";
 
 export default async function AdminCalendarPage() {
@@ -14,7 +15,7 @@ export default async function AdminCalendarPage() {
           <p className="text-sm text-zinc-400">Weekly Schedule</p>
         </div>
         <span className="text-sm text-zinc-400">
-          {new Date().toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric", year: "numeric" })}
+          {formatNy(new Date(), { weekday: "short", month: "long", day: "numeric", year: "numeric" })}
         </span>
       </header>
 
