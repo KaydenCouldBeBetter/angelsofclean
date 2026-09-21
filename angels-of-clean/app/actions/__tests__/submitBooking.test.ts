@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const singleMock = vi.fn();
 const selectMock = vi.fn(() => ({ single: singleMock }));
@@ -41,12 +41,25 @@ const VALID_INPUT: BookingData = {
   phone: "(315) 555-0100",
 };
 
+// Pin "now" so the fixed fixture dates are deterministically in the future and
+// the new date-validation cases (past date, same-day cutoff) are stable. Only
+// Date is faked, leaving the async supabase mocks' microtasks untouched.
+// 2026-07-15 14:00 UTC = 10:00 AM EDT: today's morning slot (8 AM) has passed,
+// afternoon (12 PM) has not; every fixture date (Aug 1 2026 → Mar 2027) is future.
+const NOW = new Date("2026-07-15T14:00:00.000Z");
+
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(NOW);
   bookingsInsertMock.mockImplementation(() => ({ select: selectMock }));
   selectMock.mockImplementation(() => ({ single: singleMock }));
   activityLogInsertMock.mockImplementation(() => Promise.resolve({ error: null }));
   singleMock.mockResolvedValue({ data: null, error: null });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 // Both actions share createBooking; running every validation case against both
@@ -93,6 +106,42 @@ describe.each(ACTIONS)("%s validation", (_name, action) => {
   it("rejects an invalid time slot without touching the database", async () => {
     const result = await action({ ...VALID_INPUT, timeSlot: "evening" });
     expect(result).toEqual({ success: false, error: "Invalid time slot." });
+    expect(bookingsInsertMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a malformed date without touching the database", async () => {
+    const result = await action({ ...VALID_INPUT, date: "not-a-date" });
+    expect(result).toEqual({ success: false, error: "Please choose a valid date." });
+    expect(bookingsInsertMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an impossible calendar date without touching the database", async () => {
+    const result = await action({ ...VALID_INPUT, date: "2026-02-30" });
+    expect(result).toEqual({ success: false, error: "Please choose a valid date." });
+    expect(bookingsInsertMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a past date without touching the database", async () => {
+    // NOW is 2026-07-15; the day before is in the past in New York.
+    const result = await action({ ...VALID_INPUT, date: "2026-07-14" });
+    expect(result).toEqual({
+      success: false,
+      error: "That time has already passed. Please choose a later date or time.",
+    });
+    expect(bookingsInsertMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a same-day slot whose start has already passed (cutoff)", async () => {
+    // Today's morning slot (8 AM) at 10 AM NY — already started.
+    const result = await action({
+      ...VALID_INPUT,
+      date: "2026-07-15",
+      timeSlot: "morning",
+    });
+    expect(result).toEqual({
+      success: false,
+      error: "That time has already passed. Please choose a later date or time.",
+    });
     expect(bookingsInsertMock).not.toHaveBeenCalled();
   });
 
@@ -147,6 +196,23 @@ describe("submitBooking", () => {
       booking_id: "abc-123",
       description: "Booking submitted by client",
     });
+  });
+
+  it("accepts a same-day slot that is still in the future", async () => {
+    singleMock.mockResolvedValue({
+      data: { id: "abc-123", booking_number: 1042 },
+      error: null,
+    });
+
+    // Today (2026-07-15) afternoon (starts 12 PM) at 10 AM NY — still bookable.
+    const result = await submitBooking({
+      ...VALID_INPUT,
+      date: "2026-07-15",
+      timeSlot: "afternoon",
+    });
+
+    expect(result.success).toBe(true);
+    expect(bookingsInsertMock).toHaveBeenCalled();
   });
 
   // Aug 1 is EDT (UTC-4), so New York 8:00 AM = 12:00 UTC. These literals are

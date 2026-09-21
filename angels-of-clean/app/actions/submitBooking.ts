@@ -3,7 +3,7 @@
 import { SERVICE_AREA_ZIPS, TIME_SLOT_WINDOWS } from "@/lib/constants";
 import { createServiceRoleClient } from "@/lib/supabase/service";
 import { requireAdmin } from "@/lib/supabase/require-admin";
-import { nyWallClockToInstant } from "@/lib/datetime";
+import { isNyWallClockInFuture, isValidDateStr, nyWallClockToInstant } from "@/lib/datetime";
 
 export interface BookingData {
   service: string;
@@ -75,12 +75,25 @@ async function createBooking(
     return { success: false, error: "Bedroom and bathroom count must be between 1 and 5." };
   }
 
-  if (!data.date) {
-    return { success: false, error: "Date is required." };
+  // Reject empty/malformed/impossible dates before they reach the date math
+  // below, where an Invalid Date would throw at .toISOString().
+  if (!isValidDateStr(data.date)) {
+    return { success: false, error: "Please choose a valid date." };
   }
 
   if (!VALID_TIME_SLOTS.includes(data.timeSlot)) {
     return { success: false, error: "Invalid time slot." };
+  }
+
+  // No past dates and same-day cutoff: the chosen slot must still be in the
+  // future in New York, so booking this morning's slot at 5 PM is rejected.
+  // The date is valid and the slot is known here, so the lookup is safe.
+  const window = TIME_SLOT_WINDOWS[data.timeSlot as keyof typeof TIME_SLOT_WINDOWS];
+  if (!isNyWallClockInFuture(data.date, window.start)) {
+    return {
+      success: false,
+      error: "That time has already passed. Please choose a later date or time.",
+    };
   }
 
   if (!data.name.trim()) {
@@ -95,10 +108,9 @@ async function createBooking(
     return { success: false, error: "Invalid phone number." };
   }
 
-  // The slot window is New York wall-clock time. Convert to a UTC instant via
-  // the NY zone (not the server's local zone) so start_at/end_at are correct
-  // no matter where the process runs, and correct across DST.
-  const window = TIME_SLOT_WINDOWS[data.timeSlot as keyof typeof TIME_SLOT_WINDOWS];
+  // The slot window (looked up above) is New York wall-clock time. Convert to a
+  // UTC instant via the NY zone (not the server's local zone) so start_at/end_at
+  // are correct no matter where the process runs, and correct across DST.
   const startAt = nyWallClockToInstant(data.date, window.start);
   const endAt = nyWallClockToInstant(data.date, window.end);
 

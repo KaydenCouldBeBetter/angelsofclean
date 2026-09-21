@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  addDaysToDateStr,
   formatNyTime,
   formatNyTimeRange,
+  isNyWallClockInFuture,
+  isValidDateStr,
   nyDateStr,
   nyTodayStr,
   nyWallClockISO,
@@ -58,6 +61,62 @@ describe("nyTodayStr / nyDateStr", () => {
   it("reads the New York calendar date of a stored UTC instant", () => {
     // Midnight UTC on Nov 19 is still 7 PM (EST) on Nov 18 in New York.
     expect(nyDateStr("2026-11-19T00:00:00.000Z")).toBe("2026-11-18");
+  });
+});
+
+describe("isValidDateStr", () => {
+  it("accepts a real, zero-padded calendar date", () => {
+    expect(isValidDateStr("2026-08-01")).toBe(true);
+  });
+
+  it("rejects empty, malformed, and non-padded strings", () => {
+    expect(isValidDateStr("")).toBe(false);
+    expect(isValidDateStr("not-a-date")).toBe(false);
+    expect(isValidDateStr("2026-2-1")).toBe(false);
+    expect(isValidDateStr("2026/08/01")).toBe(false);
+  });
+
+  it("rejects impossible dates that would overflow", () => {
+    expect(isValidDateStr("2026-02-30")).toBe(false);
+    expect(isValidDateStr("2026-13-01")).toBe(false);
+    expect(isValidDateStr("2026-00-10")).toBe(false);
+  });
+});
+
+describe("addDaysToDateStr", () => {
+  it("adds a day within the same month", () => {
+    expect(addDaysToDateStr("2026-08-01", 1)).toBe("2026-08-02");
+  });
+
+  it("rolls over month and year boundaries", () => {
+    expect(addDaysToDateStr("2026-02-28", 1)).toBe("2026-03-01"); // 2026 is not a leap year
+    expect(addDaysToDateStr("2026-12-31", 1)).toBe("2027-01-01");
+  });
+
+  it("goes backwards with a negative offset", () => {
+    expect(addDaysToDateStr("2026-03-01", -1)).toBe("2026-02-28");
+  });
+});
+
+describe("isNyWallClockInFuture", () => {
+  // 2026-07-15 14:00 UTC = 10:00 AM EDT: morning (8 AM) has passed, afternoon
+  // (12 PM) has not. Offsets are process-zone-independent (Intl pins NY).
+  const now = new Date("2026-07-15T14:00:00.000Z");
+
+  it("is false for a slot whose start has already passed today (same-day cutoff)", () => {
+    expect(isNyWallClockInFuture("2026-07-15", "08:00:00", now)).toBe(false);
+  });
+
+  it("is true for a later slot still to come today", () => {
+    expect(isNyWallClockInFuture("2026-07-15", "12:00:00", now)).toBe(true);
+  });
+
+  it("is false for any slot on a past date", () => {
+    expect(isNyWallClockInFuture("2026-07-14", "12:00:00", now)).toBe(false);
+  });
+
+  it("is true for any slot on a future date", () => {
+    expect(isNyWallClockInFuture("2026-07-16", "08:00:00", now)).toBe(true);
   });
 });
 

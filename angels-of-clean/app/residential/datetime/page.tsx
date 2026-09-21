@@ -8,6 +8,7 @@ import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
 import { useBookingStore } from "@/store/bookingStore";
 import { TIME_SLOT_WINDOWS } from "@/lib/constants";
+import { addDaysToDateStr, isNyWallClockInFuture, nyTodayStr } from "@/lib/datetime";
 
 const TIME_SLOTS = [
   { id: "morning" as const, label: TIME_SLOT_WINDOWS.morning.label, sub: TIME_SLOT_WINDOWS.morning.display },
@@ -15,23 +16,43 @@ const TIME_SLOTS = [
   { id: "evening" as const, label: "Evening", sub: "Unavailable", disabled: true },
 ];
 
+const BOOKABLE_SLOTS = ["morning", "afternoon"] as const;
+
+// A slot on a given date is only offerable if its start is still in the future
+// in New York — this enforces the same-day cutoff (and never offers a past day).
+function isSlotBookable(dateStr: string, slotId: "morning" | "afternoon") {
+  return isNyWallClockInFuture(dateStr, TIME_SLOT_WINDOWS[slotId].start);
+}
+
+// The earliest slot still bookable on a date (getWeekDays only offers days that
+// have at least one, so this is always defined for an offered date).
+function firstBookableSlot(dateStr: string): "morning" | "afternoon" {
+  return BOOKABLE_SLOTS.find((slot) => isSlotBookable(dateStr, slot)) ?? "morning";
+}
+
 function getWeekDays() {
   const days = [];
-  const today = new Date();
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+  // "Today" is New York's today, not the browser's, so the offered dates match
+  // the business calendar for a customer booking from another timezone. If every
+  // slot today has already passed, start from tomorrow.
+  const todayStr = nyTodayStr();
+  const todayHasSlot = BOOKABLE_SLOTS.some((slot) => isSlotBookable(todayStr, slot));
+  let cursor = todayHasSlot ? todayStr : addDaysToDateStr(todayStr, 1);
+
   for (let i = 0; i < 6; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() + i);
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
+    // cursor is a NY calendar date; read its weekday/day-of-month in UTC so the
+    // labels don't drift with the browser zone.
+    const [y, m, d] = cursor.split("-").map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d));
     days.push({
-      label: dayNames[date.getDay()],
-      date: date.getDate(),
-      full: `${y}-${m}-${d}`,
-      isFull: i === 2, // 3rd day marked as "Full" per Figma
+      label: dayNames[dt.getUTCDay()],
+      date: dt.getUTCDate(),
+      full: cursor,
+      isFull: i === 2, // 3rd day marked as "Full" per Figma (real availability is B10)
     });
+    cursor = addDaysToDateStr(cursor, 1);
   }
   return days;
 }
@@ -48,8 +69,26 @@ export default function DateTimePage() {
   }, [store.address, router]);
 
   const days = getWeekDays();
-  const [selectedDate, setSelectedDate] = useState(store.date || days[1].full);
-  const [selectedSlot, setSelectedSlot] = useState<"morning" | "afternoon">(store.timeSlot ?? "morning");
+  // Only trust a stored date if it's still one of the offered (future) days —
+  // a stale sessionStorage date could otherwise carry a now-past day forward.
+  const storedDateOffered = days.some((day) => day.full === store.date && !day.isFull);
+  const initialDate = storedDateOffered ? store.date : days[1].full;
+  const [selectedDate, setSelectedDate] = useState(initialDate);
+  // Clamp the initial slot to one still bookable for the initial date (the
+  // stored slot could be this morning's, already past).
+  const initialSlot = store.timeSlot ?? "morning";
+  const [selectedSlot, setSelectedSlot] = useState<"morning" | "afternoon">(
+    isSlotBookable(initialDate, initialSlot) ? initialSlot : firstBookableSlot(initialDate),
+  );
+
+  // Picking a date can invalidate the current slot (today after its start), so
+  // switch to the first still-bookable slot here rather than in an effect.
+  function handleSelectDate(dateStr: string) {
+    setSelectedDate(dateStr);
+    if (!isSlotBookable(dateStr, selectedSlot)) {
+      setSelectedSlot(firstBookableSlot(dateStr));
+    }
+  }
 
   function handleNext() {
     setStep4(selectedDate, selectedSlot);
@@ -95,7 +134,7 @@ export default function DateTimePage() {
                 aria-checked={isSelected}
                 aria-label={`${day.label} the ${day.date}`}
                 disabled={isDisabled}
-                onClick={() => !isDisabled && setSelectedDate(day.full)}
+                onClick={() => !isDisabled && handleSelectDate(day.full)}
                 className={`flex flex-col items-center justify-center min-w-[52px] h-16 lg:h-[72px] rounded-xl border-2 text-sm font-medium transition-colors flex-shrink-0 ${
                   isDisabled
                     ? "border-zinc-100 bg-zinc-50 text-zinc-400 cursor-not-allowed"
@@ -125,28 +164,35 @@ export default function DateTimePage() {
             className="flex flex-col gap-3 lg:flex-row"
           >
             {TIME_SLOTS.map((slot) => {
-              const isSelected = selectedSlot === slot.id && !slot.disabled;
+              // Evening is always disabled; morning/afternoon are disabled when
+              // their start has already passed for the selected date (cutoff).
+              const cutoffPassed =
+                slot.id !== "evening" &&
+                !isSlotBookable(selectedDate, slot.id as "morning" | "afternoon");
+              const disabled = slot.disabled || cutoffPassed;
+              const isSelected = selectedSlot === slot.id && !disabled;
+              const sub = cutoffPassed ? "Unavailable" : slot.sub;
               return (
                 <button
                   key={slot.id}
                   role="radio"
                   aria-checked={isSelected}
-                  aria-disabled={slot.disabled}
-                  onClick={() => !slot.disabled && setSelectedSlot(slot.id as "morning" | "afternoon")}
-                  disabled={slot.disabled}
+                  aria-disabled={disabled}
+                  onClick={() => !disabled && setSelectedSlot(slot.id as "morning" | "afternoon")}
+                  disabled={disabled}
                   className={`w-full text-left rounded-xl border-2 p-4 transition-colors lg:flex-1 lg:text-center ${
-                    slot.disabled
+                    disabled
                       ? "border-zinc-100 bg-zinc-50 cursor-not-allowed"
                       : isSelected
                         ? "border-teal-600 bg-teal-600 text-white"
                         : "border-zinc-200 bg-white hover:border-zinc-300"
                   }`}
                 >
-                  <span className={`font-semibold ${slot.disabled ? "text-zinc-400" : isSelected ? "text-white" : "text-zinc-900"}`}>
+                  <span className={`font-semibold ${disabled ? "text-zinc-400" : isSelected ? "text-white" : "text-zinc-900"}`}>
                     {slot.label}
                   </span>
-                  <p className={`text-xs mt-1 ${slot.disabled ? "text-zinc-400" : isSelected ? "text-white/80" : "text-zinc-500"}`}>
-                    {slot.sub}
+                  <p className={`text-xs mt-1 ${disabled ? "text-zinc-400" : isSelected ? "text-white/80" : "text-zinc-500"}`}>
+                    {sub}
                   </p>
                 </button>
               );
