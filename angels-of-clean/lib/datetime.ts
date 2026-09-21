@@ -52,6 +52,52 @@ export function nyWallClockToInstant(dateStr: string, timeStr: string): Date {
   return new Date(ts);
 }
 
+/**
+ * True if `s` is a real calendar date in strict "YYYY-MM-DD" form. Rejects
+ * empty/malformed strings (which would otherwise reach `.toISOString()` as an
+ * Invalid Date and throw) and impossible dates like "2026-02-30" or
+ * "2026-13-01". The round-trip through a UTC date catches month/day overflow.
+ */
+export function isValidDateStr(s: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const [y, mo, d] = s.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, mo - 1, d));
+  return (
+    dt.getUTCFullYear() === y &&
+    dt.getUTCMonth() === mo - 1 &&
+    dt.getUTCDate() === d
+  );
+}
+
+/**
+ * Add `n` calendar days to a "YYYY-MM-DD" string, rolling over months and
+ * years. Pure calendar math done in UTC so it never depends on the process or
+ * browser zone. `dateStr` must already be a valid date (see isValidDateStr).
+ */
+export function addDaysToDateStr(dateStr: string, n: number): string {
+  const [y, mo, d] = dateStr.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, mo - 1, d + n));
+  const yy = dt.getUTCFullYear();
+  const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getUTCDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
+
+/**
+ * True if a New York wall-clock date + time is still strictly in the future
+ * relative to `now`. Drives the booking same-day cutoff: a slot whose start has
+ * already passed today — or any slot on a past date — is not in the future, so
+ * this single check covers both "no past dates" and "no already-started slot".
+ * `now` is injectable so tests can pin it.
+ */
+export function isNyWallClockInFuture(
+  dateStr: string,
+  timeStr: string,
+  now: Date = new Date(),
+): boolean {
+  return nyWallClockToInstant(dateStr, timeStr).getTime() > now.getTime();
+}
+
 // Wall-clock parts of an instant, read in America/New_York.
 function nyPartsMap(
   instant: Date,
