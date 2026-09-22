@@ -1,3 +1,7 @@
 .DS_Store
 .idea/
 ClaudeReferences/
+
+# Local AI working notes and scaffolding — kept on disk, untracked from git.
+Claude.md
+.claude/
