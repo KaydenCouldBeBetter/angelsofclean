@@ -17,7 +17,8 @@ vi.mock("@/lib/supabase/require-admin", () => ({
 import { assignEmployees, updateBookingStatus } from "../actions";
 
 // Chainable mocks mirroring the Supabase query builder calls the actions make.
-const deleteEqMock = vi.fn(() => Promise.resolve({ error: null }));
+type DbError = { code: string; message?: string; details?: string } | null;
+const deleteEqMock = vi.fn((): Promise<{ error: DbError }> => Promise.resolve({ error: null }));
 const assignInsertMock = vi.fn(() => Promise.resolve({ error: null }));
 const updateSelectMock = vi.fn(() => Promise.resolve({ data: [{ id: "b-1" }], error: null }));
 const updateEqMock = vi.fn(() => ({ select: updateSelectMock }));
@@ -87,6 +88,30 @@ describe("assignEmployees", () => {
       booking_id: "b-1",
       description: "Employees assigned by admin@example.com",
     });
+  });
+
+  it("logs only the error code and a correlation id when the write fails", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    // Supabase errors can echo row data — the log must not repeat it.
+    deleteEqMock.mockResolvedValueOnce({
+      error: {
+        code: "42501",
+        message: "row echo: jane@example.com (315) 555-0100",
+        details: "gate code 4321",
+      },
+    });
+
+    const result = await assignEmployees("b-1", ["e-1"]);
+
+    expect(result).toEqual({
+      success: false,
+      error: "Something went wrong. Please try again.",
+    });
+    const logged = JSON.stringify(consoleSpy.mock.calls);
+    expect(logged).toContain("42501");
+    expect(logged).not.toContain("jane@example.com");
+    expect(logged).not.toContain("gate code 4321");
+    consoleSpy.mockRestore();
   });
 });
 
