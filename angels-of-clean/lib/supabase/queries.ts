@@ -34,6 +34,12 @@ const BOOKING_COLUMNS =
 const CALENDAR_BOOKING_COLUMNS =
   "id,booking_number,client_name,service_type,frequency,address,city,bedrooms,bathrooms,start_at,end_at,status,submitted_at,booking_employees(employee_id)" as const;
 
+// Bookings-list projection — feeds the client BookingsList component, which
+// searches by email/phone (so those are kept) but never renders `notes`.
+// Omit `notes` so entry/access instructions aren't serialized to the browser.
+const LIST_BOOKING_COLUMNS =
+  "id,booking_number,client_name,email,phone,service_type,frequency,address,city,bedrooms,bathrooms,start_at,end_at,status,submitted_at,booking_employees(employee_id)" as const;
+
 const EMPLOYEE_COLUMNS = "id,name,initials,phone,hired_date" as const;
 
 // Log only the Postgres error code plus a correlation id — full Supabase
@@ -138,7 +144,7 @@ export async function getJobsByDateFilter(
 
   let query = supabase
     .from("bookings")
-    .select(BOOKING_COLUMNS);
+    .select(LIST_BOOKING_COLUMNS);
 
   if (filter === "today") {
     query = query.eq("scheduled_date", today);

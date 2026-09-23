@@ -34,7 +34,7 @@ vi.mock("../server", () => ({
   createClient: () => createClientMock(),
 }));
 
-import { getJobsInRange, getJobs } from "../queries";
+import { getJobsInRange, getJobs, getJobsByDateFilter } from "../queries";
 
 describe("getJobsInRange (calendar projection)", () => {
   beforeEach(() => {
@@ -93,5 +93,27 @@ describe("getJobs (bookings list projection)", () => {
     expect(columns).toContain("email");
     expect(columns).toContain("phone");
     expect(columns).toContain("notes");
+  });
+});
+
+describe("getJobsByDateFilter (client bookings-list projection)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("keeps email/phone for search but omits notes — BookingsList is a client component that renders no notes", async () => {
+    const { recorded, client } = makeSupabaseStub({ data: [], error: null });
+    createClientMock.mockResolvedValue(client);
+
+    await getJobsByDateFilter("today");
+
+    expect(recorded.table).toBe("bookings");
+    const columns = recorded.columns!.split(",");
+    // email/phone are needed for the list's client-side search.
+    expect(columns).toContain("email");
+    expect(columns).toContain("phone");
+    // notes can hold entry/access instructions and is never rendered in the
+    // list, so it must not be serialized to the browser.
+    expect(columns).not.toContain("notes");
   });
 });
