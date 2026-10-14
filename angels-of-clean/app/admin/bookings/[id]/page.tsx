@@ -132,16 +132,11 @@ export default async function BookingDetailPage({
             </div>
 
             {/* Status banner */}
+            {/* Same background as the status chip, so the text color is
+                checked against it (app/admin/data/__tests__/status-contrast). */}
             <div
-              className="mt-4 rounded-[10px] border px-6 py-3"
-              style={{
-                backgroundColor: job.status === "active" ? "#fef2e8"
-                  : job.status === "done" ? "#e1f2e7"
-                  : job.status === "confirmed" ? "#eaeefc"
-                  : job.status === "cancelled" ? "#feefee"
-                  : "#f7f9f8",
-                borderColor: cfg.accentColor,
-              }}
+              className={`mt-4 rounded-[10px] border px-6 py-3 ${cfg.chipBg}`}
+              style={{ borderColor: cfg.accentColor }}
             >
               <p className="text-[11px] text-[#5c5c5e]">Current Status</p>
               <p className="text-[15px] font-semibold mt-0.5" style={{ color: cfg.accentColor }}>

@@ -190,6 +190,7 @@ Rows are mapped to the UI `Job`/`Employee`/`ActivityEntry` shapes from `app/admi
 - **`app/admin/reset-password/confirm/__tests__/route.test.ts`** — token-hash and code paths, expired/failed links, non-recovery tokens refused, `next` ignored. ✅ passing.
 - **`__tests__/middleware.test.ts`** — public admin routes reachable signed out (exact match only), everything else requires the admin role. ✅ passing.
 - **`components/booking/__tests__/ProgressDots.test.tsx`** — dot labels (completed / current / plain) and a single `aria-current="step"`. ✅ passing.
+- **`app/admin/data/__tests__/status-contrast.test.ts`** — every status chip and banner text/background pair in `mock.ts` meets WCAG AA 4.5:1. ✅ passing.
 - **`lib/__tests__/rate-limit.test.ts`** — limit/window passed to the RPC, refusal, raw IP never sent, bucket stability, header precedence, fail-open on error and on throw, dev skip. ✅ passing.
 - **`app/actions/__tests__/submitBooking.test.ts`** — validation matrix (run against both `submitBooking` and `adminCreateBooking`), success insert, window→UTC storage, DST offsets, PII-safe logging, admin auth gating. ✅ passing.
 - **`app/admin/__tests__/actions.test.ts`** — `assignEmployees`/`confirmBooking`/`updateBookingStatus`: auth gating, 0-row-as-failure, pending-only confirm, activity logging. ✅ passing.
@@ -198,7 +199,7 @@ Rows are mapped to the UI `Job`/`Employee`/`ActivityEntry` shapes from `app/admi
 - **`lib/supabase/__tests__/require-admin.test.ts`** — signed-out, token error, no-role, `user_metadata` ignored, admin accepted. ✅ passing.
 - **`store/__tests__/bookingStore.test.ts`** — defaults, each setter, reset. ✅ passing.
 
-### Current test status: 247 passing (14 of 14 files green)
+### Current test status: 260 passing (15 of 15 files green)
 Passes under both `TZ=UTC` and `TZ=America/Los_Angeles`; `tsc --noEmit` clean.
 
 **History — the B16 ZIP swap.** Commit `fe85cd2` meant to change Camillus from `13035` (actually Cazenovia) to `13031`, but edited the Cicero line instead (`13039` → `13031`), which rejected Cicero customers and turned 26 tests red. Corrected 2026-10-13: Cicero is `13039`, Camillus is `13031`, and `13035` is no longer served.
