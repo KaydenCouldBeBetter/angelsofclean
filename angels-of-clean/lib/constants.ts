@@ -44,6 +44,17 @@ export const PRICE_MAP: Record<NonNullable<ServiceType>, string> = {
   moveinout: "$199",
 };
 
+// Longest accepted value for each free-text booking field. Enforced on the
+// server (app/actions/submitBooking.ts) and mirrored as maxLength on the inputs.
+export const FIELD_MAX_LENGTHS = {
+  name: 100,
+  email: 254,
+  phone: 20,
+  address: 200,
+  city: 100,
+  notes: 1000,
+} as const;
+
 export const SERVICE_AREA_ZIPS = [
   "13039", // Cicero
   "13031", // Camillus

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { adminCreateBooking } from "@/app/actions/submitBooking";
-import { TIME_LABELS } from "@/lib/constants";
+import { FIELD_MAX_LENGTHS, TIME_LABELS } from "@/lib/constants";
 
 const SERVICES = [
   { value: "standard", label: "Standard Clean" },
@@ -135,16 +135,16 @@ export default function NewBookingModal({ open, onClose }: NewBookingModalProps)
               <div className="grid grid-cols-1 gap-3">
                 <div>
                   <Label htmlFor="nb-name" className="text-[13px] text-[#1c1c1e] mb-1">Full Name</Label>
-                  <Input id="nb-name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="John Doe" className="h-10" />
+                  <Input id="nb-name" required maxLength={FIELD_MAX_LENGTHS.name} value={name} onChange={(e) => setName(e.target.value)} placeholder="John Doe" className="h-10" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label htmlFor="nb-email" className="text-[13px] text-[#1c1c1e] mb-1">Email</Label>
-                    <Input id="nb-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="john@example.com" className="h-10" />
+                    <Input id="nb-email" type="email" required maxLength={FIELD_MAX_LENGTHS.email} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="john@example.com" className="h-10" />
                   </div>
                   <div>
                     <Label htmlFor="nb-phone" className="text-[13px] text-[#1c1c1e] mb-1">Phone</Label>
-                    <Input id="nb-phone" type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(315) 555-0100" className="h-10" />
+                    <Input id="nb-phone" type="tel" required maxLength={FIELD_MAX_LENGTHS.phone} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(315) 555-0100" className="h-10" />
                   </div>
                 </div>
               </div>
@@ -185,12 +185,12 @@ export default function NewBookingModal({ open, onClose }: NewBookingModalProps)
               <div className="grid grid-cols-1 gap-3">
                 <div>
                   <Label htmlFor="nb-address" className="text-[13px] text-[#1c1c1e] mb-1">Street Address</Label>
-                  <Input id="nb-address" required value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main St" className="h-10" />
+                  <Input id="nb-address" required maxLength={FIELD_MAX_LENGTHS.address} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main St" className="h-10" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label htmlFor="nb-city" className="text-[13px] text-[#1c1c1e] mb-1">City</Label>
-                    <Input id="nb-city" required value={city} onChange={(e) => setCity(e.target.value)} placeholder="Syracuse" className="h-10" />
+                    <Input id="nb-city" required maxLength={FIELD_MAX_LENGTHS.city} value={city} onChange={(e) => setCity(e.target.value)} placeholder="Syracuse" className="h-10" />
                   </div>
                   <div>
                     <Label htmlFor="nb-zip" className="text-[13px] text-[#1c1c1e] mb-1">ZIP Code</Label>
@@ -256,6 +256,7 @@ export default function NewBookingModal({ open, onClose }: NewBookingModalProps)
               <Label htmlFor="nb-notes" className="text-[13px] text-[#1c1c1e] mb-1">Notes (optional)</Label>
               <Textarea
                 id="nb-notes"
+                maxLength={FIELD_MAX_LENGTHS.notes}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Any special instructions..."

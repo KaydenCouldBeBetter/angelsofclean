@@ -1,6 +1,7 @@
 "use server";
 
-import { SERVICE_AREA_ZIPS, TIME_SLOT_WINDOWS } from "@/lib/constants";
+import { FIELD_MAX_LENGTHS, SERVICE_AREA_ZIPS, TIME_SLOT_WINDOWS } from "@/lib/constants";
+import { allowPublicBooking } from "@/lib/rate-limit";
 import { createServiceRoleClient } from "@/lib/supabase/service";
 import { requireAdmin } from "@/lib/supabase/require-admin";
 import { isNyWallClockInFuture, isValidDateStr, nyWallClockToInstant } from "@/lib/datetime";
@@ -34,6 +35,31 @@ const VALID_SERVICES = ["standard", "deep", "moveinout"];
 const VALID_FREQUENCIES = ["one-time", "weekly", "bi-weekly", "monthly"];
 const VALID_TIME_SLOTS = Object.keys(TIME_SLOT_WINDOWS);
 
+const STRING_FIELDS = [
+  "service", "frequency", "address", "city", "zip", "notes", "date", "timeSlot", "name", "email", "phone",
+] as const;
+
+const LENGTH_LIMITED_FIELDS: [keyof typeof FIELD_MAX_LENGTHS, string][] = [
+  ["name", "Name"],
+  ["email", "Email address"],
+  ["phone", "Phone number"],
+  ["address", "Address"],
+  ["city", "City"],
+  ["notes", "Special instructions"],
+];
+
+// Server Action arguments come straight from the caller: the BookingData type
+// is not enforced at runtime, so a script can send anything.
+function hasBookingShape(data: unknown): data is BookingData {
+  if (typeof data !== "object" || data === null) return false;
+  const record = data as Record<string, unknown>;
+  return (
+    STRING_FIELDS.every((field) => typeof record[field] === "string") &&
+    Number.isInteger(record.bedrooms) &&
+    Number.isInteger(record.bathrooms)
+  );
+}
+
 // Log only the Postgres error code plus a correlation id — full Supabase
 // error objects can echo the submitted row (customer PII) into server logs.
 function logDbError(source: string, error: { code?: string } | null | undefined) {
@@ -49,8 +75,20 @@ async function createBooking(
   data: BookingData,
   logLabel: string,
   activityDescription: string,
+  rateLimited: boolean,
 ): Promise<BookingResult> {
   // Server-side validation
+  if (!hasBookingShape(data)) {
+    return { success: false, error: "Invalid booking details." };
+  }
+
+  for (const [field, label] of LENGTH_LIMITED_FIELDS) {
+    const max = FIELD_MAX_LENGTHS[field];
+    if (data[field].length > max) {
+      return { success: false, error: `${label} must be ${max} characters or fewer.` };
+    }
+  }
+
   if (!VALID_SERVICES.includes(data.service)) {
     return { success: false, error: "Invalid service type." };
   }
@@ -108,6 +146,16 @@ async function createBooking(
     return { success: false, error: "Invalid phone number." };
   }
 
+  // Counted after validation, so only requests that would insert a row use up
+  // the caller's allowance.
+  if (rateLimited && !(await allowPublicBooking())) {
+    return {
+      success: false,
+      error:
+        "We've received several booking requests from your connection. Please try again in about an hour.",
+    };
+  }
+
   // The slot window (looked up above) is New York wall-clock time. Convert to a
   // UTC instant via the NY zone (not the server's local zone) so start_at/end_at
   // are correct no matter where the process runs, and correct across DST.
@@ -160,7 +208,7 @@ async function createBooking(
 }
 
 export async function submitBooking(data: BookingData): Promise<BookingResult> {
-  return createBooking(data, "submitBooking", "Booking submitted by client");
+  return createBooking(data, "submitBooking", "Booking submitted by client", true);
 }
 
 /**
@@ -176,5 +224,6 @@ export async function adminCreateBooking(data: BookingData): Promise<BookingResu
     data,
     "adminCreateBooking",
     `Booking created by ${auth.user.email ?? "admin"}`,
+    false,
   );
 }

@@ -7,6 +7,7 @@ import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
 import { useBookingStore } from "@/store/bookingStore";
+import { FIELD_MAX_LENGTHS } from "@/lib/constants";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
@@ -109,6 +110,7 @@ export default function PropertyPage() {
             placeholder="E.g., skip the basement, two friendly dogs, key under the mat..."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
+            maxLength={FIELD_MAX_LENGTHS.notes}
             className="min-h-24 resize-none"
           />
         </div>
