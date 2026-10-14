@@ -1,6 +1,7 @@
 import { getEmployees, getTodayJobs } from "@/lib/supabase/queries";
 import { EMPLOYEE_STATUS_CONFIG, type Employee, type EmployeeStatus, type Job } from "../data/mock";
 import { formatNy } from "@/lib/datetime";
+import LoadError from "../LoadError";
 
 function getEmployeeStatus(employeeId: string, todayJobs: Job[]): EmployeeStatus {
   const empJobs = todayJobs.filter((job) => job.employeeIds.includes(employeeId));
@@ -100,6 +101,9 @@ export default async function AdminEmployeesPage() {
       </header>
 
       {/* Content */}
+      {!employees.ok || !todayJobs.ok ? (
+        <LoadError what="your team" />
+      ) : (
       <div className="flex-1 overflow-auto bg-[#f7f9f8]">
         <div className="p-8">
           {/* Section header */}
@@ -113,19 +117,20 @@ export default async function AdminEmployeesPage() {
           </div>
 
           {/* Employee cards grid */}
-          {employees.length === 0 ? (
+          {employees.data.length === 0 ? (
             <div className="py-16 text-center text-sm text-[#5c5c5e]">
               No employees yet.
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-5">
-              {employees.map((employee) => (
-                <EmployeeCard key={employee.id} employee={employee} todayJobs={todayJobs} />
+              {employees.data.map((employee) => (
+                <EmployeeCard key={employee.id} employee={employee} todayJobs={todayJobs.data} />
               ))}
             </div>
           )}
         </div>
       </div>
+      )}
     </>
   );
 }

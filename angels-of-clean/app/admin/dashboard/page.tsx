@@ -2,6 +2,7 @@ import { getDashboardStats, getEmployees } from "@/lib/supabase/queries";
 import { DASHBOARD_STATUS, type Job, type JobStatus } from "../data/mock";
 import { NewBookingButton } from "../NewBookingModal";
 import JobRowActions from "./JobRowActions";
+import LoadError from "../LoadError";
 import { formatNy, formatNyTimeRange } from "@/lib/datetime";
 
 function timeRange(job: Job) {
@@ -21,9 +22,35 @@ function StatusChip({ status }: { status: JobStatus }) {
 
 export default async function AdminDashboardPage() {
   const [stats, employees] = await Promise.all([getDashboardStats(), getEmployees()]);
-  const employeeMap = Object.fromEntries(employees.map((e) => [e.id, e]));
 
-  const { todayJobs, totalPending, completedThisWeek, totalEmployees } = stats;
+  const displayDate = formatNy(new Date(), {
+    weekday: "short", month: "long", day: "numeric", year: "numeric",
+  });
+
+  const header = (
+    <header className="flex-shrink-0 h-16 bg-white border-b border-[#e2e8e6] flex items-center px-8 justify-between">
+      <div>
+        <h1 className="font-semibold text-lg text-[#1c1c1e] leading-tight">
+          Dashboard
+        </h1>
+        <p className="text-xs text-[#5c5c5e]">Overview for today</p>
+      </div>
+      <span className="text-sm text-[#5c5c5e]">{displayDate}</span>
+    </header>
+  );
+
+  if (!stats.ok || !employees.ok) {
+    return (
+      <>
+        {header}
+        <LoadError what="the dashboard" />
+      </>
+    );
+  }
+
+  const employeeMap = Object.fromEntries(employees.data.map((e) => [e.id, e]));
+
+  const { todayJobs, totalPending, completedThisWeek, totalEmployees } = stats.data;
 
   const inProgressCount = todayJobs.filter((job) => job.status === "active").length;
   const activeEmployees = new Set(
@@ -57,22 +84,9 @@ export default async function AdminDashboardPage() {
     },
   ];
 
-  const displayDate = formatNy(new Date(), {
-    weekday: "short", month: "long", day: "numeric", year: "numeric",
-  });
-
   return (
     <>
-      {/* Header */}
-      <header className="flex-shrink-0 h-16 bg-white border-b border-[#e2e8e6] flex items-center px-8 justify-between">
-        <div>
-          <h1 className="font-semibold text-lg text-[#1c1c1e] leading-tight">
-            Dashboard
-          </h1>
-          <p className="text-xs text-[#5c5c5e]">Overview for today</p>
-        </div>
-        <span className="text-sm text-[#5c5c5e]">{displayDate}</span>
-      </header>
+      {header}
 
       {/* Content */}
       <div className="flex-1 overflow-auto bg-[#f7f9f8]">

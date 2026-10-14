@@ -23,5 +23,11 @@ export async function GET(req: NextRequest) {
   }
 
   const jobs = await getJobsInRange(from, to);
-  return NextResponse.json(jobs);
+
+  // A failed query must not look like an empty range to the calendar.
+  if (!jobs.ok) {
+    return NextResponse.json({ error: "Could not load jobs" }, { status: 503 });
+  }
+
+  return NextResponse.json(jobs.data);
 }

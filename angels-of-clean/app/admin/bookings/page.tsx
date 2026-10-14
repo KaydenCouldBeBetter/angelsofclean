@@ -2,6 +2,7 @@ import { getJobsByDateFilter, getEmployees } from "@/lib/supabase/queries";
 import { NewBookingButton } from "../NewBookingModal";
 import { formatNy } from "@/lib/datetime";
 import BookingsList, { type FilterTab } from "./BookingsList";
+import LoadError from "../LoadError";
 
 export default async function AdminBookingsPage({
   searchParams,
@@ -12,7 +13,6 @@ export default async function AdminBookingsPage({
   const activeTab: FilterTab = (params.filter as FilterTab) || "today";
 
   const [jobs, employees] = await Promise.all([getJobsByDateFilter(activeTab), getEmployees()]);
-  const employeeMap = Object.fromEntries(employees.map((e) => [e.id, e]));
 
   const displayDate = formatNy(new Date(), {
     weekday: "short", month: "long", day: "numeric", year: "numeric",
@@ -34,7 +34,15 @@ export default async function AdminBookingsPage({
         </div>
       </header>
 
-      <BookingsList jobs={jobs} employeeMap={employeeMap} activeTab={activeTab} />
+      {jobs.ok && employees.ok ? (
+        <BookingsList
+          jobs={jobs.data}
+          employeeMap={Object.fromEntries(employees.data.map((e) => [e.id, e]))}
+          activeTab={activeTab}
+        />
+      ) : (
+        <LoadError what="bookings" />
+      )}
     </>
   );
 }
