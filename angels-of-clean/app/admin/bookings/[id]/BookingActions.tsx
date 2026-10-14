@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { assignEmployees, updateBookingStatus } from "../../actions";
+import { assignEmployees, confirmBooking, updateBookingStatus } from "../../actions";
 import type { Employee, Job } from "../../data/mock";
 
 interface BookingActionsProps {
@@ -17,6 +17,7 @@ export default function BookingActions({ job, employees }: BookingActionsProps) 
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
+  const isUnconfirmed = job.status === "pending";
   const isCancelled = job.status === "cancelled";
   const isDone = job.status === "done";
 
@@ -35,6 +36,16 @@ export default function BookingActions({ job, employees }: BookingActionsProps) 
         return;
       }
       setShowPicker(false);
+      router.refresh();
+    });
+  }
+
+  function handleConfirm() {
+    setError(null);
+    startTransition(async () => {
+      const result = await confirmBooking(job.id);
+      if (!result.success) setError(result.error ?? "Something went wrong.");
+      // Refresh either way: a refusal means the status changed under us.
       router.refresh();
     });
   }
@@ -60,7 +71,17 @@ export default function BookingActions({ job, employees }: BookingActionsProps) 
 
   return (
     <div className="flex flex-col gap-2.5">
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p role="alert" className="text-xs text-red-600">{error}</p>}
+
+      {isUnconfirmed && (
+        <button
+          onClick={handleConfirm}
+          disabled={isPending}
+          className="h-9 w-full rounded-lg bg-[#1d4ed8] text-white text-[13px] font-semibold hover:bg-[#1e40af] transition-colors disabled:opacity-50"
+        >
+          Confirm Booking
+        </button>
+      )}
 
       {showPicker ? (
         <div className="rounded-lg border border-[#e2e8e6] p-3 flex flex-col gap-2">

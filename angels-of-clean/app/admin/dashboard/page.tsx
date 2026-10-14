@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { getDashboardStats, getEmployees } from "@/lib/supabase/queries";
 import { DASHBOARD_STATUS, type Job, type JobStatus } from "../data/mock";
 import { NewBookingButton } from "../NewBookingModal";
+import JobRowActions from "./JobRowActions";
 import { formatNy, formatNyTimeRange } from "@/lib/datetime";
 
 function timeRange(job: Job) {
@@ -119,7 +119,7 @@ export default async function AdminDashboardPage() {
             ) : (
               <>
                 {/* Table Header */}
-                <div className="grid grid-cols-[1fr_1fr_1.6fr_0.8fr_1fr_0.8fr_0.5fr] bg-[#f7f9f8] border-b border-[#e2e8e6] px-6 py-3">
+                <div className="grid grid-cols-[1fr_1fr_1.6fr_0.8fr_1fr_0.8fr_10rem] bg-[#f7f9f8] border-b border-[#e2e8e6] px-6 py-3">
                   {[
                     "Client",
                     "Service",
@@ -147,7 +147,7 @@ export default async function AdminDashboardPage() {
                   return (
                     <div
                       key={job.id}
-                      className="grid grid-cols-[1fr_1fr_1.6fr_0.8fr_1fr_0.8fr_0.5fr] items-center px-6 py-5 border-b border-[#e2e8e6] last:border-b-0"
+                      className="grid grid-cols-[1fr_1fr_1.6fr_0.8fr_1fr_0.8fr_10rem] items-center px-6 py-5 border-b border-[#e2e8e6] last:border-b-0"
                     >
                       <span className="text-sm font-semibold text-[#1c1c1e]">
                         {job.client}
@@ -169,14 +169,7 @@ export default async function AdminDashboardPage() {
                         {employee ? employee.name : "Unassigned"}
                       </span>
                       <StatusChip status={job.status} />
-                      <div className="flex justify-end">
-                        <Link
-                          href={`/admin/bookings/${job.id}`}
-                          className="bg-[#f7f9f8] border border-[#e2e8e6] text-[#1c1c1e] text-xs font-medium px-4 py-1.5 rounded-md hover:bg-[#eef1ef] transition-colors"
-                        >
-                          View
-                        </Link>
-                      </div>
+                      <JobRowActions jobId={job.id} client={job.client} status={job.status} />
                     </div>
                   );
                 })}

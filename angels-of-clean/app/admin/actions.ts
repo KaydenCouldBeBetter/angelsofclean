@@ -86,6 +86,43 @@ export async function assignEmployees(
   return { success: true };
 }
 
+export async function confirmBooking(bookingId: string): Promise<ActionResult> {
+  const auth = await requireAdmin();
+  if (!auth.ok) {
+    return { success: false, error: auth.error };
+  }
+  const { supabase } = auth;
+
+  // The status filter makes pending → confirmed atomic: a booking that was
+  // cancelled or completed since the page loaded matches zero rows instead of
+  // being silently brought back.
+  const { data: updated, error } = await supabase
+    .from("bookings")
+    .update({ status: "confirmed", updated_at: new Date().toISOString() })
+    .eq("id", bookingId)
+    .eq("status", "pending")
+    .select("id");
+
+  if (error) {
+    logDbError("confirmBooking", error);
+    return { success: false, error: "Something went wrong. Please try again." };
+  }
+
+  if (!updated || updated.length === 0) {
+    // Refresh the admin pages so the admin sees what the booking is now.
+    revalidateBookingPaths(bookingId);
+    return {
+      success: false,
+      error: "This booking is no longer pending, so it can't be confirmed.",
+    };
+  }
+
+  await logActivity(auth, bookingId, STATUS_ACTIVITY_LABEL.confirmed);
+
+  revalidateBookingPaths(bookingId);
+  return { success: true };
+}
+
 export async function updateBookingStatus(
   bookingId: string,
   status: JobStatus,
