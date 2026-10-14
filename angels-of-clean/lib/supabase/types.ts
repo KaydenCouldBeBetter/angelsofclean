@@ -53,6 +53,26 @@ export type ActivityLogRow = {
   created_at: string;
 };
 
+export type CommercialQuoteRow = {
+  id: string;
+  quote_number: number;
+  business_name: string;
+  contact_name: string;
+  email: string;
+  phone: string;
+  facility_type: "office" | "retail" | "medical" | "warehouse" | "school" | "restaurant";
+  sqft_range: "<1k" | "1k-2k" | "2k-5k" | "5k+";
+  address: string;
+  city: string;
+  zip: string;
+  floors: number;
+  service_areas: string[];
+  frequency: "daily" | "2-3x" | "weekly" | "bi-weekly" | "monthly" | "one-time";
+  schedule_preference: "before" | "during" | "after" | "weekends" | null;
+  notes: string | null;
+  submitted_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -107,6 +127,12 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      commercial_quotes: {
+        Row: CommercialQuoteRow;
+        Insert: Omit<CommercialQuoteRow, "id" | "quote_number" | "submitted_at">;
+        Update: Partial<Omit<CommercialQuoteRow, "id" | "quote_number" | "submitted_at">>;
+        Relationships: [];
       };
     };
     Views: Record<string, never>;

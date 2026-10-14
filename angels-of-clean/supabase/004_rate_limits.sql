@@ -5,12 +5,12 @@
 -- flooding the bookings table. This adds a small fixed-window counter that the
 -- server calls (via the service-role client) before each public insert.
 --
--- Until this has been run, the app logs "allowPublicBooking failed" and lets
+-- Until this has been run, the app logs "allowPublicSubmission failed" and lets
 -- bookings through unlimited — it fails open so customers are never blocked by
 -- a missing migration.
 
 create table rate_limits (
-  bucket       text        not null,  -- e.g. 'booking:<keyed hash of the client IP>' — never a raw IP
+  bucket       text        not null,  -- e.g. 'booking:<keyed hash of the client IP>' or 'quote:<…>' — never a raw IP
   window_start timestamptz not null,
   hits         integer     not null default 1,
   primary key (bucket, window_start)

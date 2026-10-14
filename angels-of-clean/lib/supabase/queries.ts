@@ -1,6 +1,14 @@
 import { createClient } from "./server";
 import type { Employee, Job, ActivityEntry, JobStatus } from "@/app/admin/data/mock";
-import { SERVICE_LABELS, FREQUENCY_LABELS } from "@/lib/constants";
+import {
+  SERVICE_LABELS,
+  FREQUENCY_LABELS,
+  COMMERCIAL_FREQUENCY_LABELS,
+  COMMERCIAL_SERVICE_AREAS,
+  FACILITY_TYPE_LABELS,
+  SCHEDULE_PREFERENCE_LABELS,
+  SQFT_DISPLAY,
+} from "@/lib/constants";
 import type { ServiceType, Frequency } from "@/store/bookingStore";
 import { formatNy, formatNyDateTime, nyTodayStr } from "@/lib/datetime";
 
@@ -344,6 +352,70 @@ export async function getActivityLog(bookingId: string): Promise<QueryResult<Act
     data: data.map((row) => ({
       timestamp: formatNyDateTime(row.created_at),
       description: row.description,
+    })),
+  };
+}
+
+// ---------- Commercial quote requests ----------
+
+export interface CommercialQuote {
+  id: string;
+  quoteRef: string; // e.g. "COM-1000"
+  businessName: string;
+  contactName: string;
+  email: string;
+  phone: string;
+  facility: string; // e.g. "Office · 1,000 – 2,000 sq ft · 3 floors"
+  address: string;
+  serviceAreas: string[];
+  frequency: string;
+  schedulePreference?: string;
+  notes?: string;
+  submittedAt: string; // formatted in New York time
+}
+
+const QUOTE_COLUMNS =
+  "id,quote_number,business_name,contact_name,email,phone,facility_type,sqft_range,address,city,zip,floors,service_areas,frequency,schedule_preference,notes,submitted_at" as const;
+
+/**
+ * Every commercial quote request, newest first — used by the admin Quotes page.
+ */
+export async function getCommercialQuotes(): Promise<QueryResult<CommercialQuote[]>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("commercial_quotes")
+    .select(QUOTE_COLUMNS)
+    .order("submitted_at", { ascending: false });
+
+  if (error || !data) {
+    logQueryError("getCommercialQuotes", error);
+    return FAILED;
+  }
+
+  return {
+    ok: true,
+    data: data.map((row) => ({
+      id: row.id,
+      quoteRef: `COM-${row.quote_number}`,
+      businessName: row.business_name,
+      contactName: row.contact_name,
+      email: row.email,
+      phone: row.phone,
+      facility: [
+        FACILITY_TYPE_LABELS[row.facility_type] ?? row.facility_type,
+        SQFT_DISPLAY[row.sqft_range] ?? row.sqft_range,
+        pluralize(row.floors, "floor"),
+      ].join(" · "),
+      address: `${row.address}, ${row.city} ${row.zip}`,
+      serviceAreas: row.service_areas.map(
+        (id) => COMMERCIAL_SERVICE_AREAS.find((area) => area.id === id)?.label ?? id,
+      ),
+      frequency: COMMERCIAL_FREQUENCY_LABELS[row.frequency] ?? row.frequency,
+      schedulePreference: row.schedule_preference
+        ? SCHEDULE_PREFERENCE_LABELS[row.schedule_preference] ?? row.schedule_preference
+        : undefined,
+      notes: row.notes ?? undefined,
+      submittedAt: formatNyDateTime(row.submitted_at),
     })),
   };
 }

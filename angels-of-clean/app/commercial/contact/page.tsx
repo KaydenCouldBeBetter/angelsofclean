@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { useBookingStore } from "@/store/bookingStore";
 import {
   COMMERCIAL_FREQUENCIES,
+  FIELD_MAX_LENGTHS,
   SCHEDULE_PREFERENCES,
 } from "@/lib/constants";
 import type { CommercialFrequency, SchedulePreference } from "@/store/bookingStore";
@@ -92,6 +93,7 @@ export default function CommercialStep3() {
               onChange={(e) => setName(e.target.value)}
               onBlur={() => setTouched((t) => ({ ...t, name: true }))}
               autoComplete="name"
+              maxLength={FIELD_MAX_LENGTHS.name}
               className="h-14"
             />
             {touched.name && name.trim() === "" && (
@@ -106,6 +108,7 @@ export default function CommercialStep3() {
               value={businessName}
               onChange={(e) => setBusinessName(e.target.value)}
               autoComplete="organization"
+              maxLength={FIELD_MAX_LENGTHS.businessName}
               className="h-14"
             />
           </div>
@@ -123,6 +126,7 @@ export default function CommercialStep3() {
               onChange={(e) => setEmail(e.target.value)}
               onBlur={() => setTouched((t) => ({ ...t, email: true }))}
               autoComplete="email"
+              maxLength={FIELD_MAX_LENGTHS.email}
               className="h-14"
             />
             {touched.email && !emailValid && (
@@ -141,6 +145,7 @@ export default function CommercialStep3() {
               onChange={(e) => setPhone(e.target.value)}
               onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
               autoComplete="tel"
+              maxLength={FIELD_MAX_LENGTHS.phone}
               inputMode="tel"
               className="h-14"
             />

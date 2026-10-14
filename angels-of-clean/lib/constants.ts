@@ -44,10 +44,11 @@ export const PRICE_MAP: Record<NonNullable<ServiceType>, string> = {
   moveinout: "$199",
 };
 
-// Longest accepted value for each free-text booking field. Enforced on the
-// server (app/actions/submitBooking.ts) and mirrored as maxLength on the inputs.
+// Longest accepted value for each free-text booking or quote field. Enforced on
+// the server (app/actions/) and mirrored as maxLength on the inputs.
 export const FIELD_MAX_LENGTHS = {
   name: 100,
+  businessName: 100,
   email: 254,
   phone: 20,
   address: 200,
@@ -81,6 +82,8 @@ export const COMMERCIAL_FACILITY_TYPES: {
   { id: "school",     label: "School" },
   { id: "restaurant", label: "Restaurant" },
 ];
+
+export const COMMERCIAL_MAX_FLOORS = 20;
 
 export const COMMERCIAL_SQFT_RANGES: {
   id: NonNullable<CommercialSqftRange>;

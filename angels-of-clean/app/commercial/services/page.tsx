@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useBookingStore } from "@/store/bookingStore";
-import { COMMERCIAL_SERVICE_AREAS } from "@/lib/constants";
+import { COMMERCIAL_MAX_FLOORS, COMMERCIAL_SERVICE_AREAS, FIELD_MAX_LENGTHS } from "@/lib/constants";
 
 export default function CommercialStep2() {
   const router = useRouter();
@@ -83,9 +83,9 @@ export default function CommercialStep2() {
             </span>
             <button
               type="button"
-              onClick={() => setFloors((f) => Math.min(20, f + 1))}
+              onClick={() => setFloors((f) => Math.min(COMMERCIAL_MAX_FLOORS, f + 1))}
               aria-label="Increase floors"
-              disabled={floors >= 20}
+              disabled={floors >= COMMERCIAL_MAX_FLOORS}
               className="w-12 h-12 rounded-xl border-2 border-zinc-200 text-zinc-700 text-xl font-semibold hover:border-zinc-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
             >
               +
@@ -182,6 +182,7 @@ export default function CommercialStep2() {
             placeholder="e.g., High-traffic areas, specialized equipment needed, restricted access hours, hazardous materials…"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
+            maxLength={FIELD_MAX_LENGTHS.notes}
             className="min-h-28 resize-none"
           />
           <p className="text-xs text-zinc-400 mt-1.5">

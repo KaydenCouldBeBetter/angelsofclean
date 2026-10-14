@@ -15,6 +15,7 @@ import { useBookingStore } from "@/store/bookingStore";
 import {
   COMMERCIAL_FACILITY_TYPES,
   COMMERCIAL_SQFT_RANGES,
+  FIELD_MAX_LENGTHS,
   SERVICE_AREA_ZIPS,
 } from "@/lib/constants";
 import type { CommercialFacilityType, CommercialSqftRange } from "@/store/bookingStore";
@@ -147,6 +148,7 @@ export default function CommercialStep1() {
               placeholder="Enter street address"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
+              maxLength={FIELD_MAX_LENGTHS.address}
               autoComplete="street-address"
               className="h-14"
             />
@@ -160,6 +162,7 @@ export default function CommercialStep1() {
                 placeholder="City"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
+                maxLength={FIELD_MAX_LENGTHS.city}
                 autoComplete="address-level2"
                 className="h-14"
               />

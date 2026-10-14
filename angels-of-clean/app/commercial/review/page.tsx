@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import StepHeader from "@/components/booking/StepHeader";
@@ -17,10 +17,12 @@ import {
   COMMERCIAL_FREQUENCY_LABELS,
   SCHEDULE_PREFERENCE_LABELS,
 } from "@/lib/constants";
+import { submitCommercialQuote } from "@/app/actions/submitCommercialQuote";
 
 export default function CommercialReview() {
   const router = useRouter();
   const store = useBookingStore();
+  const [error, setError] = useState<string | null>(null);
 
   const {
     facilityType, sqftRange,
@@ -39,10 +41,39 @@ export default function CommercialReview() {
     .map((id) => COMMERCIAL_SERVICE_AREAS.find((a) => a.id === id)?.label ?? id)
     .join(", ");
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (isSubmitting) return;
+    setError(null);
     setSubmitting(true);
-    router.push("/commercial/confirmation");
+
+    let result;
+    try {
+      result = await submitCommercialQuote({
+        facilityType: facilityType ?? "",
+        sqftRange: sqftRange ?? "",
+        address, city, zip,
+        floors, serviceAreas,
+        notes: commercialNotes,
+        name, businessName, email, phone,
+        frequency: commercialFrequency ?? "",
+        schedulePreference,
+      });
+    } catch {
+      // The request never reached the server (offline, timeout).
+      result = {
+        success: false,
+        error: "We couldn't send your request. Check your connection and try again.",
+      };
+    }
+
+    // The confirmation page is only ever reached with a stored quote's reference.
+    if (!result.success || !result.quoteRef) {
+      setSubmitting(false);
+      setError(result.error ?? "Something went wrong. Please try again.");
+      return;
+    }
+
+    router.push(`/commercial/confirmation?ref=${result.quoteRef}`);
   }
 
   return (
@@ -172,6 +203,32 @@ export default function CommercialReview() {
               We respond to every quote request within one business day.
             </p>
           </div>
+
+          {error && (
+            <div
+              role="alert"
+              className="flex items-start gap-3 rounded-xl border border-red-300 bg-red-50 p-4"
+            >
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-700"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 8v4" />
+                <path d="M12 16h.01" />
+              </svg>
+              <div className="text-sm">
+                <p className="font-semibold text-red-900">Your request was not sent</p>
+                <p className="mt-0.5 text-red-800">{error}</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Desktop Submit + Back */}

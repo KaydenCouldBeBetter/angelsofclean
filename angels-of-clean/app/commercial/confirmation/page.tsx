@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import CommercialNav from "@/components/booking/CommercialNav";
 import { Button } from "@/components/ui/button";
 import { useBookingStore } from "@/store/bookingStore";
@@ -13,16 +13,11 @@ import {
   SCHEDULE_PREFERENCE_LABELS,
 } from "@/lib/constants";
 
-function generateRef() {
-  const year = new Date().getFullYear();
-  const num = Math.floor(1000 + Math.random() * 9000);
-  return `COM-${year}-${num}`;
-}
-
 export default function CommercialConfirmation() {
   const router = useRouter();
   const store = useBookingStore();
-  const [quoteRef] = useState(generateRef);
+  // Issued by the server once the quote is stored (see submitCommercialQuote).
+  const quoteRef = useSearchParams().get("ref");
 
   const {
     facilityType, sqftRange,
@@ -34,9 +29,9 @@ export default function CommercialConfirmation() {
   } = store;
 
   useEffect(() => {
-    if (!email || !businessName) router.replace("/commercial");
+    if (!quoteRef || !email || !businessName) router.replace("/commercial");
     setSubmitting(false);
-  }, [email, businessName, router, setSubmitting]);
+  }, [quoteRef, email, businessName, router, setSubmitting]);
 
   const areaLabels = serviceAreas
     .map((id) => COMMERCIAL_SERVICE_AREAS.find((a) => a.id === id)?.label ?? id)
@@ -84,7 +79,7 @@ export default function CommercialConfirmation() {
             🕐
           </span>
           <p className="text-sm text-teal-700 font-medium">
-            We'll follow up within one business day with a custom quote.
+            We&apos;ll follow up within one business day with a custom quote.
           </p>
         </div>
 
