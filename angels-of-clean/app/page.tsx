@@ -19,7 +19,7 @@ export default function Home() {
           </Link>
           <div className="border-t border-zinc-100 pt-3">
             <Link href="/admin">
-              <Button variant="ghost" className="w-full h-10 text-zinc-400 text-xs">Admin Dashboard →</Button>
+              <Button variant="ghost" className="w-full h-10 text-zinc-500 text-xs">Admin Dashboard →</Button>
             </Link>
           </div>
         </CardContent>

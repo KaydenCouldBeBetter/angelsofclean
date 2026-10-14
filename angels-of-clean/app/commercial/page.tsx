@@ -181,14 +181,14 @@ export default function CommercialStep1() {
                 className="h-14"
               />
               {touched.zip && zip.trim() !== "" && !zipValid && (
-                <p className="text-xs text-red-500" role="alert">
+                <p className="text-xs text-[#c0392b]" role="alert">
                   Enter a valid 5-digit ZIP code.
                 </p>
               )}
             </div>
           </div>
 
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-zinc-500">
             We serve the greater Syracuse, NY area. Call{" "}
             <span className="font-medium">(315) 555-0100</span> if you&apos;re
             unsure about your location.

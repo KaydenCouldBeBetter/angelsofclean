@@ -54,17 +54,17 @@ function EmployeeCard({ employee, todayJobs }: { employee: Employee; todayJobs: 
       <div className="px-5 pt-3 pb-4">
         <div className="grid grid-cols-2 gap-y-3">
           <div>
-            <p className="text-[11px] font-semibold text-[#9c9c9d] uppercase">Phone</p>
+            <p className="text-[11px] font-semibold text-[#5c5c5e] uppercase">Phone</p>
             <p className="text-[13px] text-[#1c1c1e] mt-0.5">{employee.phone}</p>
           </div>
           <div>
-            <p className="text-[11px] font-semibold text-[#9c9c9d] uppercase">Today</p>
+            <p className="text-[11px] font-semibold text-[#5c5c5e] uppercase">Today</p>
             <p className="text-[13px] text-[#1c1c1e] mt-0.5">
               {todayCount} job{todayCount !== 1 ? "s" : ""} today
             </p>
           </div>
           <div>
-            <p className="text-[11px] font-semibold text-[#9c9c9d] uppercase">Hired</p>
+            <p className="text-[11px] font-semibold text-[#5c5c5e] uppercase">Hired</p>
             <p className="text-[13px] text-[#1c1c1e] mt-0.5">{employee.hiredDate}</p>
           </div>
         </div>

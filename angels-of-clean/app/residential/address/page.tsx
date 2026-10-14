@@ -99,7 +99,7 @@ export default function AddressPage() {
                 className="h-12"
               />
               {touched.zip && zip.trim() !== "" && !zipValid && (
-                <p className="text-xs text-red-500">Please enter a valid 5-digit ZIP code.</p>
+                <p className="text-xs text-[#c0392b]">Please enter a valid 5-digit ZIP code.</p>
               )}
             </div>
           </div>

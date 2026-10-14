@@ -32,7 +32,7 @@ export default function CommercialStepper({ currentStep }: CommercialStepperProp
                   </div>
                   <span
                     className={`text-xs mt-1 text-center leading-tight max-w-[80px] ${
-                      isCurrent ? "text-teal-700 font-semibold" : "text-zinc-400"
+                      isCurrent ? "text-teal-700 font-semibold" : "text-zinc-500"
                     }`}
                   >
                     {label}

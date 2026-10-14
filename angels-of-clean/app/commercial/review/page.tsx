@@ -102,26 +102,26 @@ export default function CommercialReview() {
           <div className="rounded-xl border border-zinc-200 p-4 md:p-5">
             <div className="flex items-start justify-between mb-3">
               <span className="text-sm font-semibold text-zinc-900">Facility Info</span>
-              <Link href="/commercial" className="text-sm text-teal-600 font-medium hover:text-teal-700">
+              <Link href="/commercial" className="text-sm text-[#1a6b5a] font-medium hover:text-[#124d41]">
                 Edit
               </Link>
             </div>
             <div className="flex flex-col gap-1.5 text-sm">
               <div className="flex gap-3">
-                <span className="text-zinc-400 w-32 flex-shrink-0">Facility Type</span>
+                <span className="text-zinc-500 w-32 flex-shrink-0">Facility Type</span>
                 <span className="text-zinc-900 font-medium">
                   {facilityType ? FACILITY_TYPE_LABELS[facilityType] : "—"}
                 </span>
               </div>
               <div className="flex gap-3">
-                <span className="text-zinc-400 w-32 flex-shrink-0">Square Footage</span>
+                <span className="text-zinc-500 w-32 flex-shrink-0">Square Footage</span>
                 <span className="text-zinc-900 font-medium">
                   {sqftRange ? SQFT_DISPLAY[sqftRange] : "—"}
                 </span>
               </div>
               {address && (
                 <div className="flex gap-3">
-                  <span className="text-zinc-400 w-32 flex-shrink-0">Address</span>
+                  <span className="text-zinc-500 w-32 flex-shrink-0">Address</span>
                   <span className="text-zinc-900 font-medium">{address}, {city} {zip}</span>
                 </div>
               )}
@@ -132,22 +132,22 @@ export default function CommercialReview() {
           <div className="rounded-xl border border-zinc-200 p-4 md:p-5">
             <div className="flex items-start justify-between mb-3">
               <span className="text-sm font-semibold text-zinc-900">Service Scope</span>
-              <Link href="/commercial/services" className="text-sm text-teal-600 font-medium hover:text-teal-700">
+              <Link href="/commercial/services" className="text-sm text-[#1a6b5a] font-medium hover:text-[#124d41]">
                 Edit
               </Link>
             </div>
             <div className="flex flex-col gap-1.5 text-sm">
               <div className="flex gap-3">
-                <span className="text-zinc-400 w-32 flex-shrink-0">Floors</span>
+                <span className="text-zinc-500 w-32 flex-shrink-0">Floors</span>
                 <span className="text-zinc-900 font-medium">{floors}</span>
               </div>
               <div className="flex gap-3">
-                <span className="text-zinc-400 w-32 flex-shrink-0">Areas</span>
+                <span className="text-zinc-500 w-32 flex-shrink-0">Areas</span>
                 <span className="text-zinc-900 font-medium">{areaLabels || "—"}</span>
               </div>
               {commercialNotes && (
                 <div className="flex gap-3">
-                  <span className="text-zinc-400 w-32 flex-shrink-0">Special Notes</span>
+                  <span className="text-zinc-500 w-32 flex-shrink-0">Special Notes</span>
                   <span className="text-zinc-900 font-medium">{commercialNotes}</span>
                 </div>
               )}
@@ -158,36 +158,36 @@ export default function CommercialReview() {
           <div className="rounded-xl border border-zinc-200 p-4 md:p-5">
             <div className="flex items-start justify-between mb-3">
               <span className="text-sm font-semibold text-zinc-900">Contact &amp; Frequency</span>
-              <Link href="/commercial/contact" className="text-sm text-teal-600 font-medium hover:text-teal-700">
+              <Link href="/commercial/contact" className="text-sm text-[#1a6b5a] font-medium hover:text-[#124d41]">
                 Edit
               </Link>
             </div>
             <div className="flex flex-col gap-1.5 text-sm">
               <div className="flex gap-3">
-                <span className="text-zinc-400 w-32 flex-shrink-0">Contact</span>
+                <span className="text-zinc-500 w-32 flex-shrink-0">Contact</span>
                 <span className="text-zinc-900 font-medium">{name}</span>
               </div>
               <div className="flex gap-3">
-                <span className="text-zinc-400 w-32 flex-shrink-0">Business</span>
+                <span className="text-zinc-500 w-32 flex-shrink-0">Business</span>
                 <span className="text-zinc-900 font-medium">{businessName}</span>
               </div>
               <div className="flex gap-3">
-                <span className="text-zinc-400 w-32 flex-shrink-0">Email</span>
+                <span className="text-zinc-500 w-32 flex-shrink-0">Email</span>
                 <span className="text-zinc-900 font-medium">{email}</span>
               </div>
               <div className="flex gap-3">
-                <span className="text-zinc-400 w-32 flex-shrink-0">Phone</span>
+                <span className="text-zinc-500 w-32 flex-shrink-0">Phone</span>
                 <span className="text-zinc-900 font-medium">{phone}</span>
               </div>
               <div className="flex gap-3">
-                <span className="text-zinc-400 w-32 flex-shrink-0">Frequency</span>
+                <span className="text-zinc-500 w-32 flex-shrink-0">Frequency</span>
                 <span className="text-zinc-900 font-medium">
                   {commercialFrequency ? COMMERCIAL_FREQUENCY_LABELS[commercialFrequency] : "—"}
                 </span>
               </div>
               {schedulePreference && (
                 <div className="flex gap-3">
-                  <span className="text-zinc-400 w-32 flex-shrink-0">Preference</span>
+                  <span className="text-zinc-500 w-32 flex-shrink-0">Preference</span>
                   <span className="text-zinc-900 font-medium">
                     {SCHEDULE_PREFERENCE_LABELS[schedulePreference]}
                   </span>

@@ -46,7 +46,7 @@ function JobCard({ info }: { info: EventContentArg }) {
         <span className="font-semibold text-zinc-900 text-xs leading-tight truncate">
           {info.event.title}
         </span>
-        <span className="text-[10px] text-zinc-400 flex-shrink-0">~{hrs} hr{hrs !== 1 ? "s" : ""}</span>
+        <span className="text-[10px] text-zinc-600 flex-shrink-0">~{hrs} hr{hrs !== 1 ? "s" : ""}</span>
       </div>
 
       {/* Service */}
@@ -62,7 +62,7 @@ function JobCard({ info }: { info: EventContentArg }) {
             <span className="text-[10px] text-zinc-500 truncate">{employee.name}</span>
           </div>
         ) : (
-          <span className="text-[10px] text-orange-500 font-medium">Unassigned</span>
+          <span className="text-[10px] text-[#c0392b] font-medium">Unassigned</span>
         )}
         <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${cfg.chipBg} ${cfg.chipText}`}>
           {cfg.label}

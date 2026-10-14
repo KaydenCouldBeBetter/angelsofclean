@@ -124,8 +124,8 @@ export default function ReviewPage() {
           {reviewCards.map((card) => (
             <div key={card.label} className="rounded-xl border border-zinc-200 p-4">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-zinc-400 uppercase tracking-wide">{card.label}</span>
-                <Link href={card.editHref} className="text-sm text-teal-600 font-medium">Edit</Link>
+                <span className="text-xs text-zinc-500 uppercase tracking-wide">{card.label}</span>
+                <Link href={card.editHref} className="text-sm text-[#1a6b5a] font-medium hover:underline">Edit</Link>
               </div>
               {card.lines.map((line, i) => (
                 <p key={i} className={i === 0 ? "mt-1 font-semibold text-zinc-900" : "text-sm text-zinc-500"}>
@@ -137,7 +137,7 @@ export default function ReviewPage() {
 
           {/* Price card — mobile */}
           <div className="rounded-xl border border-teal-100 bg-teal-50 p-4">
-            <p className="text-xs text-zinc-400">Estimated Price</p>
+            <p className="text-xs text-zinc-500">Estimated Price</p>
             <p className="font-semibold text-[#1a6b5a] mt-1">Quote provided after confirmation</p>
           </div>
         </div>
@@ -147,7 +147,7 @@ export default function ReviewPage() {
           {reviewCards.map((card) => (
             <div key={card.label} className="rounded-xl border border-zinc-200 p-5">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-zinc-400">{card.label}</span>
+                <span className="text-xs text-zinc-500">{card.label}</span>
                 <Link href={card.editHref} className="text-sm text-[#1a6b5a] font-medium hover:underline">Edit</Link>
               </div>
               {card.lines.map((line, i) => (
@@ -160,7 +160,7 @@ export default function ReviewPage() {
 
           {/* Price card — desktop (teal background) */}
           <div className="rounded-xl bg-teal-50 border border-teal-100 p-5">
-            <p className="text-xs text-zinc-400">Estimated Price</p>
+            <p className="text-xs text-zinc-500">Estimated Price</p>
             <p className="font-semibold text-[#1a6b5a] mt-2">Quote provided after confirmation</p>
           </div>
         </div>

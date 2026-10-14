@@ -55,7 +55,7 @@ export default function CommercialError() {
         {/* Address entered */}
         {address && (
           <div className="rounded-xl border border-red-200 bg-red-50 p-4 mb-4">
-            <p className="text-xs font-medium text-red-500 mb-1 uppercase tracking-wide">
+            <p className="text-xs font-medium text-[#c0392b] mb-1 uppercase tracking-wide">
               Address entered
             </p>
             <p className="text-sm text-red-900 font-semibold">
@@ -83,7 +83,7 @@ export default function CommercialError() {
             <p className="text-sm text-zinc-700 mt-2">
               <a
                 href="tel:+13155550100"
-                className="text-teal-600 font-medium hover:text-teal-700 transition-colors"
+                className="text-[#1a6b5a] font-medium hover:text-[#124d41] transition-colors"
               >
                 (315) 555-0100
               </a>

@@ -12,9 +12,9 @@ export default async function AdminCalendarPage() {
       <header className="flex-shrink-0 h-16 bg-white border-b border-zinc-200 flex items-center px-8 justify-between">
         <div>
           <h1 className="font-bold text-lg text-zinc-900 leading-tight">Calendar</h1>
-          <p className="text-sm text-zinc-400">Weekly Schedule</p>
+          <p className="text-sm text-zinc-500">Weekly Schedule</p>
         </div>
-        <span className="text-sm text-zinc-400">
+        <span className="text-sm text-zinc-500">
           {formatNy(new Date(), { weekday: "short", month: "long", day: "numeric", year: "numeric" })}
         </span>
       </header>

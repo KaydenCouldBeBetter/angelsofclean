@@ -28,7 +28,7 @@ function Stepper({ label, value, min, max, onChange }: StepperProps) {
           onClick={() => onChange(value - 1)}
           disabled={value <= min}
           aria-label={`Decrease ${label}`}
-          className="w-14 h-full flex items-center justify-center text-xl font-semibold text-teal-600 disabled:text-zinc-300 disabled:cursor-not-allowed hover:bg-zinc-50 transition-colors"
+          className="w-14 h-full flex items-center justify-center text-xl font-semibold text-[#1a6b5a] disabled:text-zinc-300 disabled:cursor-not-allowed hover:bg-zinc-50 transition-colors"
         >
           −
         </button>
@@ -39,7 +39,7 @@ function Stepper({ label, value, min, max, onChange }: StepperProps) {
           onClick={() => onChange(value + 1)}
           disabled={value >= max}
           aria-label={`Increase ${label}`}
-          className="w-14 h-full flex items-center justify-center text-xl font-semibold text-teal-600 disabled:text-zinc-300 disabled:cursor-not-allowed hover:bg-zinc-50 transition-colors"
+          className="w-14 h-full flex items-center justify-center text-xl font-semibold text-[#1a6b5a] disabled:text-zinc-300 disabled:cursor-not-allowed hover:bg-zinc-50 transition-colors"
         >
           +
         </button>

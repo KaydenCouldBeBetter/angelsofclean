@@ -56,7 +56,7 @@ export default function ConfirmationPage() {
           {/* Booking detail card */}
           <div className="w-full rounded-xl border border-zinc-200 p-4 flex flex-col gap-1">
             {bookingRef && (
-              <p className="text-xs text-zinc-400 uppercase tracking-wide">
+              <p className="text-xs text-zinc-500 uppercase tracking-wide">
                 Confirmation #{bookingRef}
               </p>
             )}
@@ -110,7 +110,7 @@ export default function ConfirmationPage() {
         {/* Detail card */}
         <div className="w-[640px] mt-8 rounded-xl border border-zinc-200 bg-white p-6 flex flex-col gap-2">
           {bookingRef && (
-            <p className="text-xs text-zinc-400 uppercase tracking-wide">
+            <p className="text-xs text-zinc-500 uppercase tracking-wide">
               Confirmation #{bookingRef}
             </p>
           )}

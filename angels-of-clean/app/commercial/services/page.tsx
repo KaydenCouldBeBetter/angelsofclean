@@ -91,7 +91,7 @@ export default function CommercialStep2() {
               +
             </button>
           </div>
-          <p className="text-xs text-zinc-400 mt-2">
+          <p className="text-xs text-zinc-500 mt-2">
             Select the number of floors that require cleaning service.
           </p>
         </div>
@@ -166,7 +166,7 @@ export default function CommercialStep2() {
             })}
           </div>
           {selectedAreas.length === 0 && (
-            <p className="text-xs text-zinc-400 mt-2">
+            <p className="text-xs text-zinc-500 mt-2">
               Select at least one area to continue.
             </p>
           )}
@@ -176,7 +176,7 @@ export default function CommercialStep2() {
         <div className="mb-6 md:mb-8">
           <Label htmlFor="notes" className="text-sm font-semibold text-zinc-900 mb-1 block">
             Special Requirements or Notes{" "}
-            <span className="font-normal text-zinc-400">(optional)</span>
+            <span className="font-normal text-zinc-500">(optional)</span>
           </Label>
           <Textarea
             id="notes"
@@ -186,7 +186,7 @@ export default function CommercialStep2() {
             maxLength={FIELD_MAX_LENGTHS.notes}
             className="min-h-28 resize-none"
           />
-          <p className="text-xs text-zinc-400 mt-1.5">
+          <p className="text-xs text-zinc-500 mt-1.5">
             Optional — include any details that would help us prepare an accurate quote.
           </p>
         </div>

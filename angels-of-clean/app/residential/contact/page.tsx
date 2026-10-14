@@ -72,7 +72,7 @@ export default function ContactPage() {
               className="h-12"
             />
             {touched.name && name.trim() === "" && (
-              <p className="text-xs text-red-500">Full name is required.</p>
+              <p className="text-xs text-[#c0392b]">Full name is required.</p>
             )}
           </div>
 
@@ -92,10 +92,10 @@ export default function ContactPage() {
                 className="h-12"
               />
               {touched.email && email.trim() !== "" && !emailValid && (
-                <p className="text-xs text-red-500">Please enter a valid email address.</p>
+                <p className="text-xs text-[#c0392b]">Please enter a valid email address.</p>
               )}
               {touched.email && email.trim() === "" && (
-                <p className="text-xs text-red-500">Email is required.</p>
+                <p className="text-xs text-[#c0392b]">Email is required.</p>
               )}
             </div>
 
@@ -114,15 +114,15 @@ export default function ContactPage() {
                 className="h-12"
               />
               {touched.phone && phone.trim() !== "" && !phoneValid && (
-                <p className="text-xs text-red-500">Please enter a valid 10-digit phone number.</p>
+                <p className="text-xs text-[#c0392b]">Please enter a valid 10-digit phone number.</p>
               )}
               {touched.phone && phone.trim() === "" && (
-                <p className="text-xs text-red-500">Phone number is required.</p>
+                <p className="text-xs text-[#c0392b]">Phone number is required.</p>
               )}
             </div>
           </div>
 
-          <p className="text-xs text-zinc-400">
+          <p className="text-xs text-zinc-500">
             Your information is secure. We never share your data with third parties.
           </p>
         </div>
