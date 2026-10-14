@@ -51,22 +51,31 @@ function logQueryError(source: string, error: { code?: string } | null | undefin
   });
 }
 
-export async function getEmployees(): Promise<Employee[]> {
+// A failed query is reported as { ok: false }, never as an empty result, so a
+// page can't mistake "the database is down" for "there are no jobs".
+export type QueryResult<T> = { ok: true; data: T } | { ok: false };
+
+const FAILED = { ok: false } as const;
+
+export async function getEmployees(): Promise<QueryResult<Employee[]>> {
   const supabase = await createClient();
   const { data, error } = await supabase.from("employees").select(EMPLOYEE_COLUMNS).order("name");
 
   if (error || !data) {
     logQueryError("getEmployees", error);
-    return [];
+    return FAILED;
   }
 
-  return data.map((row) => ({
-    id: row.id,
-    name: row.name,
-    initials: row.initials,
-    phone: row.phone,
-    hiredDate: formatHiredDate(row.hired_date),
-  }));
+  return {
+    ok: true,
+    data: data.map((row) => ({
+      id: row.id,
+      name: row.name,
+      initials: row.initials,
+      phone: row.phone,
+      hiredDate: formatHiredDate(row.hired_date),
+    })),
+  };
 }
 
 // Nested-embed queries (`*, booking_employees(employee_id)`) don't reliably
@@ -117,7 +126,7 @@ function mapBookingToJob(row: BookingWithEmployees): Job {
   };
 }
 
-export async function getJobs(): Promise<Job[]> {
+export async function getJobs(): Promise<QueryResult<Job[]>> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("bookings")
@@ -126,10 +135,10 @@ export async function getJobs(): Promise<Job[]> {
 
   if (error || !data) {
     logQueryError("getJobs", error);
-    return [];
+    return FAILED;
   }
 
-  return (data as unknown as BookingWithEmployees[]).map(mapBookingToJob);
+  return { ok: true, data: (data as unknown as BookingWithEmployees[]).map(mapBookingToJob) };
 }
 
 /**
@@ -138,7 +147,7 @@ export async function getJobs(): Promise<Job[]> {
  */
 export async function getJobsByDateFilter(
   filter: "today" | "upcoming" | "past" | "all",
-): Promise<Job[]> {
+): Promise<QueryResult<Job[]>> {
   const supabase = await createClient();
   const today = nyTodayStr();
 
@@ -163,16 +172,16 @@ export async function getJobsByDateFilter(
 
   if (error || !data) {
     logQueryError("getJobsByDateFilter", error);
-    return [];
+    return FAILED;
   }
 
-  return (data as unknown as BookingWithEmployees[]).map(mapBookingToJob);
+  return { ok: true, data: (data as unknown as BookingWithEmployees[]).map(mapBookingToJob) };
 }
 
 /**
  * Fetch only today's non-cancelled bookings — used by the employees page.
  */
-export async function getTodayJobs(): Promise<Job[]> {
+export async function getTodayJobs(): Promise<QueryResult<Job[]>> {
   const supabase = await createClient();
   const today = nyTodayStr();
 
@@ -185,10 +194,10 @@ export async function getTodayJobs(): Promise<Job[]> {
 
   if (error || !data) {
     logQueryError("getTodayJobs", error);
-    return [];
+    return FAILED;
   }
 
-  return (data as unknown as BookingWithEmployees[]).map(mapBookingToJob);
+  return { ok: true, data: (data as unknown as BookingWithEmployees[]).map(mapBookingToJob) };
 }
 
 /**
@@ -199,7 +208,7 @@ export async function getTodayJobs(): Promise<Job[]> {
 export async function getJobsInRange(
   from?: string,
   to?: string,
-): Promise<Job[]> {
+): Promise<QueryResult<Job[]>> {
   const supabase = await createClient();
 
   if (!from || !to) {
@@ -217,10 +226,10 @@ export async function getJobsInRange(
 
   if (error || !data) {
     logQueryError("getJobsInRange", error);
-    return [];
+    return FAILED;
   }
 
-  return (data as unknown as BookingWithEmployees[]).map(mapBookingToJob);
+  return { ok: true, data: (data as unknown as BookingWithEmployees[]).map(mapBookingToJob) };
 }
 
 // ---------- Dashboard-specific queries ----------
@@ -232,7 +241,7 @@ export interface DashboardStats {
   totalEmployees: number;
 }
 
-export async function getDashboardStats(): Promise<DashboardStats> {
+export async function getDashboardStats(): Promise<QueryResult<DashboardStats>> {
   const supabase = await createClient();
   const today = nyTodayStr();
 
@@ -271,19 +280,34 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       .select("id", { count: "exact", head: true }),
   ]);
 
-  const todayJobs = todayRes.error || !todayRes.data
-    ? []
-    : (todayRes.data as unknown as BookingWithEmployees[]).map(mapBookingToJob);
+  // One failed query fails the whole dashboard: a card showing 0 beside real
+  // numbers would read as "nothing pending", not "couldn't load".
+  const failed =
+    todayRes.error ?? pendingRes.error ?? completedRes.error ?? employeeRes.error;
+  if (
+    failed ||
+    !todayRes.data ||
+    pendingRes.count === null ||
+    completedRes.count === null ||
+    employeeRes.count === null
+  ) {
+    logQueryError("getDashboardStats", failed);
+    return FAILED;
+  }
 
   return {
-    todayJobs,
-    totalPending: pendingRes.count ?? 0,
-    completedThisWeek: completedRes.count ?? 0,
-    totalEmployees: employeeRes.count ?? 0,
+    ok: true,
+    data: {
+      todayJobs: (todayRes.data as unknown as BookingWithEmployees[]).map(mapBookingToJob),
+      totalPending: pendingRes.count,
+      completedThisWeek: completedRes.count,
+      totalEmployees: employeeRes.count,
+    },
   };
 }
 
-export async function getJobById(id: string): Promise<Job | null> {
+// `data: null` means the booking doesn't exist; a failed lookup is { ok: false }.
+export async function getJobById(id: string): Promise<QueryResult<Job | null>> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("bookings")
@@ -291,15 +315,18 @@ export async function getJobById(id: string): Promise<Job | null> {
     .eq("id", id)
     .maybeSingle();
 
-  if (error || !data) {
-    if (error) logQueryError("getJobById", error);
-    return null;
+  if (error) {
+    logQueryError("getJobById", error);
+    return FAILED;
   }
 
-  return mapBookingToJob(data as unknown as BookingWithEmployees);
+  return {
+    ok: true,
+    data: data ? mapBookingToJob(data as unknown as BookingWithEmployees) : null,
+  };
 }
 
-export async function getActivityLog(bookingId: string): Promise<ActivityEntry[]> {
+export async function getActivityLog(bookingId: string): Promise<QueryResult<ActivityEntry[]>> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("activity_log")
@@ -309,11 +336,14 @@ export async function getActivityLog(bookingId: string): Promise<ActivityEntry[]
 
   if (error || !data) {
     logQueryError("getActivityLog", error);
-    return [];
+    return FAILED;
   }
 
-  return data.map((row) => ({
-    timestamp: formatNyDateTime(row.created_at),
-    description: row.description,
-  }));
+  return {
+    ok: true,
+    data: data.map((row) => ({
+      timestamp: formatNyDateTime(row.created_at),
+      description: row.description,
+    })),
+  };
 }

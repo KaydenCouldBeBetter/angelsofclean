@@ -75,6 +75,10 @@ function JobCard({ info }: { info: EventContentArg }) {
 export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [allJobs, setAllJobs] = useState<Job[]>(jobs);
+  // Set when jobs for the visible dates failed to load, so blank days aren't
+  // read as "nothing scheduled".
+  const [loadFailed, setLoadFailed] = useState(false);
+  const lastDatesSet = useRef<DatesSetArg | null>(null);
 
   // Track the date range we've already loaded so we don't re-fetch.
   const loadedRange = useRef({ from: "", to: "" });
@@ -92,11 +96,13 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
 
   // Called whenever FullCalendar changes its visible date range (navigation).
   const handleDatesSet = useCallback(async (arg: DatesSetArg) => {
+    lastDatesSet.current = arg;
     const viewStart = toDateStr(arg.start);
     const viewEnd = toDateStr(arg.end);
 
     // If the visible range is within what we've already loaded, do nothing.
     if (viewStart >= loadedRange.current.from && viewEnd <= loadedRange.current.to) {
+      setLoadFailed(false);
       return;
     }
 
@@ -115,7 +121,10 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
 
     try {
       const res = await fetch(`/api/admin/jobs?from=${fetchFrom}&to=${fetchTo}`);
-      if (!res.ok) return;
+      if (!res.ok) {
+        setLoadFailed(true);
+        return;
+      }
       const newJobs: Job[] = await res.json();
 
       // Merge: replace any overlapping jobs (by id) and add new ones.
@@ -128,8 +137,10 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
       });
 
       loadedRange.current = { from: fetchFrom, to: fetchTo };
+      setLoadFailed(false);
     } catch (err) {
       console.error("Failed to fetch calendar jobs", err);
+      setLoadFailed(true);
     }
   }, []);
 
@@ -149,6 +160,23 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
 
   return (
     <>
+    {loadFailed && (
+      <div
+        role="alert"
+        className="flex items-center justify-between gap-4 border-b border-[#c0392b] bg-[#feefee] px-8 py-3"
+      >
+        <p className="text-[13px] text-[#1c1c1e]">
+          <span className="font-semibold">We couldn&apos;t load jobs for these dates.</span>{" "}
+          Days that look empty may not be.
+        </p>
+        <button
+          onClick={() => lastDatesSet.current && handleDatesSet(lastDatesSet.current)}
+          className="h-8 flex-shrink-0 rounded-lg border border-[#c0392b] bg-white px-3 text-[13px] font-semibold text-[#c0392b] hover:bg-[#fde2e0] transition-colors"
+        >
+          Try again
+        </button>
+      </div>
+    )}
     <FullCalendar
       plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
       initialView="timeGridWeek"

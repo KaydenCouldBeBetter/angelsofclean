@@ -1,40 +1,80 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // Chainable postgrest-builder stub — records the columns passed to select()
 // and resolves to the given result when awaited.
-type QueryResult = { data: unknown; error: unknown };
+type QueryResult = { data: unknown; error: unknown; count?: number | null };
 
-function makeSupabaseStub(result: QueryResult) {
+// Pass several results to answer successive from() calls in order (the last
+// one repeats) — getDashboardStats runs four queries.
+function makeSupabaseStub(...results: QueryResult[]) {
   const recorded: { table?: string; columns?: string } = {};
-  /* eslint-disable @typescript-eslint/no-explicit-any */
-  const builder: any = {};
-  for (const method of ["order", "eq", "neq", "gt", "lt", "gte", "lte"]) {
-    builder[method] = vi.fn(() => builder);
-  }
-  builder.select = vi.fn((columns: string) => {
-    recorded.columns = columns;
+  let call = 0;
+
+  function makeBuilder(result: QueryResult) {
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const builder: any = {};
+    for (const method of ["order", "eq", "neq", "gt", "lt", "gte", "lte"]) {
+      builder[method] = vi.fn(() => builder);
+    }
+    builder.select = vi.fn((columns: string) => {
+      recorded.columns = columns;
+      return builder;
+    });
+    builder.maybeSingle = vi.fn(() => Promise.resolve(result));
+    builder.then = (resolve: (value: QueryResult) => unknown, reject?: (reason: unknown) => unknown) =>
+      Promise.resolve(result).then(resolve, reject);
+    /* eslint-enable @typescript-eslint/no-explicit-any */
     return builder;
-  });
-  builder.maybeSingle = vi.fn(() => Promise.resolve(result));
-  builder.then = (resolve: (value: QueryResult) => unknown, reject?: (reason: unknown) => unknown) =>
-    Promise.resolve(result).then(resolve, reject);
-  /* eslint-enable @typescript-eslint/no-explicit-any */
+  }
 
   const client = {
     from: vi.fn((table: string) => {
       recorded.table = table;
-      return builder;
+      const result = results[Math.min(call, results.length - 1)];
+      call += 1;
+      return makeBuilder(result);
     }),
   };
   return { recorded, client };
 }
+
+const DB_DOWN: QueryResult = { data: null, error: { code: "57P03", message: "cannot connect" } };
+
+const BOOKING_ROW = {
+  id: "b-1",
+  booking_number: 1001,
+  client_name: "Jane Doe",
+  email: "jane@example.com",
+  phone: "(315) 555-0100",
+  service_type: "standard",
+  frequency: "one-time",
+  address: "1 Main St",
+  city: "Cicero",
+  bedrooms: 2,
+  bathrooms: 1,
+  notes: null,
+  start_at: "2026-09-15T12:00:00.000Z",
+  end_at: "2026-09-15T16:00:00.000Z",
+  status: "pending",
+  submitted_at: "2026-09-10T15:00:00.000Z",
+  booking_employees: [],
+};
 
 const createClientMock = vi.fn();
 vi.mock("../server", () => ({
   createClient: () => createClientMock(),
 }));
 
-import { getJobsInRange, getJobs, getJobsByDateFilter } from "../queries";
+import {
+  getActivityLog,
+  getDashboardStats,
+  getEmployees,
+  getJobById,
+  getJobs,
+  getJobsByDateFilter,
+  getJobsInRange,
+  getTodayJobs,
+} from "../queries";
 
 describe("getJobsInRange (calendar projection)", () => {
   beforeEach(() => {
@@ -72,7 +112,7 @@ describe("getJobsInRange (calendar projection)", () => {
 
     const jobs = await getJobsInRange("2026-09-01", "2026-09-30");
 
-    expect(jobs).toEqual([]);
+    expect(jobs).toEqual({ ok: false });
     expect(consoleSpy).toHaveBeenCalledTimes(1);
     const logged = JSON.stringify(consoleSpy.mock.calls);
     expect(logged).toContain("42501");
@@ -115,5 +155,70 @@ describe("getJobsByDateFilter (client bookings-list projection)", () => {
     // notes can hold entry/access instructions and is never rendered in the
     // list, so it must not be serialized to the browser.
     expect(columns).not.toContain("notes");
+  });
+});
+
+// B18 — an outage must never be reported as an empty result.
+describe("failed queries are distinguishable from empty results", () => {
+  let consoleSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleSpy.mockRestore();
+  });
+
+  it.each([
+    ["getEmployees", () => getEmployees()],
+    ["getJobs", () => getJobs()],
+    ["getJobsByDateFilter", () => getJobsByDateFilter("today")],
+    ["getTodayJobs", () => getTodayJobs()],
+    ["getJobsInRange", () => getJobsInRange("2026-09-01", "2026-09-30")],
+    ["getActivityLog", () => getActivityLog("b-1")],
+  ])("%s reports a database error as { ok: false }, and no rows as an empty list", async (_name, run) => {
+    createClientMock.mockResolvedValue(makeSupabaseStub(DB_DOWN).client);
+    expect(await run()).toEqual({ ok: false });
+    expect(consoleSpy).toHaveBeenCalledTimes(1);
+
+    createClientMock.mockResolvedValue(makeSupabaseStub({ data: [], error: null }).client);
+    expect(await run()).toEqual({ ok: true, data: [] });
+  });
+
+  it("getJobById tells a missing booking apart from a failed lookup", async () => {
+    createClientMock.mockResolvedValue(makeSupabaseStub({ data: null, error: null }).client);
+    expect(await getJobById("missing")).toEqual({ ok: true, data: null });
+    expect(consoleSpy).not.toHaveBeenCalled();
+
+    createClientMock.mockResolvedValue(makeSupabaseStub(DB_DOWN).client);
+    expect(await getJobById("b-1")).toEqual({ ok: false });
+
+    createClientMock.mockResolvedValue(makeSupabaseStub({ data: BOOKING_ROW, error: null }).client);
+    const found = await getJobById("b-1");
+    expect(found).toMatchObject({ ok: true, data: { id: "b-1", client: "Jane Doe" } });
+  });
+
+  it("getDashboardStats returns real zeros when the day is genuinely empty", async () => {
+    createClientMock.mockResolvedValue(
+      makeSupabaseStub({ data: [], error: null, count: 0 }).client,
+    );
+
+    expect(await getDashboardStats()).toEqual({
+      ok: true,
+      data: { todayJobs: [], totalPending: 0, completedThisWeek: 0, totalEmployees: 0 },
+    });
+  });
+
+  it("getDashboardStats fails as a whole when any one of its queries fails", async () => {
+    const ok = { data: [], error: null, count: 3 };
+    // Order of from() calls: today's jobs, pending count, completed count, employee count.
+    for (const failingIndex of [0, 1, 2, 3]) {
+      const results = [ok, ok, ok, ok].map((r, i) => (i === failingIndex ? DB_DOWN : r));
+      createClientMock.mockResolvedValue(makeSupabaseStub(...results).client);
+
+      expect(await getDashboardStats()).toEqual({ ok: false });
+    }
   });
 });

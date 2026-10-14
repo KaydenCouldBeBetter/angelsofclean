@@ -1,10 +1,10 @@
 import { getJobsInRange, getEmployees } from "@/lib/supabase/queries";
 import { formatNy } from "@/lib/datetime";
 import CalendarView from "./CalendarView";
+import LoadError from "../LoadError";
 
 export default async function AdminCalendarPage() {
   const [jobs, employees] = await Promise.all([getJobsInRange(), getEmployees()]);
-  const employeeMap = Object.fromEntries(employees.map((e) => [e.id, e]));
 
   return (
     <>
@@ -20,9 +20,16 @@ export default async function AdminCalendarPage() {
       </header>
 
       {/* Calendar */}
-      <div className="flex-1 overflow-auto p-0 admin-calendar">
-        <CalendarView jobs={jobs} employeeMap={employeeMap} />
-      </div>
+      {jobs.ok && employees.ok ? (
+        <div className="flex-1 overflow-auto p-0 admin-calendar">
+          <CalendarView
+            jobs={jobs.data}
+            employeeMap={Object.fromEntries(employees.data.map((e) => [e.id, e]))}
+          />
+        </div>
+      ) : (
+        <LoadError what="the calendar" />
+      )}
     </>
   );
 }

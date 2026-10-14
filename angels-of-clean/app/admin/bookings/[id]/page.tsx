@@ -3,6 +3,7 @@ import { getJobById, getActivityLog, getEmployees } from "@/lib/supabase/queries
 import { DASHBOARD_STATUS } from "../../data/mock";
 import { formatNy, formatNyTime } from "@/lib/datetime";
 import BookingActions from "./BookingActions";
+import LoadError from "../../LoadError";
 
 function formatDetailDate(iso: string) {
   return formatNy(iso, {
@@ -24,7 +25,7 @@ export default async function BookingDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [job, activityLog, employees] = await Promise.all([
+  const [jobResult, activityResult, employeesResult] = await Promise.all([
     getJobById(id),
     getActivityLog(id),
     getEmployees(),
@@ -33,6 +34,22 @@ export default async function BookingDetailPage({
   const displayDate = formatNy(new Date(), {
     weekday: "short", month: "long", day: "numeric", year: "numeric",
   });
+
+  // A failed lookup is not "this booking does not exist".
+  if (!jobResult.ok || !activityResult.ok || !employeesResult.ok) {
+    return (
+      <>
+        <header className="flex-shrink-0 h-16 bg-white border-b border-[#e2e8e6] flex items-center px-8">
+          <h1 className="font-semibold text-lg text-[#1c1c1e]">Booking</h1>
+        </header>
+        <LoadError what="this booking" />
+      </>
+    );
+  }
+
+  const job = jobResult.data;
+  const activityLog = activityResult.data;
+  const employees = employeesResult.data;
 
   if (!job) {
     return (
