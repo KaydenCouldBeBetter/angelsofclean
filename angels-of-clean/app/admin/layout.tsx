@@ -12,7 +12,7 @@ const NAV_ITEMS = [
   { label: "Bookings",  href: "/admin/bookings"  },
   { label: "Quotes",    href: "/admin/quotes"    },
   { label: "Employees", href: "/admin/employees" },
-  { label: "Settings",  href: "/admin/settings"  }, // Added settings link
+  { label: "Settings",  href: "/admin/settings"  },
 ];
 
 const AUTH_ROUTES = ["/admin", "/admin/forgot-password", "/admin/reset-password"];
