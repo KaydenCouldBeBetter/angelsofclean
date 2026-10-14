@@ -120,10 +120,18 @@ export default function CommercialStep2() {
                       : "border-zinc-200 bg-white hover:border-zinc-300"
                   }`}
                 >
+                  {/* The real checkbox is visually hidden; the box after it is
+                      its picture, so it's hidden from screen readers and
+                      shows the focus ring the hidden input can't. */}
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={() => toggleArea(area.id)}
+                    className="peer sr-only"
+                  />
                   <div
-                    role="checkbox"
-                    aria-checked={isChecked}
-                    className={`w-5 h-5 rounded flex-shrink-0 border-2 flex items-center justify-center transition-colors ${
+                    aria-hidden="true"
+                    className={`w-5 h-5 rounded flex-shrink-0 border-2 flex items-center justify-center transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-teal-700 peer-focus-visible:ring-offset-2 ${
                       isChecked
                         ? "bg-teal-600 border-teal-600"
                         : "border-zinc-300 bg-white"
@@ -146,13 +154,6 @@ export default function CommercialStep2() {
                       </svg>
                     )}
                   </div>
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={() => toggleArea(area.id)}
-                    className="sr-only"
-                    aria-label={area.label}
-                  />
                   <span
                     className={`text-sm font-medium ${
                       isChecked ? "text-teal-700" : "text-zinc-700"
