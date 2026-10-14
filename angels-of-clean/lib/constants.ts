@@ -45,8 +45,8 @@ export const PRICE_MAP: Record<NonNullable<ServiceType>, string> = {
 };
 
 export const SERVICE_AREA_ZIPS = [
-  "13031", // Cicero
-  "13035", // Camillus
+  "13039", // Cicero
+  "13031", // Camillus
   "13201", "13202", "13203", "13204", "13205", "13206", "13207",
   "13208", "13210", "13214", "13215", "13219", "13224", // Syracuse
   "13088", "13090", // Liverpool
