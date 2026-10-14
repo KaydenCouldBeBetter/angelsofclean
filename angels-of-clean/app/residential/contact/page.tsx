@@ -7,6 +7,7 @@ import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
 import { useBookingStore } from "@/store/bookingStore";
+import { FIELD_MAX_LENGTHS } from "@/lib/constants";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -67,6 +68,7 @@ export default function ContactPage() {
               onChange={(e) => setName(e.target.value)}
               onBlur={() => setTouched((t) => ({ ...t, name: true }))}
               autoComplete="name"
+              maxLength={FIELD_MAX_LENGTHS.name}
               className="h-12"
             />
             {touched.name && name.trim() === "" && (
@@ -86,6 +88,7 @@ export default function ContactPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 onBlur={() => setTouched((t) => ({ ...t, email: true }))}
                 autoComplete="email"
+                maxLength={FIELD_MAX_LENGTHS.email}
                 className="h-12"
               />
               {touched.email && email.trim() !== "" && !emailValid && (
@@ -106,6 +109,7 @@ export default function ContactPage() {
                 onChange={(e) => setPhone(e.target.value)}
                 onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
                 autoComplete="tel"
+                maxLength={FIELD_MAX_LENGTHS.phone}
                 inputMode="tel"
                 className="h-12"
               />

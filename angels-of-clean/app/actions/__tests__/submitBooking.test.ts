@@ -22,8 +22,14 @@ vi.mock("@/lib/supabase/require-admin", () => ({
   ),
 }));
 
+const allowPublicBookingMock = vi.fn(() => Promise.resolve(true));
+vi.mock("@/lib/rate-limit", () => ({
+  allowPublicBooking: () => allowPublicBookingMock(),
+}));
+
 import { submitBooking, adminCreateBooking, type BookingData } from "../submitBooking";
 import { requireAdmin } from "@/lib/supabase/require-admin";
+import { FIELD_MAX_LENGTHS } from "@/lib/constants";
 
 const VALID_INPUT: BookingData = {
   service: "standard",
@@ -56,6 +62,7 @@ beforeEach(() => {
   selectMock.mockImplementation(() => ({ single: singleMock }));
   activityLogInsertMock.mockImplementation(() => Promise.resolve({ error: null }));
   singleMock.mockResolvedValue({ data: null, error: null });
+  allowPublicBookingMock.mockResolvedValue(true);
 });
 
 afterEach(() => {
@@ -100,6 +107,42 @@ describe.each(ACTIONS)("%s validation", (_name, action) => {
       success: false,
       error: "Bedroom and bathroom count must be between 1 and 5.",
     });
+    expect(bookingsInsertMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["name", "Name"],
+    ["email", "Email address"],
+    ["phone", "Phone number"],
+    ["address", "Address"],
+    ["city", "City"],
+    ["notes", "Special instructions"],
+  ] as const)("rejects an over-long %s without touching the database", async (field, label) => {
+    const max = FIELD_MAX_LENGTHS[field];
+    const result = await action({ ...VALID_INPUT, [field]: "x".repeat(max + 1) });
+    expect(result).toEqual({
+      success: false,
+      error: `${label} must be ${max} characters or fewer.`,
+    });
+    expect(bookingsInsertMock).not.toHaveBeenCalled();
+  });
+
+  it("accepts special instructions exactly at the limit", async () => {
+    singleMock.mockResolvedValue({ data: { id: "abc-123", booking_number: 1042 }, error: null });
+    const result = await action({ ...VALID_INPUT, notes: "x".repeat(FIELD_MAX_LENGTHS.notes) });
+    expect(result.success).toBe(true);
+  });
+
+  it.each([
+    ["a non-string field", { ...VALID_INPUT, notes: { length: 0 } }],
+    ["a missing field", { ...VALID_INPUT, email: undefined }],
+    ["a fractional room count", { ...VALID_INPUT, bedrooms: 2.5 }],
+    ["a string room count", { ...VALID_INPUT, bathrooms: "2" }],
+    ["no payload at all", null],
+  ])("rejects %s instead of throwing", async (_case, payload) => {
+    // Server Action arguments are not type-checked at runtime.
+    const result = await action(payload as unknown as BookingData);
+    expect(result).toEqual({ success: false, error: "Invalid booking details." });
     expect(bookingsInsertMock).not.toHaveBeenCalled();
   });
 
@@ -286,6 +329,46 @@ describe("submitBooking", () => {
     expect(bookingsInsertMock).toHaveBeenCalledWith(
       expect.objectContaining({ start_at: "2027-03-14T12:00:00.000Z" }),
     );
+  });
+});
+
+describe("submitBooking rate limiting", () => {
+  it("refuses a caller who is over the limit, without touching the database", async () => {
+    allowPublicBookingMock.mockResolvedValue(false);
+
+    const result = await submitBooking(VALID_INPUT);
+
+    expect(result).toEqual({
+      success: false,
+      error:
+        "We've received several booking requests from your connection. Please try again in about an hour.",
+    });
+    expect(bookingsInsertMock).not.toHaveBeenCalled();
+    expect(activityLogInsertMock).not.toHaveBeenCalled();
+  });
+
+  it("does not spend the caller's allowance on a request that fails validation", async () => {
+    await submitBooking({ ...VALID_INPUT, email: "not-an-email" });
+
+    expect(allowPublicBookingMock).not.toHaveBeenCalled();
+  });
+
+  it("counts each valid public submission once", async () => {
+    singleMock.mockResolvedValue({ data: { id: "abc-123", booking_number: 1042 }, error: null });
+
+    await submitBooking(VALID_INPUT);
+
+    expect(allowPublicBookingMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("never rate-limits a signed-in admin creating a booking", async () => {
+    allowPublicBookingMock.mockResolvedValue(false);
+    singleMock.mockResolvedValue({ data: { id: "def-456", booking_number: 1043 }, error: null });
+
+    const result = await adminCreateBooking(VALID_INPUT);
+
+    expect(result.success).toBe(true);
+    expect(allowPublicBookingMock).not.toHaveBeenCalled();
   });
 });
 

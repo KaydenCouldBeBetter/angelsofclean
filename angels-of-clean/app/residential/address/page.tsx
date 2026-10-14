@@ -9,7 +9,7 @@ import BottomCTA from "@/components/booking/BottomCTA";
 import { useBookingStore } from "@/store/bookingStore";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SERVICE_AREA_ZIPS } from "@/lib/constants";
+import { FIELD_MAX_LENGTHS, SERVICE_AREA_ZIPS } from "@/lib/constants";
 
 export default function AddressPage() {
   const router = useRouter();
@@ -67,6 +67,7 @@ export default function AddressPage() {
               placeholder="123 Main Street"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
+              maxLength={FIELD_MAX_LENGTHS.address}
               className="h-12"
             />
           </div>
@@ -80,6 +81,7 @@ export default function AddressPage() {
                 placeholder="Syracuse"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
+                maxLength={FIELD_MAX_LENGTHS.city}
                 className="h-12"
               />
             </div>
