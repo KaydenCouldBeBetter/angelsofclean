@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import CommercialNav from "@/components/booking/CommercialNav";
+import ConfirmedWithoutDetails from "@/components/booking/ConfirmedWithoutDetails";
 import { Button } from "@/components/ui/button";
 import { useBookingStore } from "@/store/bookingStore";
+import { useIsClient } from "@/lib/use-is-client";
 import {
   FACILITY_TYPE_LABELS,
   SQFT_DISPLAY,
@@ -15,23 +17,48 @@ import {
 
 export default function CommercialConfirmation() {
   const router = useRouter();
-  const store = useBookingStore();
   // Issued by the server once the quote is stored (see submitCommercialQuote).
   const quoteRef = useSearchParams().get("ref");
+  const isClient = useIsClient();
 
+  // Keep a private copy of what this page shows, then clear the request from
+  // the browser (store and sessionStorage). Otherwise the contact details stay
+  // there, and Back refills the form, until the tab is closed.
+  const [quote] = useState(() => useBookingStore.getState());
   const {
     facilityType, sqftRange,
     address, city, zip,
     floors, serviceAreas,
     name, businessName, email, phone,
     commercialFrequency, schedulePreference,
-    reset, setSubmitting,
-  } = store;
+  } = quote;
+  const hasDetails = Boolean(email && businessName);
 
   useEffect(() => {
-    if (!quoteRef || !email || !businessName) router.replace("/commercial");
-    setSubmitting(false);
-  }, [quoteRef, email, businessName, router, setSubmitting]);
+    useBookingStore.getState().reset();
+  }, []);
+
+  useEffect(() => {
+    // Only a stored quote has a reference; without one, start over.
+    if (!quoteRef) router.replace("/commercial");
+  }, [quoteRef, router]);
+
+  // The details only ever exist in this browser, so there's nothing to render
+  // on the server.
+  if (!isClient || !quoteRef) return null;
+
+  if (!hasDetails) {
+    return (
+      <>
+        <CommercialNav />
+        <ConfirmedWithoutDetails
+          title="Quote request submitted!"
+          referenceLabel="Reference:"
+          reference={quoteRef}
+        />
+      </>
+    );
+  }
 
   const areaLabels = serviceAreas
     .map((id) => COMMERCIAL_SERVICE_AREAS.find((a) => a.id === id)?.label ?? id)
@@ -205,10 +232,7 @@ export default function CommercialConfirmation() {
         <Button
           variant="outline"
           className="w-full md:w-auto md:px-8 h-14 text-base font-medium"
-          onClick={() => {
-            reset();
-            router.push("/");
-          }}
+          onClick={() => router.push("/")}
         >
           ← Return to Homepage
         </Button>
