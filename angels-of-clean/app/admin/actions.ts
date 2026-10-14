@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin, type AdminContext } from "@/lib/supabase/require-admin";
-import type { JobStatus } from "./data/mock";
+import type { JobStatus } from "@/lib/admin-types";
 
 interface ActionResult {
   success: boolean;

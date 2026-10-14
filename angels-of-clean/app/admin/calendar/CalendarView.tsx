@@ -6,7 +6,8 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import type { EventContentArg, DatesSetArg } from "@fullcalendar/core";
-import { STATUS_CONFIG, type Job, type Employee } from "../data/mock";
+import { STATUS_CONFIG } from "../status-config";
+import type { Job, Employee } from "@/lib/admin-types";
 import NewBookingModal from "../NewBookingModal";
 import { nyTodayStr, nyWallClockISO } from "@/lib/datetime";
 

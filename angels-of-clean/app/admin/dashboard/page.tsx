@@ -1,5 +1,6 @@
 import { getDashboardStats, getEmployees } from "@/lib/supabase/queries";
-import { DASHBOARD_STATUS, type Job, type JobStatus } from "../data/mock";
+import { DASHBOARD_STATUS } from "../status-config";
+import type { Job, JobStatus } from "@/lib/admin-types";
 import { NewBookingButton } from "../NewBookingModal";
 import JobRowActions from "./JobRowActions";
 import LoadError from "../LoadError";

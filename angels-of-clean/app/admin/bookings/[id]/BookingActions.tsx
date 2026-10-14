@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { assignEmployees, confirmBooking, updateBookingStatus } from "../../actions";
-import type { Employee, Job } from "../../data/mock";
+import type { Employee, Job } from "@/lib/admin-types";
 
 interface BookingActionsProps {
   job: Job;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { DASHBOARD_STATUS, EMPLOYEE_STATUS_CONFIG, STATUS_CONFIG } from "../mock";
+import { DASHBOARD_STATUS, EMPLOYEE_STATUS_CONFIG, STATUS_CONFIG } from "../status-config";
 
 // WCAG 2.x relative luminance and contrast ratio.
 function luminance(hex: string): number {

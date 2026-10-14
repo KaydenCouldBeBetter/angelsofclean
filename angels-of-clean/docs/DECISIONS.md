@@ -47,7 +47,7 @@ Chosen over Shneiderman's 8 Golden Rules — more granular for usability testing
 ## Tech Stack Conflicts
 
 ### BACKEND_PLAN.md vs actual implementation
-The original `BACKEND_PLAN.md` specifies Prisma + Auth.js (NextAuth v5) + Vercel Postgres (Neon). The actual implementation uses **Supabase** (PostgreSQL + Auth + RLS) with raw SQL schema and the Supabase JS SDK. No Prisma, no Auth.js.
+The original `BACKEND_PLAN.md` (now archived locally at `docs/archive/BACKEND_PLAN.md`) specified Prisma + Auth.js (NextAuth v5) + Vercel Postgres (Neon). The actual implementation uses **Supabase** (PostgreSQL + Auth + RLS) with raw SQL schema and the Supabase JS SDK. No Prisma, no Auth.js.
 
 ### Tech stack recommendation vs actual implementation
 `tech_stack_recommendation.md` recommends the "Pragmatic Monolith" — Next.js 15 + Drizzle + Auth.js on Render with Neon Postgres. The actual build uses Next.js 16 + Supabase (not Drizzle, not Auth.js, not Render). The recommendation was written before implementation began; the actual stack diverged toward Supabase for faster development.

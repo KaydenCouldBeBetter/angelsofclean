@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { DASHBOARD_STATUS, type Job, type JobStatus, type Employee } from "../data/mock";
+import { DASHBOARD_STATUS } from "../status-config";
+import type { Job, JobStatus, Employee } from "@/lib/admin-types";
 import { formatNy, formatNyTime, nyDateStr, nyTodayStr } from "@/lib/datetime";
 import BookingsSearch from "./BookingsSearch";
 

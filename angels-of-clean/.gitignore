@@ -43,7 +43,7 @@ next-env.d.ts
 # Local AI working notes and scaffolding — kept on disk, untracked from git.
 # (Genuine project docs docs/PROJECT_MAP.md and docs/DECISIONS.md stay tracked.)
 .claude/
-BACKEND_PLAN.md
+docs/archive/
 docs/BACKLOG.md
 docs/FIGMA_MAP.md
 docs/audit/

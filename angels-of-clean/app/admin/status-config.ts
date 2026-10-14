@@ -1,41 +1,6 @@
-// UI-config-only: types and label/color dictionaries shared by the admin pages.
-// Data (jobs, employees, activity logs) now comes from lib/supabase/queries.ts.
-
-export type JobStatus = "done" | "active" | "confirmed" | "pending" | "cancelled";
-
-export type EmployeeStatus = "available" | "on-a-job" | "scheduled";
-
-export interface Employee {
-  id: string;
-  name: string;
-  initials: string;
-  phone: string;
-  hiredDate: string; // e.g. "Mar 2024"
-}
-
-export interface Job {
-  id: string;
-  bookingNumber: number;
-  client: string;
-  service: string;
-  address: string;
-  start: string; // ISO datetime
-  end: string;   // ISO datetime
-  employeeIds: string[];
-  status: JobStatus;
-  // Detail fields
-  email?: string;
-  phone?: string;
-  frequency?: string;
-  property?: string;
-  notes?: string;
-  submittedAt?: string;
-}
-
-export interface ActivityEntry {
-  timestamp: string;
-  description: string;
-}
+// Label and color dictionaries for job and employee statuses, shared by the
+// admin pages. Contrast is checked in __tests__/status-contrast.test.ts.
+import type { JobStatus, EmployeeStatus } from "@/lib/admin-types";
 
 export const STATUS_CONFIG: Record<JobStatus, { label: string; cardBg: string; borderColor: string; chipBg: string; chipText: string }> = {
   done:      { label: "Done",       cardBg: "bg-emerald-50", borderColor: "border-l-emerald-500", chipBg: "bg-emerald-100", chipText: "text-emerald-700" },
