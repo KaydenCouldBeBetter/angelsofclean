@@ -56,6 +56,10 @@ export const FIELD_MAX_LENGTHS = {
   notes: 1000,
 } as const;
 
+// Shortest admin password the reset form accepts. Supabase's own project
+// setting may be stricter; its message is shown if so.
+export const PASSWORD_MIN_LENGTH = 8;
+
 export const SERVICE_AREA_ZIPS = [
   "13039", // Cicero
   "13031", // Camillus

@@ -15,6 +15,8 @@ const NAV_ITEMS = [
   { label: "Settings",  href: "/admin/settings"  }, // Added settings link
 ];
 
+const AUTH_ROUTES = ["/admin", "/admin/forgot-password", "/admin/reset-password"];
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [userLabel, setUserLabel] = useState("Admin");
@@ -36,9 +38,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     });
   }, []);
 
-  // The login page (/admin) renders its own full-page layout — no sidebar chrome
-  // before a session exists.
-  if (pathname === "/admin") {
+  // Sign-in and password reset render their own full-page layout — no sidebar
+  // chrome before (or while restoring) a session.
+  if (AUTH_ROUTES.includes(pathname)) {
     return <>{children}</>;
   }
 
