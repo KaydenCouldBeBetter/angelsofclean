@@ -81,5 +81,31 @@ describe("SERVICE_AREA_ZIPS", () => {
     expect(SERVICE_AREA_ZIPS).not.toContain("10001"); // NYC
     expect(SERVICE_AREA_ZIPS).not.toContain("90210"); // Beverly Hills
     expect(SERVICE_AREA_ZIPS).not.toContain("00000");
+    expect(SERVICE_AREA_ZIPS).not.toContain("13035"); // Cazenovia, once mislabeled Camillus
+  });
+
+  // Each town is pinned to its ZIPs so a swap on the wrong line fails here.
+  const ZIPS_BY_TOWN: [string, string[]][] = [
+    ["Cicero", ["13039"]],
+    ["Camillus", ["13031"]],
+    ["Syracuse", [
+      "13201", "13202", "13203", "13204", "13205", "13206", "13207",
+      "13208", "13210", "13214", "13215", "13219", "13224",
+    ]],
+    ["Liverpool", ["13088", "13090"]],
+    ["Baldwinsville", ["13027"]],
+    ["Brewerton", ["13029"]],
+    ["Solvay", ["13209"]],
+    ["Manlius", ["13104"]],
+    ["Marcellus", ["13108"]],
+  ];
+
+  it.each(ZIPS_BY_TOWN)("serves %s", (_town, zips) => {
+    for (const zip of zips) expect(SERVICE_AREA_ZIPS).toContain(zip);
+  });
+
+  it("lists no ZIP outside the known towns, and none twice", () => {
+    const expected = ZIPS_BY_TOWN.flatMap(([, zips]) => zips);
+    expect([...SERVICE_AREA_ZIPS].sort()).toEqual([...expected].sort());
   });
 });
