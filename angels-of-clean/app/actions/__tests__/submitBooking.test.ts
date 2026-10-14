@@ -22,9 +22,9 @@ vi.mock("@/lib/supabase/require-admin", () => ({
   ),
 }));
 
-const allowPublicBookingMock = vi.fn(() => Promise.resolve(true));
+const allowPublicBookingMock = vi.fn<(kind: string) => Promise<boolean>>(() => Promise.resolve(true));
 vi.mock("@/lib/rate-limit", () => ({
-  allowPublicBooking: () => allowPublicBookingMock(),
+  allowPublicSubmission: (kind: string) => allowPublicBookingMock(kind),
 }));
 
 import { submitBooking, adminCreateBooking, type BookingData } from "../submitBooking";
@@ -359,6 +359,7 @@ describe("submitBooking rate limiting", () => {
     await submitBooking(VALID_INPUT);
 
     expect(allowPublicBookingMock).toHaveBeenCalledTimes(1);
+    expect(allowPublicBookingMock).toHaveBeenCalledWith("booking");
   });
 
   it("never rate-limits a signed-in admin creating a booking", async () => {

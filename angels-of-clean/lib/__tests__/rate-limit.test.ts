@@ -13,7 +13,7 @@ vi.mock("@/lib/supabase/service", () => ({
   createServiceRoleClient: () => ({ rpc: rpcMock }),
 }));
 
-import { allowPublicBooking, BOOKING_RATE_LIMIT } from "../rate-limit";
+import { allowPublicSubmission, SUBMISSION_RATE_LIMIT } from "../rate-limit";
 
 function bucketOfLastCall(): string {
   return rpcMock.mock.calls.at(-1)![1].p_bucket as string;
@@ -30,60 +30,72 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe("allowPublicBooking", () => {
+describe("allowPublicSubmission", () => {
   it("asks the database to count one hit against the configured limit and window", async () => {
-    expect(await allowPublicBooking()).toBe(true);
+    expect(await allowPublicSubmission("booking")).toBe(true);
 
     expect(rpcMock).toHaveBeenCalledTimes(1);
     expect(rpcMock).toHaveBeenCalledWith("check_rate_limit", {
       p_bucket: expect.stringMatching(/^booking:[0-9a-f]{64}$/),
-      p_limit: BOOKING_RATE_LIMIT.limit,
-      p_window_seconds: BOOKING_RATE_LIMIT.windowSeconds,
+      p_limit: SUBMISSION_RATE_LIMIT.limit,
+      p_window_seconds: SUBMISSION_RATE_LIMIT.windowSeconds,
     });
   });
 
   it("refuses once the database reports the caller is over the limit", async () => {
     rpcMock.mockResolvedValue({ data: false, error: null });
 
-    expect(await allowPublicBooking()).toBe(false);
+    expect(await allowPublicSubmission("booking")).toBe(false);
   });
 
   it("never sends the raw IP address to the database", async () => {
-    await allowPublicBooking();
+    await allowPublicSubmission("booking");
 
     expect(JSON.stringify(rpcMock.mock.calls)).not.toContain("203.0.113.7");
   });
 
   it("gives the same IP the same bucket and different IPs different buckets", async () => {
-    await allowPublicBooking();
+    await allowPublicSubmission("booking");
     const first = bucketOfLastCall();
 
-    await allowPublicBooking();
+    await allowPublicSubmission("booking");
     expect(bucketOfLastCall()).toBe(first);
 
     requestHeaders = new Headers({ "x-forwarded-for": "203.0.113.8" });
-    await allowPublicBooking();
+    await allowPublicSubmission("booking");
     expect(bucketOfLastCall()).not.toBe(first);
   });
 
+  it("counts bookings and quote requests from the same IP separately", async () => {
+    await allowPublicSubmission("booking");
+    const booking = bucketOfLastCall();
+
+    await allowPublicSubmission("quote");
+    const quote = bucketOfLastCall();
+
+    expect(booking).toMatch(/^booking:/);
+    expect(quote).toMatch(/^quote:/);
+    expect(quote.split(":")[1]).toBe(booking.split(":")[1]);
+  });
+
   it("uses the first address in a forwarded chain, then x-real-ip, then a shared bucket", async () => {
-    await allowPublicBooking();
+    await allowPublicSubmission("booking");
     const direct = bucketOfLastCall();
 
     requestHeaders = new Headers({ "x-forwarded-for": "203.0.113.7, 10.0.0.1, 10.0.0.2" });
-    await allowPublicBooking();
+    await allowPublicSubmission("booking");
     expect(bucketOfLastCall()).toBe(direct);
 
     requestHeaders = new Headers({ "x-real-ip": "203.0.113.7" });
-    await allowPublicBooking();
+    await allowPublicSubmission("booking");
     expect(bucketOfLastCall()).toBe(direct);
 
     // No address at all: every such caller shares one bucket rather than going unlimited.
     requestHeaders = new Headers();
-    await allowPublicBooking();
+    await allowPublicSubmission("booking");
     const unknown = bucketOfLastCall();
     expect(unknown).not.toBe(direct);
-    await allowPublicBooking();
+    await allowPublicSubmission("booking");
     expect(bucketOfLastCall()).toBe(unknown);
   });
 
@@ -95,7 +107,7 @@ describe("allowPublicBooking", () => {
       error: { code: "PGRST202", message: "function check_rate_limit not found for 203.0.113.7" },
     });
 
-    expect(await allowPublicBooking()).toBe(true);
+    expect(await allowPublicSubmission("booking")).toBe(true);
 
     const logged = JSON.stringify(consoleSpy.mock.calls);
     expect(logged).toContain("PGRST202");
@@ -107,7 +119,7 @@ describe("allowPublicBooking", () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     rpcMock.mockRejectedValue(new Error("network down"));
 
-    expect(await allowPublicBooking()).toBe(true);
+    expect(await allowPublicSubmission("booking")).toBe(true);
     expect(consoleSpy).toHaveBeenCalledTimes(1);
     consoleSpy.mockRestore();
   });
@@ -115,7 +127,7 @@ describe("allowPublicBooking", () => {
   it("skips the limiter in local development", async () => {
     vi.stubEnv("NODE_ENV", "development");
 
-    expect(await allowPublicBooking()).toBe(true);
+    expect(await allowPublicSubmission("booking")).toBe(true);
     expect(rpcMock).not.toHaveBeenCalled();
   });
 });

@@ -1,7 +1,7 @@
 "use server";
 
 import { FIELD_MAX_LENGTHS, SERVICE_AREA_ZIPS, TIME_SLOT_WINDOWS } from "@/lib/constants";
-import { allowPublicBooking } from "@/lib/rate-limit";
+import { allowPublicSubmission } from "@/lib/rate-limit";
 import { createServiceRoleClient } from "@/lib/supabase/service";
 import { requireAdmin } from "@/lib/supabase/require-admin";
 import { isNyWallClockInFuture, isValidDateStr, nyWallClockToInstant } from "@/lib/datetime";
@@ -39,7 +39,7 @@ const STRING_FIELDS = [
   "service", "frequency", "address", "city", "zip", "notes", "date", "timeSlot", "name", "email", "phone",
 ] as const;
 
-const LENGTH_LIMITED_FIELDS: [keyof typeof FIELD_MAX_LENGTHS, string][] = [
+const LENGTH_LIMITED_FIELDS: [keyof typeof FIELD_MAX_LENGTHS & keyof BookingData, string][] = [
   ["name", "Name"],
   ["email", "Email address"],
   ["phone", "Phone number"],
@@ -148,7 +148,7 @@ async function createBooking(
 
   // Counted after validation, so only requests that would insert a row use up
   // the caller's allowance.
-  if (rateLimited && !(await allowPublicBooking())) {
+  if (rateLimited && !(await allowPublicSubmission("booking"))) {
     return {
       success: false,
       error:

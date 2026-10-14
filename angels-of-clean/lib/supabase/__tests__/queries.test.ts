@@ -67,6 +67,7 @@ vi.mock("../server", () => ({
 
 import {
   getActivityLog,
+  getCommercialQuotes,
   getDashboardStats,
   getEmployees,
   getJobById,
@@ -178,6 +179,7 @@ describe("failed queries are distinguishable from empty results", () => {
     ["getTodayJobs", () => getTodayJobs()],
     ["getJobsInRange", () => getJobsInRange("2026-09-01", "2026-09-30")],
     ["getActivityLog", () => getActivityLog("b-1")],
+    ["getCommercialQuotes", () => getCommercialQuotes()],
   ])("%s reports a database error as { ok: false }, and no rows as an empty list", async (_name, run) => {
     createClientMock.mockResolvedValue(makeSupabaseStub(DB_DOWN).client);
     expect(await run()).toEqual({ ok: false });
@@ -220,5 +222,62 @@ describe("failed queries are distinguishable from empty results", () => {
 
       expect(await getDashboardStats()).toEqual({ ok: false });
     }
+  });
+});
+
+describe("getCommercialQuotes", () => {
+  it("maps a stored quote to what the admin Quotes page shows, in New York time", async () => {
+    const { recorded, client } = makeSupabaseStub({
+      data: [
+        {
+          id: "q-1",
+          quote_number: 1007,
+          business_name: "Northside Dental",
+          contact_name: "Dana Lee",
+          email: "dana@example.com",
+          phone: "(315) 555-0100",
+          facility_type: "medical",
+          sqft_range: "2k-5k",
+          address: "100 Clinton Sq",
+          city: "Syracuse",
+          zip: "13202",
+          floors: 1,
+          service_areas: ["lobbies", "restrooms"],
+          frequency: "2-3x",
+          schedule_preference: null,
+          notes: null,
+          // 2:30 PM UTC = 10:30 AM in New York (EDT).
+          submitted_at: "2026-09-15T14:30:00.000Z",
+        },
+      ],
+      error: null,
+    });
+    createClientMock.mockResolvedValue(client);
+
+    const result = await getCommercialQuotes();
+
+    expect(recorded.table).toBe("commercial_quotes");
+    expect(result).toMatchObject({
+      ok: true,
+      data: [
+        {
+          id: "q-1",
+          quoteRef: "COM-1007",
+          businessName: "Northside Dental",
+          contactName: "Dana Lee",
+          email: "dana@example.com",
+          phone: "(315) 555-0100",
+          facility: "Medical · 2,000 – 5,000 sq ft · 1 floor",
+          address: "100 Clinton Sq, Syracuse 13202",
+          serviceAreas: ["Lobbies & Reception", "Restrooms"],
+          frequency: "2–3x / Week",
+          schedulePreference: undefined,
+          notes: undefined,
+        },
+      ],
+    });
+    const submittedAt = result.ok ? result.data[0].submittedAt : "";
+    expect(submittedAt).toContain("10:30");
+    expect(submittedAt).toContain("AM");
   });
 });
