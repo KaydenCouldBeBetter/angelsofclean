@@ -1,5 +1,6 @@
 import { getEmployees, getTodayJobs } from "@/lib/supabase/queries";
-import { EMPLOYEE_STATUS_CONFIG, type Employee, type EmployeeStatus, type Job } from "../data/mock";
+import { EMPLOYEE_STATUS_CONFIG } from "../status-config";
+import type { Employee, EmployeeStatus, Job } from "@/lib/admin-types";
 import { formatNy } from "@/lib/datetime";
 import LoadError from "../LoadError";
 

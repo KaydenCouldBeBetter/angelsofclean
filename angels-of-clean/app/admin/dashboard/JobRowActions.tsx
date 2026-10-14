@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { confirmBooking } from "../actions";
-import type { JobStatus } from "../data/mock";
+import type { JobStatus } from "@/lib/admin-types";
 
 interface JobRowActionsProps {
   jobId: string;

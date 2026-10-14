@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getJobById, getActivityLog, getEmployees } from "@/lib/supabase/queries";
-import { DASHBOARD_STATUS } from "../../data/mock";
+import { DASHBOARD_STATUS } from "../../status-config";
 import { formatNy, formatNyTime } from "@/lib/datetime";
 import BookingActions from "./BookingActions";
 import LoadError from "../../LoadError";
@@ -133,7 +133,7 @@ export default async function BookingDetailPage({
 
             {/* Status banner */}
             {/* Same background as the status chip, so the text color is
-                checked against it (app/admin/data/__tests__/status-contrast). */}
+                checked against it (app/admin/__tests__/status-contrast). */}
             <div
               className={`mt-4 rounded-[10px] border px-6 py-3 ${cfg.chipBg}`}
               style={{ borderColor: cfg.accentColor }}

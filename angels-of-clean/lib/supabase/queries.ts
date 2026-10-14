@@ -1,5 +1,5 @@
 import { createClient } from "./server";
-import type { Employee, Job, ActivityEntry, JobStatus } from "@/app/admin/data/mock";
+import type { Employee, Job, ActivityEntry, JobStatus } from "@/lib/admin-types";
 import {
   SERVICE_LABELS,
   FREQUENCY_LABELS,
