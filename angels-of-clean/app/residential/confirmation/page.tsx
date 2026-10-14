@@ -1,26 +1,53 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useBookingStore } from "@/store/bookingStore";
 import { Button } from "@/components/ui/button";
+import ConfirmedWithoutDetails from "@/components/booking/ConfirmedWithoutDetails";
 import { SERVICE_LABELS, FREQUENCY_LABELS, TIME_LABELS } from "@/lib/constants";
+import { useIsClient } from "@/lib/use-is-client";
 
 export default function ConfirmationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const bookingRef = searchParams.get("ref");
+  const isClient = useIsClient();
+
+  // Keep a private copy of what this page shows, then clear the booking from
+  // the browser (store and sessionStorage). Otherwise the address, phone, and
+  // notes stay there, and Back refills the form, until the tab is closed.
+  const [booking] = useState(() => useBookingStore.getState());
   const {
     service, frequency, date, timeSlot,
     address, city, zip,
     bedrooms, bathrooms,
-    email, reset, setSubmitting,
-  } = useBookingStore();
+    email,
+  } = booking;
+  const hasDetails = Boolean(service && email);
 
   useEffect(() => {
-    if (!service || !email) router.replace("/residential");
-    setSubmitting(false);
-  }, [service, email, router, setSubmitting]);
+    useBookingStore.getState().reset();
+  }, []);
+
+  useEffect(() => {
+    // No booking and no reference: this page wasn't reached by booking.
+    if (!hasDetails && !bookingRef) router.replace("/residential");
+  }, [hasDetails, bookingRef, router]);
+
+  // The details only ever exist in this browser, so there's nothing to render
+  // on the server.
+  if (!isClient) return null;
+
+  if (!hasDetails) {
+    return bookingRef ? (
+      <ConfirmedWithoutDetails
+        title="You're booked!"
+        referenceLabel="Confirmation #"
+        reference={bookingRef}
+      />
+    ) : null;
+  }
 
   const formattedDate = date
     ? new Date(date + "T12:00:00").toLocaleDateString("en-US", {
@@ -88,7 +115,7 @@ export default function ConfirmationPage() {
           <Button
             variant="outline"
             className="w-full h-14"
-            onClick={() => { reset(); router.push("/"); }}
+            onClick={() => router.push("/")}
           >
             Return to Home
           </Button>
@@ -145,7 +172,7 @@ export default function ConfirmationPage() {
         <Button
           variant="outline"
           className="w-[640px] mt-4 h-12"
-          onClick={() => { reset(); router.push("/"); }}
+          onClick={() => router.push("/")}
         >
           Return to Home
         </Button>

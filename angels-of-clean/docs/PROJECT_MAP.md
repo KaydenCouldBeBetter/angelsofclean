@@ -91,7 +91,7 @@ Wrapped by `layout.tsx` → `ResidentialShell` (desktop navbar + stepper + live 
 | `/residential/datetime` | 4 | Date chips (next ~6 NY days) + morning/afternoon slots. Enforces same-day cutoff via `isNyWallClockInFuture`. Evening slot always disabled; 3rd day hardcoded "Full" (Figma placeholder). |
 | `/residential/contact` | 5 | Name/email/phone with regex validation. |
 | `/residential/review` | 6 | Summary cards + **calls `submitBooking`** server action; on success → confirmation. Shows "Quote provided after confirmation" (no price). |
-| `/residential/confirmation` | — | Success screen (reads `?ref=`); calendar/create-account buttons are non-functional placeholders; "Return to Home" resets the store. |
+| `/residential/confirmation` | — | Success screen. Copies the booking into local state, then clears the store and `sessionStorage` (backlog B50); a reload shows only the `?ref=` number with a privacy note. Calendar/create-account buttons are non-functional placeholders. |
 | `/residential/error` | — | Out-of-service-area screen; "Try a Different Address" → back to step 2. |
 
 ### Customer-facing — Commercial (`app/commercial/`, 4-step quote request)
@@ -103,7 +103,7 @@ Wrapped by `layout.tsx` (Suspense). Each step uses `CommercialNav` + `Commercial
 | `/commercial/services` | 2 | Floors stepper + service-area checkboxes (≥1 required) + notes. |
 | `/commercial/contact` | 3 | Contact name, business name, email/phone, frequency, schedule preference. |
 | `/commercial/review` | 4 | Summary + **calls `submitCommercialQuote`**; on success → `/commercial/confirmation?ref=COM-…`. A refusal, a failed insert, or a request that never reaches the server shows a "Your request was not sent" alert and stays on the page. |
-| `/commercial/confirmation` | — | Success screen; shows the server-issued reference from `?ref=` (redirects to `/commercial` without one); resets store on exit. |
+| `/commercial/confirmation` | — | Success screen; shows the server-issued reference from `?ref=` (redirects to `/commercial` without one). Copies the request into local state, then clears the store and `sessionStorage` (backlog B50); a reload shows only the reference. |
 | `/commercial/error` | — | Out-of-area screen with call-to-phone. |
 
 ### Admin (`app/admin/`, all under middleware guard)
@@ -191,6 +191,7 @@ Rows are mapped to the UI `Job`/`Employee`/`ActivityEntry` shapes from `app/admi
 - **`__tests__/middleware.test.ts`** — public admin routes reachable signed out (exact match only), everything else requires the admin role. ✅ passing.
 - **`components/booking/__tests__/ProgressDots.test.tsx`** — dot labels (completed / current / plain) and a single `aria-current="step"`. ✅ passing.
 - **`app/admin/data/__tests__/status-contrast.test.ts`** — every status chip and banner text/background pair in `mock.ts` meets WCAG AA 4.5:1. ✅ passing.
+- **`__tests__/confirmation-privacy.test.tsx`** — both confirmation pages show the details, then clear them from the store and `sessionStorage`; reloads show only the reference; no reference redirects. ✅ passing.
 - **`lib/__tests__/rate-limit.test.ts`** — limit/window passed to the RPC, refusal, raw IP never sent, bucket stability, header precedence, fail-open on error and on throw, dev skip. ✅ passing.
 - **`app/actions/__tests__/submitBooking.test.ts`** — validation matrix (run against both `submitBooking` and `adminCreateBooking`), success insert, window→UTC storage, DST offsets, PII-safe logging, admin auth gating. ✅ passing.
 - **`app/admin/__tests__/actions.test.ts`** — `assignEmployees`/`confirmBooking`/`updateBookingStatus`: auth gating, 0-row-as-failure, pending-only confirm, activity logging. ✅ passing.
@@ -199,7 +200,7 @@ Rows are mapped to the UI `Job`/`Employee`/`ActivityEntry` shapes from `app/admi
 - **`lib/supabase/__tests__/require-admin.test.ts`** — signed-out, token error, no-role, `user_metadata` ignored, admin accepted. ✅ passing.
 - **`store/__tests__/bookingStore.test.ts`** — defaults, each setter, reset. ✅ passing.
 
-### Current test status: 260 passing (15 of 15 files green)
+### Current test status: 266 passing (16 of 16 files green)
 Passes under both `TZ=UTC` and `TZ=America/Los_Angeles`; `tsc --noEmit` clean.
 
 **History — the B16 ZIP swap.** Commit `fe85cd2` meant to change Camillus from `13035` (actually Cazenovia) to `13031`, but edited the Cicero line instead (`13039` → `13031`), which rejected Cicero customers and turned 26 tests red. Corrected 2026-10-13: Cicero is `13039`, Camillus is `13031`, and `13035` is no longer served.
