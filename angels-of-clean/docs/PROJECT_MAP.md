@@ -121,7 +121,7 @@ Wrapped by `layout.tsx` (Suspense). Each step uses `CommercialNav` + `Commercial
 | `/admin/bookings/[id]` | server | Booking detail: details card, status banner, `BookingActions`, activity log. `getJobById` + `getActivityLog` + `getEmployees`. |
 | `/admin/employees` | server | Employee cards with derived today-status. `getEmployees` + `getTodayJobs`. |
 | `/admin/quotes` | server | Commercial quote requests, newest first, one card each: business, contact (mailto/tel links), reference, received time, facility, address, areas, frequency, preference, notes. Read-only. Data from `getCommercialQuotes`. |
-| `/admin/settings` | client | Two toggles; "Save" only fires `alert()` and redirects — **does not persist**. |
+| `/admin/settings` | server | Placeholder: Notifications card marked "Coming soon" with both toggles disabled and no Save button, since the app can't send email or SMS yet. |
 
 ### API (`app/api/`)
 - **`GET /api/admin/jobs`** — requires admin (`requireAdmin`; 401 if signed out, 403 if not admin). Requires `from`/`to` (YYYY-MM-DD) query params (400 otherwise). Returns `getJobsInRange(from, to)` as JSON, or 503 if the query failed (never an empty list). Consumed by `CalendarView` when the visible range changes.
@@ -191,6 +191,7 @@ Rows are mapped to the UI `Job`/`Employee`/`ActivityEntry` shapes from `app/admi
 - **`__tests__/middleware.test.ts`** — public admin routes reachable signed out (exact match only), everything else requires the admin role. ✅ passing.
 - **`components/booking/__tests__/ProgressDots.test.tsx`** — dot labels (completed / current / plain) and a single `aria-current="step"`. ✅ passing.
 - **`app/admin/data/__tests__/status-contrast.test.ts`** — every status chip and banner text/background pair in `mock.ts` meets WCAG AA 4.5:1. ✅ passing.
+- **`app/admin/settings/__tests__/page.test.tsx`** — notifications are labeled "Coming soon" with an explanation, every toggle is disabled and off, and there is no Save button. ✅ passing.
 - **`__tests__/confirmation-privacy.test.tsx`** — both confirmation pages show the details, then clear them from the store and `sessionStorage`; reloads show only the reference; no reference redirects. ✅ passing.
 - **`lib/__tests__/rate-limit.test.ts`** — limit/window passed to the RPC, refusal, raw IP never sent, bucket stability, header precedence, fail-open on error and on throw, dev skip. ✅ passing.
 - **`app/actions/__tests__/submitBooking.test.ts`** — validation matrix (run against both `submitBooking` and `adminCreateBooking`), success insert, window→UTC storage, DST offsets, PII-safe logging, admin auth gating. ✅ passing.
@@ -200,7 +201,7 @@ Rows are mapped to the UI `Job`/`Employee`/`ActivityEntry` shapes from `app/admi
 - **`lib/supabase/__tests__/require-admin.test.ts`** — signed-out, token error, no-role, `user_metadata` ignored, admin accepted. ✅ passing.
 - **`store/__tests__/bookingStore.test.ts`** — defaults, each setter, reset. ✅ passing.
 
-### Current test status: 266 passing (16 of 16 files green)
+### Current test status: 268 passing (17 of 17 files green)
 Passes under both `TZ=UTC` and `TZ=America/Los_Angeles`; `tsc --noEmit` clean.
 
 **History — the B16 ZIP swap.** Commit `fe85cd2` meant to change Camillus from `13035` (actually Cazenovia) to `13031`, but edited the Cicero line instead (`13039` → `13031`), which rejected Cicero customers and turned 26 tests red. Corrected 2026-10-13: Cicero is `13039`, Camillus is `13031`, and `13035` is no longer served.
@@ -215,7 +216,7 @@ Passes under both `TZ=UTC` and `TZ=America/Los_Angeles`; `tsc --noEmit` clean.
 4. **Conflicting prices.** `app/residential/page.tsx` advertises "From $120 / $200 / $250" while `PRICE_MAP` in constants is `$85 / $149 / $199`. (Backlog B28.)
 5. **`BACKEND_PLAN.md` is aspirational and does not match reality** — it describes Prisma + Vercel/Neon Postgres + Auth.js/NextAuth + Zod + Resend/Twilio. The app actually uses Supabase (Postgres + Auth) with hand-written types and no ORM/email/SMS. Treat that doc as a historical plan, not a description of the codebase.
 6. **Fake availability & dead controls.** The datetime step hardcodes the 3rd offered day as "Full" (`isFull: i === 2`, a Figma placeholder). Several admin/customer buttons are non-functional placeholders: Reschedule, Send Client Message, Print/Export, Add Employee, View Schedule, calendar-export, Create Account.
-7. **Settings don't persist** — `/admin/settings` "Save" only calls `alert()`.
+7. **Settings are a placeholder** — `/admin/settings` shows email/SMS notification toggles disabled and labeled "Coming soon" (backlog B49). Building them needs outbound email/SMS first.
 8. Backlog work is tracked as **B1–B52** in `docs/BACKLOG.md`; recent commits (B1/B2/B4/B8/B9/B11/B20) reference those IDs. Design rationale lives in `docs/DECISIONS.md`; Figma mapping in `docs/FIGMA_MAP.md`.
 
 ---
