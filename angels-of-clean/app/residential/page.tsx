@@ -93,7 +93,7 @@ export default function ResidentialPage() {
                         {service.name}
                       </span>
                     </div>
-                    <span className={`text-sm font-semibold lg:hidden ${isSelected ? "text-teal-600" : "text-zinc-500"}`}>
+                    <span className={`text-sm font-semibold lg:hidden ${isSelected ? "text-[#1a6b5a]" : "text-zinc-500"}`}>
                       {service.price}
                     </span>
                   </div>
@@ -103,7 +103,7 @@ export default function ResidentialPage() {
                   <p className="hidden lg:block text-sm text-zinc-500 mt-2">{service.description}</p>
                 </div>
                 {/* Desktop: price at bottom */}
-                <p className={`hidden lg:block text-sm font-semibold mt-4 ${isSelected ? "text-teal-600" : "text-zinc-500"}`}>
+                <p className={`hidden lg:block text-sm font-semibold mt-4 ${isSelected ? "text-[#1a6b5a]" : "text-zinc-500"}`}>
                   {service.price}
                 </p>
               </button>

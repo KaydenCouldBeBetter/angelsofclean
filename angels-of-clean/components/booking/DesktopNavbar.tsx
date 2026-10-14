@@ -20,7 +20,7 @@ export default function DesktopNavbar({ tagline }: DesktopNavbarProps) {
       </Link>
 
       {tagline && (
-        <span className="ml-2 text-xs text-zinc-400 self-end mb-1">{tagline}</span>
+        <span className="ml-2 text-xs text-zinc-500 self-end mb-1">{tagline}</span>
       )}
 
       <div className="ml-auto flex items-center gap-8">

@@ -36,7 +36,7 @@ export default function DesktopStepper({ steps, currentStep }: DesktopStepperPro
                   ? "font-semibold text-zinc-900"
                   : isCompleted
                     ? "font-medium text-zinc-500"
-                    : "font-medium text-zinc-400"
+                    : "font-medium text-zinc-500"
               }`}
             >
               {step.label}

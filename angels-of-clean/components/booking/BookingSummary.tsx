@@ -85,7 +85,7 @@ export default function BookingSummary() {
 
         <div className="px-6 py-5">
           {rows.length === 0 ? (
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-zinc-500">
               Your selections will appear here as you complete each step.
             </p>
           ) : (
@@ -93,7 +93,7 @@ export default function BookingSummary() {
               {rows.map((row, i) => (
                 <div key={row.label}>
                   <div className="py-2">
-                    <p className="text-xs text-zinc-400">{row.label}</p>
+                    <p className="text-xs text-zinc-500">{row.label}</p>
                     <p className="text-sm font-semibold text-zinc-900 mt-0.5">
                       {row.value}
                     </p>

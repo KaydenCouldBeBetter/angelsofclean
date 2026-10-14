@@ -97,7 +97,7 @@ export default function CommercialStep3() {
               className="h-14"
             />
             {touched.name && name.trim() === "" && (
-              <p className="text-xs text-red-500" role="alert">Name is required.</p>
+              <p className="text-xs text-[#c0392b]" role="alert">Name is required.</p>
             )}
           </div>
           <div className="flex flex-col gap-1.5">
@@ -130,7 +130,7 @@ export default function CommercialStep3() {
               className="h-14"
             />
             {touched.email && !emailValid && (
-              <p className="text-xs text-red-500" role="alert">
+              <p className="text-xs text-[#c0392b]" role="alert">
                 {email.trim() === "" ? "Email is required." : "Enter a valid email address."}
               </p>
             )}
@@ -150,7 +150,7 @@ export default function CommercialStep3() {
               className="h-14"
             />
             {touched.phone && !phoneValid && (
-              <p className="text-xs text-red-500" role="alert">
+              <p className="text-xs text-[#c0392b]" role="alert">
                 {phone.trim() === "" ? "Phone is required." : "Enter a valid 10-digit phone number."}
               </p>
             )}
@@ -196,7 +196,7 @@ export default function CommercialStep3() {
         <div className="mb-6 md:mb-8">
           <Label className="text-sm font-semibold text-zinc-900 mb-1 block">
             Schedule Preference{" "}
-            <span className="font-normal text-zinc-400">(optional)</span>
+            <span className="font-normal text-zinc-500">(optional)</span>
           </Label>
           <p className="text-xs text-zinc-500 mb-3">
             When would cleaning be least disruptive to your operations?

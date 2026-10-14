@@ -21,7 +21,7 @@ export default function AuthShell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      <p className="text-center text-xs text-zinc-400 pb-6">
+      <p className="text-center text-xs text-zinc-500 pb-6">
         Angels of Clean · Admin Access Only
       </p>
     </div>

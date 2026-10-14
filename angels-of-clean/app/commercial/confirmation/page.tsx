@@ -91,7 +91,7 @@ export default function CommercialConfirmation() {
           <div className="flex flex-col gap-2 text-sm">
             {facilityType && (
               <div className="flex gap-3">
-                <span className="text-zinc-400 w-28 flex-shrink-0">Facility</span>
+                <span className="text-zinc-500 w-28 flex-shrink-0">Facility</span>
                 <span className="text-zinc-900 font-medium">
                   {FACILITY_TYPE_LABELS[facilityType]}
                 </span>
@@ -99,7 +99,7 @@ export default function CommercialConfirmation() {
             )}
             {sqftRange && (
               <div className="flex gap-3">
-                <span className="text-zinc-400 w-28 flex-shrink-0">Size</span>
+                <span className="text-zinc-500 w-28 flex-shrink-0">Size</span>
                 <span className="text-zinc-900 font-medium">
                   {SQFT_DISPLAY[sqftRange]}
                 </span>
@@ -107,42 +107,42 @@ export default function CommercialConfirmation() {
             )}
             {address && (
               <div className="flex gap-3">
-                <span className="text-zinc-400 w-28 flex-shrink-0">Address</span>
+                <span className="text-zinc-500 w-28 flex-shrink-0">Address</span>
                 <span className="text-zinc-900 font-medium">
                   {address}, {city} {zip}
                 </span>
               </div>
             )}
             <div className="flex gap-3">
-              <span className="text-zinc-400 w-28 flex-shrink-0">Floors</span>
+              <span className="text-zinc-500 w-28 flex-shrink-0">Floors</span>
               <span className="text-zinc-900 font-medium">{floors}</span>
             </div>
             {areaLabels && (
               <div className="flex gap-3">
-                <span className="text-zinc-400 w-28 flex-shrink-0">Areas</span>
+                <span className="text-zinc-500 w-28 flex-shrink-0">Areas</span>
                 <span className="text-zinc-900 font-medium">{areaLabels}</span>
               </div>
             )}
             <div className="border-t border-zinc-100 my-1" />
             <div className="flex gap-3">
-              <span className="text-zinc-400 w-28 flex-shrink-0">Contact</span>
+              <span className="text-zinc-500 w-28 flex-shrink-0">Contact</span>
               <span className="text-zinc-900 font-medium">{name}</span>
             </div>
             <div className="flex gap-3">
-              <span className="text-zinc-400 w-28 flex-shrink-0">Business</span>
+              <span className="text-zinc-500 w-28 flex-shrink-0">Business</span>
               <span className="text-zinc-900 font-medium">{businessName}</span>
             </div>
             <div className="flex gap-3">
-              <span className="text-zinc-400 w-28 flex-shrink-0">Email</span>
+              <span className="text-zinc-500 w-28 flex-shrink-0">Email</span>
               <span className="text-zinc-900 font-medium">{email}</span>
             </div>
             <div className="flex gap-3">
-              <span className="text-zinc-400 w-28 flex-shrink-0">Phone</span>
+              <span className="text-zinc-500 w-28 flex-shrink-0">Phone</span>
               <span className="text-zinc-900 font-medium">{phone}</span>
             </div>
             {commercialFrequency && (
               <div className="flex gap-3">
-                <span className="text-zinc-400 w-28 flex-shrink-0">Frequency</span>
+                <span className="text-zinc-500 w-28 flex-shrink-0">Frequency</span>
                 <span className="text-zinc-900 font-medium">
                   {COMMERCIAL_FREQUENCY_LABELS[commercialFrequency]}
                 </span>
@@ -150,7 +150,7 @@ export default function CommercialConfirmation() {
             )}
             {schedulePreference && (
               <div className="flex gap-3">
-                <span className="text-zinc-400 w-28 flex-shrink-0">Preference</span>
+                <span className="text-zinc-500 w-28 flex-shrink-0">Preference</span>
                 <span className="text-zinc-900 font-medium">
                   {SCHEDULE_PREFERENCE_LABELS[schedulePreference]}
                 </span>
@@ -193,7 +193,7 @@ export default function CommercialConfirmation() {
               Call us at{" "}
               <a
                 href="tel:+13155550100"
-                className="text-teal-600 font-medium hover:text-teal-700"
+                className="text-[#1a6b5a] font-medium hover:text-[#124d41]"
               >
                 (315) 555-0100
               </a>
