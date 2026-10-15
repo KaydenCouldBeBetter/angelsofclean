@@ -56,7 +56,7 @@ describe("buildCsp", () => {
     expect(d["base-uri"]).toEqual(["'self'"]);
     expect(d["form-action"]).toEqual(["'self'"]);
     expect(d["frame-ancestors"]).toEqual(["'none'"]);
-    expect(d["font-src"]).toEqual(["'self'"]);
+    expect(d["font-src"]).toEqual(["'self'", "data:"]);
   });
 });
 
