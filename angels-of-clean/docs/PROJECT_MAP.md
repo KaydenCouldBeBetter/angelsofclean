@@ -28,7 +28,7 @@ Angels of Clean is a residential + commercial cleaning company in Syracuse, NY. 
 
 **tsconfig:** strict mode, `moduleResolution: bundler`, path alias `@/* → ./*`, Next plugin. **components.json:** aliases `@/components`, `@/lib`, `@/components/ui`, `@/lib/utils`, `@/hooks`.
 
-**next.config.ts:** enables React Compiler and sets global security headers on `/(.*)`: `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (camera/mic/geo disabled), and a `Content-Security-Policy` (`default-src 'self'`; scripts allow `'unsafe-inline'`/`'unsafe-eval'`; fonts allow `fonts.gstatic.com`).
+**next.config.ts:** enables React Compiler and sets global security headers on `/(.*)`: `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (camera/mic/geo disabled), and, for every route except `/admin` and `/admin/*`, a `Content-Security-Policy` from `lib/csp.ts` `buildCsp()`. Public pages are prerendered, so their policy allows inline scripts but no `'unsafe-eval'` outside dev; `connect-src` allows only `'self'` and the Supabase project origin; `object-src 'none'`, `base-uri`/`form-action 'self'`, `frame-ancestors 'none'`. Admin pages get a per-request nonce policy from `middleware.ts` instead.
 
 **vitest.config.ts:** forces `process.env.TZ = "UTC"` by default so timezone bugs surface in CI; jsdom environment; `@` alias.
 
@@ -107,7 +107,7 @@ Wrapped by `layout.tsx` (Suspense). Each step uses `CommercialNav` + `Commercial
 | `/commercial/error` | — | Out-of-area screen with call-to-phone. |
 
 ### Admin (`app/admin/`, all under middleware guard)
-`layout.tsx` renders the sidebar shell (Dashboard / Calendar / Bookings / Quotes / Employees / Settings) for every route except `/admin` (login). It reads the display name via a **browser** Supabase client.
+`layout.tsx` is a server component that calls `connection()` so every admin page renders per request (required for the CSP nonce), then renders `AdminShell.tsx`: the sidebar shell (Dashboard / Calendar / Bookings / Quotes / Employees / Settings) for every route except the auth pages. `AdminShell` reads the display name via a **browser** Supabase client.
 
 | Route | Type | Purpose |
 |-------|------|---------|
@@ -127,7 +127,7 @@ Wrapped by `layout.tsx` (Suspense). Each step uses `CommercialNav` + `Commercial
 - **`GET /api/admin/jobs`** — requires admin (`requireAdmin`; 401 if signed out, 403 if not admin). Requires `from`/`to` (YYYY-MM-DD) query params (400 otherwise). Returns `getJobsInRange(from, to)` as JSON, or 503 if the query failed (never an empty list). Consumed by `CalendarView` when the visible range changes.
 
 ### Middleware (`middleware.ts`, matcher `/admin/:path*`)
-Runs `updateSession` (refreshes the Supabase cookie), then for any `/admin/*` route except the public ones (`/admin`, `/admin/forgot-password`, `/admin/reset-password/confirm` — exact matches), redirects to `/admin` unless `user.app_metadata.role === "admin"`. This guards **page loads only**; server actions and the API route each re-verify with `requireAdmin`.
+Runs `updateSession` (refreshes the Supabase cookie), then for any `/admin/*` route except the public ones (`/admin`, `/admin/forgot-password`, `/admin/reset-password/confirm` — exact matches), redirects to `/admin` unless `user.app_metadata.role === "admin"`. This guards **page loads only**; server actions and the API route each re-verify with `requireAdmin`. It also sets the admin `Content-Security-Policy`: a fresh nonce per request with `'strict-dynamic'` and no `'unsafe-inline'` for scripts, put on the forwarded request (Next.js stamps the nonce on its `<script>` tags while rendering) and on the response.
 
 ---
 
