@@ -42,7 +42,8 @@ export function buildCsp({ nonce, isDev, supabaseUrl }: CspOptions): string {
     "style-src": ["'self'", "'unsafe-inline'"],
     "img-src": ["'self'", "blob:", "data:"],
     // next/font self-hosts Google Fonts, so nothing loads from Google.
-    "font-src": ["'self'"],
+    // FullCalendar's stylesheet embeds its icon font as a data: URI.
+    "font-src": ["'self'", "data:"],
     "connect-src": ["'self'", ...supabaseOrigins(supabaseUrl)],
     "object-src": ["'none'"],
     "base-uri": ["'self'"],
