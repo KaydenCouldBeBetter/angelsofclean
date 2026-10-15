@@ -6,6 +6,7 @@ import Link from "next/link";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
+import { PrivacyNote } from "@/components/booking/PolicyNotes";
 import { useBookingStore } from "@/store/bookingStore";
 import { FIELD_MAX_LENGTHS } from "@/lib/constants";
 import { Input } from "@/components/ui/input";
@@ -122,9 +123,7 @@ export default function ContactPage() {
             </div>
           </div>
 
-          <p className="text-xs text-zinc-500">
-            Your information is secure. We never share your data with third parties.
-          </p>
+          <PrivacyNote />
         </div>
 
         {/* Desktop inline CTA */}

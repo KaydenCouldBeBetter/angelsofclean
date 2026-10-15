@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-zinc-50 p-4">
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Angels of Clean</CardTitle>
@@ -24,6 +24,10 @@ export default function Home() {
           </div>
         </CardContent>
       </Card>
+      <footer className="flex gap-4 text-xs text-zinc-600">
+        <Link href="/privacy" className="underline underline-offset-2 hover:text-zinc-900">Privacy Policy</Link>
+        <Link href="/terms" className="underline underline-offset-2 hover:text-zinc-900">Terms of Service</Link>
+      </footer>
     </div>
   );
 }

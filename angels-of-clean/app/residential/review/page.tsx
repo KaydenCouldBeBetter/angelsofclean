@@ -6,6 +6,7 @@ import Link from "next/link";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
+import { AgreementNote } from "@/components/booking/PolicyNotes";
 import { useBookingStore } from "@/store/bookingStore";
 import { SERVICE_LABELS, FREQUENCY_LABELS, TIME_LABELS } from "@/lib/constants";
 import { submitBooking } from "@/app/actions/submitBooking";
@@ -190,6 +191,8 @@ export default function ReviewPage() {
             </div>
           </div>
         )}
+
+        <AgreementNote action="Confirm Booking" />
 
         {/* Desktop: full-width confirm button */}
         <div className="hidden lg:block mt-4">
