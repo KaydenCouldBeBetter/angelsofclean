@@ -6,6 +6,7 @@ import Link from "next/link";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
+import { AgreementNote } from "@/components/booking/PolicyNotes";
 import CommercialNav from "@/components/booking/CommercialNav";
 import CommercialStepper from "@/components/booking/CommercialStepper";
 import { Button } from "@/components/ui/button";
@@ -229,6 +230,8 @@ export default function CommercialReview() {
               </div>
             </div>
           )}
+
+          <AgreementNote action="Submit Quote Request" />
         </div>
 
         {/* Desktop Submit + Back */}

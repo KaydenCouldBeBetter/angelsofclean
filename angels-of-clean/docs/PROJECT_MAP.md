@@ -78,7 +78,10 @@ A DIAGNOSTIC `SELECT` + a commented-out `UPDATE`. Fixes rows created before the 
 
 ## 3. Routes & pages (app/)
 
-Root `app/layout.tsx` sets Geist fonts and the `%s | Angels of Clean` title template. `app/error.tsx` is the global error boundary (Try Again / Return Home). `app/page.tsx` is the dual-path homepage: Residential / Commercial / Admin links.
+Root `app/layout.tsx` sets Geist fonts and the `%s | Angels of Clean` title template. `app/error.tsx` is the global error boundary (Try Again / Return Home). `app/page.tsx` is the dual-path homepage: Residential / Commercial / Admin links, with Privacy Policy and Terms of Service links underneath.
+
+### Legal (`app/privacy/`, `app/terms/`)
+Static server pages sharing `components/legal/LegalPage.tsx` (header with home + Privacy/Terms links, title, effective date). The text describes what the code actually does (fields collected by each flow, `sessionStorage` wizard state, the hashed-IP rate limiter, Supabase + hosting provider, no analytics); keep it in step when data collection changes. Owner-supplied details (legal name, contact email/phone, mailing address, effective date, record retention, cancellation, payment and damage policies) come from `LEGAL_INFO` in `lib/legal.ts`; each missing one renders as a visible "[To be provided: …]" placeholder. While `isLegalDraft()` is true (any value missing, or `reviewed: false`), both pages show a "Draft — not yet in effect" banner and are `noindex, nofollow`. Linked from the homepage, both contact steps (`PrivacyNote`), and both review steps above the submit button (`AgreementNote`, "By selecting {button}, you agree to our Terms of Service…"), all in `components/booking/PolicyNotes.tsx`.
 
 ### Customer-facing — Residential (`app/residential/`, 6-step wizard)
 Wrapped by `layout.tsx` → `ResidentialShell` (desktop navbar + stepper + live `BookingSummary` sidebar; mobile is a stacked `max-w-sm` column). All steps are `"use client"`, read/write the Zustand store, and guard against deep-linking by `router.replace("/residential")` if prerequisite state is missing. A `?returnTo=review` param makes each step's CTA jump back to Review after editing.
@@ -176,6 +179,7 @@ Rows are mapped to the UI `Job`/`Employee`/`ActivityEntry` shapes from `lib/admi
 - **`lib/admin-types.ts`** — the admin UI shapes `Job`/`Employee`/`ActivityEntry`/`EmployeeStatus` that queries map rows into; `JobStatus` is an alias of the database's `BookingStatus`.
 - **`app/admin/status-config.ts`** — status label/color dictionaries (`STATUS_CONFIG`, `DASHBOARD_STATUS`, `EMPLOYEE_STATUS_CONFIG`). Replaces the old `app/admin/data/mock.ts`, which no longer holds any mock data.
 - **`lib/utils.ts`** — `cn()` (clsx + tailwind-merge).
+- **`lib/legal.ts`** — `LEGAL_INFO` (owner-supplied business details and policies for `/privacy` and `/terms`, all `null` until provided), `missingLegalFields()`, `isLegalDraft()`.
 - **Booking components (`components/booking/`)** — `ResidentialShell`, `DesktopNavbar`, `DesktopStepper`, `CommercialNav`, `CommercialStepper`, `StepHeader`, `ProgressDots`, `BottomCTA`, `BookingSummary`. `BookingSummary` re-declares its own label maps rather than importing `lib/constants`.
 - **UI primitives (`components/ui/`)** — shadcn `button`, `card`, `input`, `label`, `textarea`.
 
@@ -193,6 +197,7 @@ Rows are mapped to the UI `Job`/`Employee`/`ActivityEntry` shapes from `lib/admi
 - **`components/booking/__tests__/ProgressDots.test.tsx`** — dot labels (completed / current / plain) and a single `aria-current="step"`. ✅ passing.
 - **`app/admin/__tests__/status-contrast.test.ts`** — every status chip and banner text/background pair in `status-config.ts` meets WCAG AA 4.5:1. ✅ passing.
 - **`app/admin/settings/__tests__/page.test.tsx`** — notifications are labeled "Coming soon" with an explanation, every toggle is disabled and off, and there is no Save button. ✅ passing.
+- **`__tests__/legal-pages.test.tsx`** — draft logic (missing/blank values, `reviewed`), both pages render with the banner and placeholders, a filled-in and reviewed `LEGAL_INFO` drops them and links email/phone, the policy notes link to the right pages, and the residential contact step no longer claims "we never share your data". ✅ passing.
 - **`__tests__/confirmation-privacy.test.tsx`** — both confirmation pages show the details, then clear them from the store and `sessionStorage`; reloads show only the reference; no reference redirects. ✅ passing.
 - **`lib/__tests__/rate-limit.test.ts`** — limit/window passed to the RPC, refusal, raw IP never sent, bucket stability, header precedence, fail-open on error and on throw, dev skip. ✅ passing.
 - **`app/actions/__tests__/submitBooking.test.ts`** — validation matrix (run against both `submitBooking` and `adminCreateBooking`), success insert, window→UTC storage, DST offsets, PII-safe logging, admin auth gating. ✅ passing.
