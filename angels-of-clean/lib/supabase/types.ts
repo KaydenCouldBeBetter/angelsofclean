@@ -141,6 +141,32 @@ export type Database = {
         Args: { p_bucket: string; p_limit: number; p_window_seconds: number };
         Returns: boolean;
       };
+      assign_booking_employees: {
+        Args: {
+          p_booking_id: string;
+          p_employee_ids: string[];
+          p_expected_employee_ids: string[];
+          p_allow_overlap?: boolean;
+        };
+        Returns: AssignBookingEmployeesResult;
+      };
     };
   };
 };
+
+// jsonb returned by assign_booking_employees (supabase/006).
+export type AssignmentConflictRow = {
+  employee_id: string;
+  employee_name: string;
+  booking_id: string;
+  booking_number: number;
+  start_at: string;
+  end_at: string;
+};
+
+export type AssignBookingEmployeesResult =
+  | { status: "saved"; added: string[]; removed: string[]; overridden: AssignmentConflictRow[] }
+  | { status: "conflicts"; conflicts: AssignmentConflictRow[] }
+  | { status: "stale" }
+  | { status: "closed"; booking_status: BookingStatus }
+  | { status: "not_found" };

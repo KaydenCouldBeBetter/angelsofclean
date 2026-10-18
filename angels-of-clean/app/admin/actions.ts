@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin, type AdminContext } from "@/lib/supabase/require-admin";
 import type { JobStatus } from "@/lib/admin-types";
+import type { AssignmentConflictRow } from "@/lib/supabase/types";
+import { formatNy, formatNyTimeRange } from "@/lib/datetime";
 
 interface ActionResult {
   success: boolean;
@@ -46,44 +48,100 @@ async function logActivity(
   });
 }
 
+// A failed assignment either carries an error, or (when the only problem is
+// overlapping jobs) the overlaps to show the admin before "Assign anyway".
+export type AssignResult =
+  | { success: true }
+  | { success: false; error: string; conflicts?: never }
+  | { success: false; conflicts: string[]; error?: never };
+
+const listFormat = new Intl.ListFormat("en-US", { style: "long", type: "conjunction" });
+
+// "Marcus T. is already on #1042 (Tue, Oct 20, 8:00 AM – 12:00 PM)."
+function describeConflict(c: AssignmentConflictRow): string {
+  const day = formatNy(c.start_at, { weekday: "short", month: "short", day: "numeric" });
+  return `${c.employee_name} is already on #${c.booking_number} (${day}, ${formatNyTimeRange(c.start_at, c.end_at)}).`;
+}
+
+// "Assigned Marcus T.; unassigned Rosa C. (overlap with #1042 overridden)"
+function describeCrewChange(
+  added: string[],
+  removed: string[],
+  overridden: AssignmentConflictRow[],
+): string | null {
+  const parts: string[] = [];
+  if (added.length > 0) parts.push(`assigned ${listFormat.format(added)}`);
+  if (removed.length > 0) parts.push(`unassigned ${listFormat.format(removed)}`);
+  if (parts.length === 0) return null;
+
+  let description = parts.join("; ");
+  description = description[0].toUpperCase() + description.slice(1);
+
+  const numbers = [...new Set(overridden.map((c) => `#${c.booking_number}`))];
+  if (numbers.length > 0) {
+    description += ` (overlap with ${listFormat.format(numbers)} overridden)`;
+  }
+  return description;
+}
+
+/**
+ * Replaces a booking's crew in one database transaction (supabase/006).
+ * `expectedEmployeeIds` is the crew the admin saw when the page loaded; if it
+ * changed since, nothing is saved. Newly added cleaners who are already on an
+ * overlapping job come back as `conflicts` unless `allowOverlap` is set.
+ */
 export async function assignEmployees(
   bookingId: string,
   employeeIds: string[],
-): Promise<ActionResult> {
+  expectedEmployeeIds: string[],
+  { allowOverlap = false }: { allowOverlap?: boolean } = {},
+): Promise<AssignResult> {
   const auth = await requireAdmin();
   if (!auth.ok) {
     return { success: false, error: auth.error };
   }
   const { supabase } = auth;
 
-  const { error: deleteError } = await supabase
-    .from("booking_employees")
-    .delete()
-    .eq("booking_id", bookingId);
+  const { data: result, error } = await supabase.rpc("assign_booking_employees", {
+    p_booking_id: bookingId,
+    p_employee_ids: employeeIds,
+    p_expected_employee_ids: expectedEmployeeIds,
+    p_allow_overlap: allowOverlap === true,
+  });
 
-  if (deleteError) {
-    logDbError("assignEmployees: delete", deleteError);
+  if (error || !result) {
+    logDbError("assignEmployees", error);
     return { success: false, error: "Something went wrong. Please try again." };
   }
 
-  if (employeeIds.length > 0) {
-    const { error: insertError } = await supabase
-      .from("booking_employees")
-      .insert(employeeIds.map((employee_id) => ({ booking_id: bookingId, employee_id })));
+  switch (result.status) {
+    case "not_found":
+      return { success: false, error: "Booking not found." };
 
-    if (insertError) {
-      logDbError("assignEmployees: insert", insertError);
-      return { success: false, error: "Something went wrong. Please try again." };
+    case "closed":
+      revalidateBookingPaths(bookingId);
+      return {
+        success: false,
+        error: `This booking is ${result.booking_status === "done" ? "completed" : "cancelled"}, so its crew can't be changed.`,
+      };
+
+    case "stale":
+      revalidateBookingPaths(bookingId);
+      return {
+        success: false,
+        error: "Someone else changed this crew since you opened the page. Check the current crew and try again.",
+      };
+
+    case "conflicts":
+      return { success: false, conflicts: result.conflicts.map(describeConflict) };
+
+    case "saved": {
+      const description = describeCrewChange(result.added, result.removed, result.overridden);
+      if (description) await logActivity(auth, bookingId, description);
+      revalidateBookingPaths(bookingId);
+      return { success: true };
     }
   }
-
-  const description = employeeIds.length > 0
-    ? `Employee${employeeIds.length > 1 ? "s" : ""} assigned`
-    : "Employees unassigned";
-  await logActivity(auth, bookingId, description);
-
-  revalidateBookingPaths(bookingId);
-  return { success: true };
 }
 
 export async function confirmBooking(bookingId: string): Promise<ActionResult> {
