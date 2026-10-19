@@ -11,6 +11,7 @@ import CommercialStepper from "@/components/booking/CommercialStepper";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import WhenHydrated from "@/components/booking/WhenHydrated";
 import { useBookingStore } from "@/store/bookingStore";
 import {
   COMMERCIAL_FACILITY_TYPES,
@@ -20,7 +21,7 @@ import {
 } from "@/lib/constants";
 import type { CommercialFacilityType, CommercialSqftRange } from "@/store/bookingStore";
 
-export default function CommercialStep1() {
+function CommercialStep1Content() {
   const router = useRouter();
   const store = useBookingStore();
 
@@ -218,5 +219,13 @@ export default function CommercialStep1() {
         <BottomCTA label="Next" onClick={handleNext} disabled={!isValid} />
       </div>
     </>
+  );
+}
+
+export default function CommercialStep1() {
+  return (
+    <WhenHydrated>
+      <CommercialStep1Content />
+    </WhenHydrated>
   );
 }
