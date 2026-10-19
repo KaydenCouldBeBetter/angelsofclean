@@ -88,9 +88,11 @@ function alertBox() {
   return container.querySelector('[role="alert"]');
 }
 
+// The phone links in the page body. The shared desktop navbar carries the
+// number too, so it is left out: these tests are about the failure screens.
 function telLinks() {
   return [...container.querySelectorAll("a")].filter(
-    (a) => a.getAttribute("href") === BUSINESS_PHONE.tel,
+    (a) => a.getAttribute("href") === BUSINESS_PHONE.tel && !a.closest("header"),
   );
 }
 
