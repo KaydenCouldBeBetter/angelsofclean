@@ -6,7 +6,7 @@ import Link from "next/link";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
-import { useBookingStore } from "@/store/bookingStore";
+import { useBookingStore, useBookingHydrated } from "@/store/bookingStore";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FIELD_MAX_LENGTHS, SERVICE_AREA_ZIPS } from "@/lib/constants";
@@ -16,11 +16,12 @@ export default function AddressPage() {
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo");
   const store = useBookingStore();
+  const hydrated = useBookingHydrated();
   const { setStep2 } = store;
 
   useEffect(() => {
-    if (!store.service) router.replace("/residential");
-  }, [store.service, router]);
+    if (hydrated && !store.service) router.replace("/residential");
+  }, [hydrated, store.service, router]);
 
   const [address, setAddress] = useState(store.address || "");
   const [city, setCity] = useState(store.city || "");
