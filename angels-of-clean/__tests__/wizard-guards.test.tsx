@@ -22,6 +22,8 @@ vi.mock("@/app/actions/submitBooking", () => ({ submitBooking: vi.fn() }));
 vi.mock("@/app/actions/submitCommercialQuote", () => ({ submitCommercialQuote: vi.fn() }));
 
 import { useBookingStore } from "@/store/bookingStore";
+import ResidentialService from "@/app/residential/page";
+import CommercialFacility from "@/app/commercial/page";
 import ResidentialAddress from "@/app/residential/address/page";
 import ResidentialProperty from "@/app/residential/property/page";
 import ResidentialDateTime from "@/app/residential/datetime/page";
@@ -32,30 +34,30 @@ import CommercialContact from "@/app/commercial/contact/page";
 import CommercialReview from "@/app/commercial/review/page";
 
 const RESIDENTIAL = {
-  service: "standard" as const,
-  frequency: "one-time" as const,
+  service: "deep" as const,
+  frequency: "monthly" as const,
   address: "1 Test St",
   city: "Cicero",
   zip: "13039",
-  bedrooms: 2,
+  bedrooms: 4,
   bathrooms: 1,
-  notes: "",
+  notes: "Gate code 1234",
   date: "2026-11-02",
-  timeSlot: "morning" as const,
+  timeSlot: "afternoon" as const,
   name: "Jane Doe",
   email: "jane@example.com",
   phone: "(315) 555-0100",
 };
 
 const COMMERCIAL = {
-  facilityType: "office" as const,
-  sqftRange: "1k-2k" as const,
+  facilityType: "retail" as const,
+  sqftRange: "5k+" as const,
   address: "100 Clinton Sq",
   city: "Syracuse",
   zip: "13202",
   floors: 3,
-  serviceAreas: ["lobbies"],
-  commercialNotes: "",
+  serviceAreas: ["lobbies", "restrooms"],
+  commercialNotes: "Badge access after 6",
   name: "Dana Lee",
   businessName: "Northside Dental",
   email: "dana@example.com",
@@ -169,7 +171,62 @@ describe("guards before the store has rehydrated", () => {
     act(() => {
       void persist.rehydrate();
     });
-    expect(useBookingStore.getState().service).toBe("standard");
+    expect(useBookingStore.getState().service).toBe("deep");
     expect(replaceMock).not.toHaveBeenCalled();
+  });
+});
+
+// Every step form that starts its fields from the saved booking.
+const PREFILLED_STEPS = [
+  { name: "residential service", Page: ResidentialService, saved: RESIDENTIAL },
+  { name: "residential address", Page: ResidentialAddress, saved: RESIDENTIAL },
+  { name: "residential property", Page: ResidentialProperty, saved: RESIDENTIAL },
+  { name: "residential datetime", Page: ResidentialDateTime, saved: RESIDENTIAL },
+  { name: "residential contact", Page: ResidentialContact, saved: RESIDENTIAL },
+  { name: "commercial facility", Page: CommercialFacility, saved: COMMERCIAL },
+  { name: "commercial services", Page: CommercialServices, saved: COMMERCIAL },
+  { name: "commercial contact", Page: CommercialContact, saved: COMMERCIAL },
+];
+
+// What a visitor sees and has filled in: text, field values, selected options.
+function formState(el: HTMLElement): string {
+  const values = [...el.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input, textarea")]
+    .map((field) => field.value);
+  const checked = [...el.querySelectorAll('[aria-checked="true"]')].map((o) => o.textContent);
+  return JSON.stringify({ text: el.textContent, values, checked });
+}
+
+// Mount the page on its own in a throwaway container and report what it shows.
+function freshFormState(page: React.ReactElement): string {
+  const fresh = document.createElement("div");
+  document.body.appendChild(fresh);
+  const freshRoot = createRoot(fresh);
+  act(() => freshRoot.render(page));
+  const state = formState(fresh);
+  act(() => freshRoot.unmount());
+  fresh.remove();
+  return state;
+}
+
+describe.each(PREFILLED_STEPS)("$name step form after a refresh", ({ Page, saved }) => {
+  it("shows the saved answers once hydrated, as it does when mounted fresh", () => {
+    useBookingStore.setState(saved);
+    const expected = freshFormState(<Page />);
+
+    container.innerHTML = renderToString(<Page />);
+    act(() => {
+      root = hydrateRoot(container, <Page />);
+    });
+
+    expect(formState(container)).toBe(expected);
+  });
+
+  it("differs from an empty form, so the check above is not vacuous", () => {
+    useBookingStore.setState(saved);
+    const withSaved = freshFormState(<Page />);
+
+    useBookingStore.getState().reset();
+
+    expect(freshFormState(<Page />)).not.toBe(withSaved);
   });
 });

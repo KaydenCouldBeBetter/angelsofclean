@@ -7,7 +7,8 @@ import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
 import { PrivacyNote } from "@/components/booking/PolicyNotes";
-import { useBookingStore, useBookingHydrated } from "@/store/bookingStore";
+import WhenHydrated from "@/components/booking/WhenHydrated";
+import { useBookingStore } from "@/store/bookingStore";
 import { FIELD_MAX_LENGTHS } from "@/lib/constants";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,17 +16,16 @@ import { Label } from "@/components/ui/label";
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$/;
 
-export default function ContactPage() {
+function ContactPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo");
   const store = useBookingStore();
-  const hydrated = useBookingHydrated();
   const { setStep5 } = store;
 
   useEffect(() => {
-    if (hydrated && !store.date) router.replace("/residential");
-  }, [hydrated, store.date, router]);
+    if (!store.date) router.replace("/residential");
+  }, [store.date, router]);
 
   const [name, setName] = useState(store.name || "");
   const [email, setEmail] = useState(store.email || "");
@@ -149,5 +149,13 @@ export default function ContactPage() {
         <BottomCTA label={returnTo === "review" ? "Save & Return to Review" : "Next"} onClick={handleNext} disabled={!isValid} />
       </div>
     </>
+  );
+}
+
+export default function ContactPage() {
+  return (
+    <WhenHydrated>
+      <ContactPageContent />
+    </WhenHydrated>
   );
 }

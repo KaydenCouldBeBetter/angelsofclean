@@ -12,7 +12,8 @@ import CommercialStepper from "@/components/booking/CommercialStepper";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { useBookingStore, useBookingHydrated } from "@/store/bookingStore";
+import WhenHydrated from "@/components/booking/WhenHydrated";
+import { useBookingStore } from "@/store/bookingStore";
 import {
   COMMERCIAL_FREQUENCIES,
   FIELD_MAX_LENGTHS,
@@ -23,14 +24,13 @@ import type { CommercialFrequency, SchedulePreference } from "@/store/bookingSto
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$/;
 
-export default function CommercialStep3() {
+function CommercialStep3Content() {
   const router = useRouter();
   const store = useBookingStore();
-  const hydrated = useBookingHydrated();
 
   useEffect(() => {
-    if (hydrated && !store.facilityType) router.replace("/commercial");
-  }, [hydrated, store.facilityType, router]);
+    if (!store.facilityType) router.replace("/commercial");
+  }, [store.facilityType, router]);
 
   const [name, setName] = useState(store.name || "");
   const [businessName, setBusinessName] = useState(store.businessName || "");
@@ -280,5 +280,13 @@ export default function CommercialStep3() {
         <BottomCTA label="Next" onClick={handleNext} disabled={!isValid} />
       </div>
     </>
+  );
+}
+
+export default function CommercialStep3() {
+  return (
+    <WhenHydrated>
+      <CommercialStep3Content />
+    </WhenHydrated>
   );
 }
