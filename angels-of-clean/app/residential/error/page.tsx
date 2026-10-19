@@ -5,6 +5,7 @@ import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
 import { useBookingStore } from "@/store/bookingStore";
+import { BUSINESS_PHONE } from "@/lib/constants";
 
 export default function ServiceAreaErrorPage() {
   const router = useRouter();
@@ -40,8 +41,11 @@ export default function ServiceAreaErrorPage() {
         <div role="alert" className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
           <span className="text-red-500 mt-0.5" role="img" aria-label="Warning">&#9888;</span>
           <p className="text-sm text-red-700">
-            We don&apos;t currently serve this area. Check our service zone or call{" "}
-            <span className="font-semibold">(315) 555-CLEAN</span> for a custom quote.
+            We don&apos;t currently serve this area. Check our service zone or{" "}
+            <a href={BUSINESS_PHONE.tel} className="font-semibold text-red-700 underline hover:text-red-800">
+              call us
+            </a>
+            {" "}for a custom quote.
           </p>
         </div>
 

@@ -17,8 +17,8 @@ import { BUSINESS_PHONE } from "@/lib/constants";
 
 describe("BUSINESS_PHONE", () => {
   it("pairs the display text with a matching tel: link", () => {
-    expect(BUSINESS_PHONE.display).toBe("(315) 555-0100");
-    expect(BUSINESS_PHONE.tel).toBe("tel:+13155550100");
+    expect(BUSINESS_PHONE.display).toBe("(315) 516-1266");
+    expect(BUSINESS_PHONE.tel).toBe("tel:+13155161266");
     expect(BUSINESS_PHONE.tel.replace(/\D/g, "")).toContain(
       BUSINESS_PHONE.display.replace(/\D/g, ""),
     );
