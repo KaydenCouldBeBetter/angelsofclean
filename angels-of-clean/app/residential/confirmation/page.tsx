@@ -1,5 +1,6 @@
 "use client";
 
+import WhatHappensNext from "@/components/booking/WhatHappensNext";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useBookingStore } from "@/store/bookingStore";
@@ -153,6 +154,8 @@ export default function ConfirmationPage() {
             />
           )}
 
+          <WhatHappensNext className="w-full" />
+
           <div className="w-full border-t border-zinc-100 pt-4">
             <div className="rounded-xl border border-zinc-200 p-4 flex flex-col gap-3">
               <p className="font-semibold text-zinc-900">Save your details for next time?</p>
@@ -206,6 +209,8 @@ export default function ConfirmationPage() {
             buttonClassName="flex-1 h-12"
           />
         )}
+
+        <WhatHappensNext className="w-[640px] mt-4" />
 
         {/* Upsell card */}
         <div className="w-[640px] mt-4 rounded-xl bg-primary/5 border border-primary/20 p-5">

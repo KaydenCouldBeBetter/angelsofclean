@@ -1,5 +1,6 @@
 "use client";
 
+import WhatHappensNext from "@/components/booking/WhatHappensNext";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -20,6 +21,7 @@ import {
   COMMERCIAL_FREQUENCY_LABELS,
   COMMERCIAL_STEP_LABELS,
   SCHEDULE_PREFERENCE_LABELS,
+  PRICE_NOTE,
 } from "@/lib/constants";
 import { submitCommercialQuote, type QuoteResult } from "@/app/actions/submitCommercialQuote";
 
@@ -227,6 +229,10 @@ export default function CommercialReview() {
               We respond to every quote request within one business day.
             </p>
           </div>
+
+          <p className="text-sm text-zinc-500">{PRICE_NOTE}</p>
+
+          <WhatHappensNext />
 
           {error && (
             <SubmitErrorAlert

@@ -1,5 +1,6 @@
 "use client";
 
+import WhatHappensNext from "@/components/booking/WhatHappensNext";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DesktopNavbar, { COMMERCIAL_NAV_TAGLINE } from "@/components/booking/DesktopNavbar";
@@ -187,26 +188,7 @@ export default function CommercialConfirmation() {
           </div>
         </div>
 
-        {/* What happens next */}
-        <div className="rounded-xl border border-zinc-200 p-4 md:p-5 mb-8">
-          <h2 className="text-sm font-semibold text-zinc-900 mb-3">
-            What happens next?
-          </h2>
-          <ol className="flex flex-col gap-3">
-            {[
-              "Our commercial team reviews your request and facility details.",
-              "A specialist contacts you to clarify any questions and finalize scope.",
-              "You receive a custom quote — no commitment required.",
-            ].map((step, i) => (
-              <li key={i} className="flex items-start gap-3 text-sm text-zinc-600">
-                <span className="w-6 h-6 rounded-full bg-primary text-white text-xs font-semibold flex-shrink-0 flex items-center justify-center mt-0.5">
-                  {i + 1}
-                </span>
-                {step}
-              </li>
-            ))}
-          </ol>
-        </div>
+        <WhatHappensNext className="mb-8" />
 
         {/* Need help? — mobile only */}
         <div className="md:hidden flex items-start gap-3 rounded-xl border border-zinc-200 p-4 mb-6">

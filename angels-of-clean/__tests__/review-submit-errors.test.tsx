@@ -89,10 +89,13 @@ function alertBox() {
 }
 
 // The phone links in the page body. The shared desktop navbar carries the
-// number too, so it is left out: these tests are about the failure screens.
+// number too, and so does the What happens next block; both are left out:
+// these tests are about the failure screens.
 function telLinks() {
   return [...container.querySelectorAll("a")].filter(
-    (a) => a.getAttribute("href") === BUSINESS_PHONE.tel && !a.closest("header"),
+    (a) => a.getAttribute("href") === BUSINESS_PHONE.tel &&
+      !a.closest("header") &&
+      !a.closest('[data-testid="what-happens-next"]'),
   );
 }
 
