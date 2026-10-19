@@ -34,7 +34,7 @@ function BookingNotFound() {
       <div className="flex-1 flex items-center justify-center bg-[#f7f9f8]">
         <div className="text-center">
           <p className="text-[#5c5c5e] mb-4">This booking does not exist.</p>
-          <Link href="/admin/bookings" className="text-[#1a6b5a] font-medium hover:underline">
+          <Link href="/admin/bookings" className="text-primary font-medium hover:underline">
             &larr; Back to Bookings
           </Link>
         </div>
@@ -188,7 +188,7 @@ export default async function BookingDetailPage({
                   {activityLog.map((entry, i) => (
                     <div key={i} className="relative pl-6">
                       {/* Dot */}
-                      <div className="absolute left-0 top-1 w-2 h-2 rounded bg-[#1a6b5a]" />
+                      <div className="absolute left-0 top-1 w-2 h-2 rounded bg-primary" />
                       {/* Connecting line */}
                       {i < activityLog.length - 1 && (
                         <div className="absolute left-[3px] top-[12px] w-0.5 h-9 bg-[#e2e8e6]" />

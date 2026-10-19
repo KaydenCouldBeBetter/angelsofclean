@@ -22,11 +22,11 @@ function QuoteCard({ quote }: { quote: CommercialQuote }) {
           <p className="text-[13px] text-[#1c1c1e] mt-1.5">
             {quote.contactName}
             {" · "}
-            <a href={`mailto:${quote.email}`} className="text-[#1a6b5a] font-medium hover:underline">
+            <a href={`mailto:${quote.email}`} className="text-primary font-medium hover:underline">
               {quote.email}
             </a>
             {" · "}
-            <a href={`tel:${quote.phone}`} className="text-[#1a6b5a] font-medium hover:underline">
+            <a href={`tel:${quote.phone}`} className="text-primary font-medium hover:underline">
               {quote.phone}
             </a>
           </p>

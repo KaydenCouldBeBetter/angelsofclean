@@ -21,7 +21,7 @@ export default function DesktopStepper({ steps, currentStep }: DesktopStepperPro
             <div
               className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${
                 isCompleted || isCurrent
-                  ? "bg-[#1a6b5a] text-white"
+                  ? "bg-primary text-white"
                   : "bg-zinc-200 text-zinc-500"
               }`}
             >
@@ -45,7 +45,7 @@ export default function DesktopStepper({ steps, currentStep }: DesktopStepperPro
             {i < steps.length - 1 && (
               <div
                 className={`w-16 xl:w-24 h-0.5 mx-3 flex-shrink-0 ${
-                  stepNum < currentStep ? "bg-[#1a6b5a]" : "bg-zinc-200"
+                  stepNum < currentStep ? "bg-primary" : "bg-zinc-200"
                 }`}
               />
             )}

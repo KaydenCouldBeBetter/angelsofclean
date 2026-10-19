@@ -47,7 +47,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   return (
     <div className="flex h-screen overflow-hidden bg-[#f5f5f5]">
       {/* Sidebar */}
-      <aside className="w-60 flex-shrink-0 flex flex-col h-full bg-[#1b3b36]">
+      <aside data-focus-surface="dark" className="w-60 flex-shrink-0 flex flex-col h-full bg-[#1b3b36]">
         {/* Brand */}
         <div className="px-6 pt-5 pb-4">
           <p className="text-white font-bold text-base leading-tight">Angels of Clean</p>

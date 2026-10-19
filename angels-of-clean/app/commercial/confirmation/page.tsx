@@ -72,12 +72,12 @@ export default function CommercialConfirmation() {
         {/* Success header */}
         <div className="flex flex-col items-center text-center mb-8 md:mb-10">
           <div
-            className="w-20 h-20 rounded-full border-2 border-teal-500 flex items-center justify-center mb-4"
+            className="w-20 h-20 rounded-full border-2 border-primary flex items-center justify-center mb-4"
             role="img"
             aria-label="Quote request submitted successfully"
           >
             <svg
-              className="w-9 h-9 text-teal-600"
+              className="w-9 h-9 text-primary"
               viewBox="0 0 24 24"
               fill="none"
               aria-hidden="true"
@@ -101,11 +101,11 @@ export default function CommercialConfirmation() {
         </div>
 
         {/* Commitment card */}
-        <div className="flex items-start gap-3 rounded-xl border border-teal-100 bg-teal-50 p-4 mb-6">
-          <span className="text-teal-600 text-base mt-0.5" aria-hidden="true">
+        <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4 mb-6">
+          <span className="text-primary text-base mt-0.5" aria-hidden="true">
             🕐
           </span>
-          <p className="text-sm text-teal-700 font-medium">
+          <p className="text-sm text-primary font-medium">
             We&apos;ll follow up within one business day with a custom quote.
           </p>
         </div>
@@ -198,7 +198,7 @@ export default function CommercialConfirmation() {
               "You receive a custom quote — no commitment required.",
             ].map((step, i) => (
               <li key={i} className="flex items-start gap-3 text-sm text-zinc-600">
-                <span className="w-6 h-6 rounded-full bg-teal-600 text-white text-xs font-semibold flex-shrink-0 flex items-center justify-center mt-0.5">
+                <span className="w-6 h-6 rounded-full bg-primary text-white text-xs font-semibold flex-shrink-0 flex items-center justify-center mt-0.5">
                   {i + 1}
                 </span>
                 {step}
@@ -220,7 +220,7 @@ export default function CommercialConfirmation() {
               Call us at{" "}
               <a
                 href="tel:+13155550100"
-                className="text-[#1a6b5a] font-medium hover:text-[#124d41]"
+                className="text-primary font-medium hover:text-primary-pressed"
               >
                 (315) 555-0100
               </a>

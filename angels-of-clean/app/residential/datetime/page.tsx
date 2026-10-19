@@ -117,9 +117,9 @@ function DateTimePageContent() {
 
         {/* Month navigation */}
         <div className="hidden lg:flex items-center gap-2 text-sm font-medium text-zinc-700">
-          <button className="text-[#1a6b5a] hover:underline">&larr;</button>
+          <button className="text-primary hover:underline">&larr;</button>
           <span>{monthLabel}</span>
-          <button className="text-[#1a6b5a] hover:underline">&rarr;</button>
+          <button className="text-primary hover:underline">&rarr;</button>
         </div>
 
         {/* Date chips — mobile: horizontal scroll, desktop: 3-col grid */}
@@ -143,7 +143,7 @@ function DateTimePageContent() {
                   isDisabled
                     ? "border-zinc-100 bg-zinc-50 text-zinc-400 cursor-not-allowed"
                     : isSelected
-                      ? "border-teal-600 bg-teal-600 text-white"
+                      ? "border-primary bg-primary text-white"
                       : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
                 }`}
               >
@@ -188,7 +188,7 @@ function DateTimePageContent() {
                     disabled
                       ? "border-zinc-100 bg-zinc-50 cursor-not-allowed"
                       : isSelected
-                        ? "border-teal-600 bg-teal-600 text-white"
+                        ? "border-primary bg-primary text-white"
                         : "border-zinc-200 bg-white hover:border-zinc-300"
                   }`}
                 >
@@ -208,12 +208,12 @@ function DateTimePageContent() {
         <div className="hidden lg:block mt-2">
           <button
             onClick={handleNext}
-            className="w-[360px] h-14 rounded-xl bg-[#1a6b5a] text-white text-base font-semibold hover:bg-[#155a4b] transition-colors"
+            className="w-[360px] h-14 rounded-xl bg-primary text-white text-base font-semibold hover:bg-primary-pressed transition-colors"
           >
             {returnTo === "review" ? "Save & Return to Review" : "Next \u2192"}
           </button>
           <div className="mt-3">
-            <Link href="/residential/property" className="text-sm font-medium text-[#1a6b5a] hover:underline">
+            <Link href="/residential/property" className="text-sm font-medium text-primary hover:underline">
               &larr; Back
             </Link>
           </div>

@@ -27,14 +27,14 @@ export function LegalValue({
   }
   if (field === "contactEmail") {
     return (
-      <a href={`mailto:${value}`} className="text-[#1a6b5a] underline underline-offset-2">
+      <a href={`mailto:${value}`} className="text-primary underline underline-offset-2">
         {value}
       </a>
     );
   }
   if (field === "contactPhone") {
     return (
-      <a href={`tel:${value.replace(/[^\d+]/g, "")}`} className="text-[#1a6b5a] underline underline-offset-2">
+      <a href={`tel:${value.replace(/[^\d+]/g, "")}`} className="text-primary underline underline-offset-2">
         {value}
       </a>
     );
@@ -86,10 +86,10 @@ export default function LegalPage({
             Angels of Clean
           </Link>
           <nav aria-label="Legal" className="flex gap-4 text-sm">
-            <Link href="/privacy" className="text-[#1a6b5a] underline-offset-2 hover:underline">
+            <Link href="/privacy" className="text-primary underline-offset-2 hover:underline">
               Privacy
             </Link>
-            <Link href="/terms" className="text-[#1a6b5a] underline-offset-2 hover:underline">
+            <Link href="/terms" className="text-primary underline-offset-2 hover:underline">
               Terms
             </Link>
           </nav>

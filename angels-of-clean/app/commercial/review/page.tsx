@@ -125,7 +125,7 @@ export default function CommercialReview() {
           <div className="rounded-xl border border-zinc-200 p-4 md:p-5">
             <div className="flex items-start justify-between mb-3">
               <span className="text-sm font-semibold text-zinc-900">Facility Info</span>
-              <Link href="/commercial" className="text-sm text-[#1a6b5a] font-medium hover:text-[#124d41]">
+              <Link href="/commercial" className="text-sm text-primary font-medium hover:text-primary-pressed">
                 Edit
               </Link>
             </div>
@@ -155,7 +155,7 @@ export default function CommercialReview() {
           <div className="rounded-xl border border-zinc-200 p-4 md:p-5">
             <div className="flex items-start justify-between mb-3">
               <span className="text-sm font-semibold text-zinc-900">Service Scope</span>
-              <Link href="/commercial/services" className="text-sm text-[#1a6b5a] font-medium hover:text-[#124d41]">
+              <Link href="/commercial/services" className="text-sm text-primary font-medium hover:text-primary-pressed">
                 Edit
               </Link>
             </div>
@@ -181,7 +181,7 @@ export default function CommercialReview() {
           <div className="rounded-xl border border-zinc-200 p-4 md:p-5">
             <div className="flex items-start justify-between mb-3">
               <span className="text-sm font-semibold text-zinc-900">Contact &amp; Frequency</span>
-              <Link href="/commercial/contact" className="text-sm text-[#1a6b5a] font-medium hover:text-[#124d41]">
+              <Link href="/commercial/contact" className="text-sm text-primary font-medium hover:text-primary-pressed">
                 Edit
               </Link>
             </div>
@@ -220,9 +220,9 @@ export default function CommercialReview() {
           </div>
 
           {/* Commitment */}
-          <div className="flex items-start gap-3 rounded-xl border border-teal-100 bg-teal-50 p-4">
-            <span className="text-teal-600 text-base mt-0.5" aria-hidden="true">🕐</span>
-            <p className="text-sm text-teal-700 font-medium">
+          <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+            <span className="text-primary text-base mt-0.5" aria-hidden="true">🕐</span>
+            <p className="text-sm text-primary font-medium">
               We respond to every quote request within one business day.
             </p>
           </div>
@@ -250,7 +250,7 @@ export default function CommercialReview() {
           </Button>
           <Link
             href="/commercial/contact"
-            className="text-sm text-teal-700 hover:text-teal-800 transition-colors"
+            className="text-sm text-primary hover:text-primary-pressed transition-colors"
           >
             ← Back to Contact &amp; Frequency
           </Link>

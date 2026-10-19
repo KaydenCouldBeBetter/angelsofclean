@@ -82,7 +82,7 @@ export default function TermsPage() {
       <LegalSection title="Your information">
         <p>
           Our{" "}
-          <Link href="/privacy" className="text-[#1a6b5a] underline underline-offset-2">
+          <Link href="/privacy" className="text-primary underline underline-offset-2">
             Privacy Policy
           </Link>{" "}
           explains what we collect when you book and how we use it.

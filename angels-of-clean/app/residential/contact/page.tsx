@@ -137,12 +137,12 @@ function ContactPageContent() {
           <button
             onClick={handleNext}
             disabled={!isValid}
-            className="w-[360px] h-14 rounded-xl bg-[#1a6b5a] text-white text-base font-semibold hover:bg-[#155a4b] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-[360px] h-14 rounded-xl bg-primary text-white text-base font-semibold hover:bg-primary-pressed transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {returnTo === "review" ? "Save & Return to Review" : "Next \u2192"}
           </button>
           <div className="mt-3">
-            <Link href="/residential/datetime" className="text-sm font-medium text-[#1a6b5a] hover:underline">
+            <Link href="/residential/datetime" className="text-sm font-medium text-primary hover:underline">
               &larr; Back
             </Link>
           </div>

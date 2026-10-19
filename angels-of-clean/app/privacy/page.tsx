@@ -158,7 +158,7 @@ export default function PrivacyPage() {
         <p>
           If we change this policy, we&apos;ll post the new version here and update the effective
           date. Our{" "}
-          <Link href="/terms" className="text-[#1a6b5a] underline underline-offset-2">
+          <Link href="/terms" className="text-primary underline underline-offset-2">
             Terms of Service
           </Link>{" "}
           also apply when you book.
