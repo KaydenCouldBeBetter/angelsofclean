@@ -10,7 +10,7 @@ import { AgreementNote } from "@/components/booking/PolicyNotes";
 import SubmitErrorAlert from "@/components/booking/SubmitErrorAlert";
 import ServiceUnavailable from "@/components/booking/ServiceUnavailable";
 import { useBookingStore, useBookingHydrated } from "@/store/bookingStore";
-import { SERVICE_LABELS, FREQUENCY_LABELS, TIME_LABELS } from "@/lib/constants";
+import { SERVICE_LABELS, FREQUENCY_LABELS, TIME_LABELS, formatBathroomCount } from "@/lib/constants";
 import { submitBooking, type BookingResult } from "@/app/actions/submitBooking";
 
 export default function ReviewPage() {
@@ -114,7 +114,7 @@ export default function ReviewPage() {
       label: "Property Details",
       editHref: "/residential/property?returnTo=review",
       lines: [
-        `${bedrooms} ${bedrooms === 1 ? "Bedroom" : "Bedrooms"}, ${bathrooms} ${bathrooms === 1 ? "Bathroom" : "Bathrooms"}`,
+        `${bedrooms} ${bedrooms === 1 ? "Bedroom" : "Bedrooms"}, ${formatBathroomCount(bathrooms)}`,
         notes ? `Notes: ${notes}` : null,
         accessInstructions ? `Entry instructions: ${accessInstructions}` : null,
       ].filter(Boolean) as string[],
