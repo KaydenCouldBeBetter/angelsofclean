@@ -9,13 +9,14 @@ import BottomCTA from "@/components/booking/BottomCTA";
 import { AgreementNote } from "@/components/booking/PolicyNotes";
 import SubmitErrorAlert from "@/components/booking/SubmitErrorAlert";
 import ServiceUnavailable from "@/components/booking/ServiceUnavailable";
-import { useBookingStore } from "@/store/bookingStore";
+import { useBookingStore, useBookingHydrated } from "@/store/bookingStore";
 import { SERVICE_LABELS, FREQUENCY_LABELS, TIME_LABELS } from "@/lib/constants";
 import { submitBooking, type BookingResult } from "@/app/actions/submitBooking";
 
 export default function ReviewPage() {
   const router = useRouter();
   const store = useBookingStore();
+  const hydrated = useBookingHydrated();
   const [error, setError] = useState<string | null>(null);
   const [unavailable, setUnavailable] = useState(false);
 
@@ -30,11 +31,13 @@ export default function ReviewPage() {
   } = store;
 
   useEffect(() => {
+    // Wait for the store to fill from sessionStorage: until then it reads as empty.
+    if (!hydrated) return;
     // A saved date that had passed was cleared on load: send the customer to
     // the date step (which explains why) instead of back to the start.
     if (dateExpired) router.replace("/residential/datetime?returnTo=review");
     else if (!service || !address || !date || !name) router.replace("/residential");
-  }, [service, address, date, name, dateExpired, router]);
+  }, [hydrated, service, address, date, name, dateExpired, router]);
 
   const formattedDate = date
     ? new Date(date + "T12:00:00").toLocaleDateString("en-US", {

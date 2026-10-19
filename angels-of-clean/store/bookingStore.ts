@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from "react";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { TIME_SLOT_WINDOWS } from "@/lib/constants";
@@ -214,3 +215,17 @@ export const useBookingStore = create<BookingState>()(
     }
   )
 );
+
+/**
+ * True once the store has been filled from sessionStorage. Step guards must not
+ * redirect before this: while React hydrates, Zustand serves the default
+ * (empty) state, so a guard would send a visitor with a saved booking back to
+ * step 1. The server snapshot is false, so this is also false during hydration.
+ */
+export function useBookingHydrated(): boolean {
+  return useSyncExternalStore(
+    (onChange) => useBookingStore.persist.onFinishHydration(onChange),
+    () => useBookingStore.persist.hasHydrated(),
+    () => false
+  );
+}
