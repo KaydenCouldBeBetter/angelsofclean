@@ -101,7 +101,7 @@ describe("allowPublicSubmission", () => {
 
   it("fails open, logging only the error code, when the limiter is unavailable", async () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    // e.g. supabase/004_rate_limits.sql has not been run yet.
+    // e.g. the rate_limits migration has not been applied yet.
     rpcMock.mockResolvedValue({
       data: null,
       error: { code: "PGRST202", message: "function check_rate_limit not found for 203.0.113.7" },
