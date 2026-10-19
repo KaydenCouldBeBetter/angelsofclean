@@ -327,13 +327,6 @@ export type Database = {
         }
         Returns: Json
       }
-      booking_status_transition_allowed: {
-        Args: {
-          p_from: Database["public"]["Enums"]["booking_status"]
-          p_to: Database["public"]["Enums"]["booking_status"]
-        }
-        Returns: boolean
-      }
       check_rate_limit: {
         Args: { p_bucket: string; p_limit: number; p_window_seconds: number }
         Returns: boolean
