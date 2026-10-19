@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { getJobById, getActivityLog, getEmployees } from "@/lib/supabase/queries";
+import { getJobById, getActivityLog, getBookingAccess, getEmployees } from "@/lib/supabase/queries";
 import { DASHBOARD_STATUS } from "../../status-config";
 import { formatNy, formatNyTime, formatNyTimeRange } from "@/lib/datetime";
 import BookingActions from "./BookingActions";
+import EntryInstructions from "./EntryInstructions";
 import LoadError from "../../LoadError";
 
 function formatDetailDate(iso: string) {
@@ -25,10 +26,13 @@ export default async function BookingDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [jobResult, activityResult, employeesResult] = await Promise.all([
+  // A failed entry-instructions lookup only affects its own card (below), so
+  // it isn't part of the whole-page error check.
+  const [jobResult, activityResult, employeesResult, accessResult] = await Promise.all([
     getJobById(id),
     getActivityLog(id),
     getEmployees(),
+    getBookingAccess(id),
   ]);
 
   const displayDate = formatNy(new Date(), {
@@ -143,6 +147,12 @@ export default async function BookingDetailPage({
                 {cfg.label} {assignedEmployees.length > 0 ? `· Employee: ${employeeLabel}` : ""}
               </p>
             </div>
+
+            <EntryInstructions
+              bookingId={job.id}
+              instructions={accessResult.ok ? accessResult.data : null}
+              loadFailed={!accessResult.ok}
+            />
           </div>
 
           {/* Right column */}

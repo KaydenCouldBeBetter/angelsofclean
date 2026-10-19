@@ -64,6 +64,8 @@ export const FIELD_MAX_LENGTHS = {
   address: 200,
   city: 100,
   notes: 1000,
+  // Entry instructions (door code, gate, pets), stored in booking_access.
+  accessInstructions: 500,
 } as const;
 
 // Shortest admin password the reset form accepts. Supabase's own project
