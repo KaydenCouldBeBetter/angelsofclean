@@ -11,10 +11,11 @@ import CommercialStepper from "@/components/booking/CommercialStepper";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import WhenHydrated from "@/components/booking/WhenHydrated";
 import { useBookingStore } from "@/store/bookingStore";
 import { COMMERCIAL_MAX_FLOORS, COMMERCIAL_SERVICE_AREAS, FIELD_MAX_LENGTHS } from "@/lib/constants";
 
-export default function CommercialStep2() {
+function CommercialStep2Content() {
   const router = useRouter();
   const store = useBookingStore();
 
@@ -214,5 +215,13 @@ export default function CommercialStep2() {
         <BottomCTA label="Next" onClick={handleNext} disabled={!isValid} />
       </div>
     </>
+  );
+}
+
+export default function CommercialStep2() {
+  return (
+    <WhenHydrated>
+      <CommercialStep2Content />
+    </WhenHydrated>
   );
 }

@@ -6,12 +6,13 @@ import Link from "next/link";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
+import WhenHydrated from "@/components/booking/WhenHydrated";
 import { useBookingStore } from "@/store/bookingStore";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FIELD_MAX_LENGTHS, SERVICE_AREA_ZIPS } from "@/lib/constants";
 
-export default function AddressPage() {
+function AddressPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo");
@@ -134,5 +135,13 @@ export default function AddressPage() {
         <BottomCTA label={returnTo === "review" ? "Save & Return to Review" : "Next"} onClick={handleNext} disabled={!isValid} />
       </div>
     </>
+  );
+}
+
+export default function AddressPage() {
+  return (
+    <WhenHydrated>
+      <AddressPageContent />
+    </WhenHydrated>
   );
 }

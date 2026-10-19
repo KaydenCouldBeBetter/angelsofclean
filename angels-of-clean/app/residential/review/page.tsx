@@ -7,13 +7,14 @@ import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
 import { AgreementNote } from "@/components/booking/PolicyNotes";
-import { useBookingStore } from "@/store/bookingStore";
+import { useBookingStore, useBookingHydrated } from "@/store/bookingStore";
 import { SERVICE_LABELS, FREQUENCY_LABELS, TIME_LABELS } from "@/lib/constants";
 import { submitBooking } from "@/app/actions/submitBooking";
 
 export default function ReviewPage() {
   const router = useRouter();
   const store = useBookingStore();
+  const hydrated = useBookingHydrated();
   const [error, setError] = useState<string | null>(null);
 
   const {
@@ -28,10 +29,10 @@ export default function ReviewPage() {
 
   // No start time means the wizard state predates the bot check: start over.
   useEffect(() => {
-    if (!service || !address || !date || !name || formStartedAt === null) {
+    if (hydrated && (!service || !address || !date || !name || formStartedAt === null)) {
       router.replace("/residential");
     }
-  }, [service, address, date, name, formStartedAt, router]);
+  }, [hydrated, service, address, date, name, formStartedAt, router]);
 
   const formattedDate = date
     ? new Date(date + "T12:00:00").toLocaleDateString("en-US", {
