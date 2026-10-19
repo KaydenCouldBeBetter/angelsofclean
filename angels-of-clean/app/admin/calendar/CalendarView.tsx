@@ -1,15 +1,16 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import Link from "next/link";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import type { EventContentArg, DatesSetArg } from "@fullcalendar/core";
+import type { EventContentArg, DatesSetArg, DayCellContentArg } from "@fullcalendar/core";
 import { STATUS_CONFIG } from "../status-config";
 import type { Job, Employee } from "@/lib/admin-types";
 import NewBookingModal from "../NewBookingModal";
-import { nyTodayStr, nyWallClockISO } from "@/lib/datetime";
+import { formatNy, formatNyTimeRange, nyDateStr, nyTodayStr, nyWallClockISO } from "@/lib/datetime";
 
 interface CalendarViewProps {
   jobs: Job[];
@@ -35,6 +36,117 @@ function initialLoadedRange(): { from: string; to: string } {
   const end = new Date(anchor);
   end.setUTCMonth(end.getUTCMonth() + 2);
   return { from: toDateStr(start), to: toDateStr(end) };
+}
+
+// A job still needs a crew while it is pending, confirmed or in progress.
+// Cancelled and finished jobs with no crew are not a to-do.
+export function isUnassigned(job: Job): boolean {
+  return job.employeeIds.length === 0 && job.status !== "cancelled" && job.status !== "done";
+}
+
+// Unassigned jobs grouped by their New York date ("YYYY-MM-DD"), each day in
+// start order.
+export function unassignedByDay(jobs: Job[]): Map<string, Job[]> {
+  const byDay = new Map<string, Job[]>();
+  const sorted = jobs.filter(isUnassigned).sort((a, b) => a.start.localeCompare(b.start));
+  for (const job of sorted) {
+    const day = nyDateStr(job.start);
+    byDay.set(day, [...(byDay.get(day) ?? []), job]);
+  }
+  return byDay;
+}
+
+function jobsLabel(count: number): string {
+  return `${count} unassigned job${count !== 1 ? "s" : ""}`;
+}
+
+interface UnassignedTrayProps {
+  // Unassigned jobs by NY date, as from unassignedByDay().
+  byDay: Map<string, Job[]>;
+  // The visible week: first day inclusive, last day exclusive ("YYYY-MM-DD").
+  from: string;
+  to: string;
+}
+
+// Pinned above the weekly grid so a job with no crew can't be missed. Every
+// job is a real link to its booking, where the crew is assigned, so the tray
+// works with Tab and Enter and needs no custom key handling.
+export function UnassignedTray({ byDay, from, to }: UnassignedTrayProps) {
+  const days = [...byDay.keys()].filter((day) => day >= from && day < to).sort();
+  const count = days.reduce((n, day) => n + byDay.get(day)!.length, 0);
+
+  return (
+    <section
+      aria-labelledby="unassigned-heading"
+      className="flex-shrink-0 max-h-[30vh] overflow-y-auto border-b border-zinc-200 bg-white px-4 py-3"
+    >
+      <h2 id="unassigned-heading" className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
+        Unassigned
+        <span
+          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+            count > 0 ? "bg-[#feefee] text-[#c0392b]" : "bg-zinc-100 text-zinc-600"
+          }`}
+        >
+          {count}
+        </span>
+      </h2>
+      {count === 0 ? (
+        <p className="mt-1 text-[13px] text-zinc-600">Every job this week has a crew.</p>
+      ) : (
+        <div className="mt-2 space-y-2">
+          {days.map((day) => (
+            <div key={day}>
+              <h3 className="mb-1 text-xs font-semibold text-zinc-600">
+                {formatNy(`${day}T12:00:00Z`, { weekday: "short", month: "short", day: "numeric" })}
+              </h3>
+              <ul className="flex flex-wrap gap-2">
+                {byDay.get(day)!.map((job) => {
+                  const cfg = STATUS_CONFIG[job.status];
+                  return (
+                    <li key={job.id}>
+                      <Link
+                        href={`/admin/bookings/${job.id}`}
+                        className={`flex min-h-11 items-center gap-2 rounded-sm border-l-[3px] px-2 py-1.5 text-xs text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1a6b5a] ${cfg.cardBg} ${cfg.borderColor}`}
+                      >
+                        <span className="font-semibold">{job.client}</span>
+                        <span className="text-zinc-600">
+                          {formatNyTimeRange(job.start, job.end)} · {job.service}
+                        </span>
+                        <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${cfg.chipBg} ${cfg.chipText}`}>
+                          {cfg.label}
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// Month cell content: the day number, plus a count when the day has unassigned
+// jobs. It sits inside the day-number link (made focusable by navLinks), which
+// opens that day's week, where the tray lists the jobs. The screen-reader text
+// carries the count; the badge is a visual repeat of it.
+function DayCell({ arg, count }: { arg: DayCellContentArg; count: number }) {
+  return (
+    <>
+      {count > 0 && (
+        <span
+          aria-hidden="true"
+          className="mr-1 inline-block rounded-full bg-[#feefee] px-1.5 text-[11px] font-semibold text-[#c0392b]"
+        >
+          {count} unassigned
+        </span>
+      )}
+      {arg.dayNumberText}
+      {count > 0 && <span className="sr-only">, {jobsLabel(count)}</span>}
+    </>
+  );
 }
 
 function JobCard({ info }: { info: EventContentArg }) {
@@ -91,6 +203,8 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
   // read as "nothing scheduled".
   const [loadFailed, setLoadFailed] = useState(false);
   const lastDatesSet = useRef<DatesSetArg | null>(null);
+  // The visible view and its dates (end exclusive), for the Unassigned tray.
+  const [view, setView] = useState<{ type: string; from: string; to: string } | null>(null);
 
   // Track the date range we've already loaded so we don't re-fetch. Only the
   // first render's value is kept; later renders recompute it and discard it.
@@ -101,6 +215,7 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
     lastDatesSet.current = arg;
     const viewStart = toDateStr(arg.start);
     const viewEnd = toDateStr(arg.end);
+    setView({ type: arg.view.type, from: viewStart, to: viewEnd });
 
     // If the visible range is within what we've already loaded, do nothing.
     if (viewStart >= loadedRange.current.from && viewEnd <= loadedRange.current.to) {
@@ -160,8 +275,10 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
     },
   }));
 
+  const unassigned = unassignedByDay(allJobs);
+
   return (
-    <>
+    <div className="flex h-full flex-col">
     {loadFailed && (
       <div
         role="alert"
@@ -179,6 +296,10 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
         </button>
       </div>
     )}
+    {view?.type === "timeGridWeek" && (
+      <UnassignedTray byDay={unassigned} from={view.from} to={view.to} />
+    )}
+    <div className="min-h-0 flex-1">
     <FullCalendar
       plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
       initialView="timeGridWeek"
@@ -209,7 +330,16 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
         timeGridWeek: {
           titleFormat: { month: "short", day: "numeric" },
         },
+        // Month day numbers become links (Tab, then Enter) that open that
+        // day's week, where the Unassigned tray lists the jobs.
+        dayGridMonth: {
+          navLinks: true,
+          navLinkDayClick: "timeGridWeek",
+        },
       }}
+      dayCellContent={(arg) => (
+        <DayCell arg={arg} count={unassigned.get(toDateStr(arg.date))?.length ?? 0} />
+      )}
       slotMinTime="07:00:00"
       slotMaxTime="17:00:00"
       slotDuration="01:00:00"
@@ -225,7 +355,8 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
       eventMinHeight={60}
       datesSet={handleDatesSet}
     />
+    </div>
     <NewBookingModal open={modalOpen} onClose={() => setModalOpen(false)} />
-    </>
+    </div>
   );
 }
