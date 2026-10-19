@@ -9,6 +9,9 @@ const publicCsp = buildCsp({
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  logging: {
+    serverFunctions: false,
+  },
   async headers() {
     return [
       {

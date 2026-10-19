@@ -31,7 +31,7 @@ export default function ServiceAreaErrorPage() {
         {/* Pre-filled address */}
         <div className="flex flex-col gap-1">
           <span className="text-sm font-medium text-zinc-700">Street Address</span>
-          <div className="h-12 flex items-center px-3 rounded-lg border-2 border-red-400 bg-white">
+          <div className="h-12 flex items-center px-3 rounded-lg border-2 border-zinc-300 bg-white">
             <span className="text-zinc-900">{address}</span>
           </div>
         </div>
@@ -56,8 +56,8 @@ export default function ServiceAreaErrorPage() {
 
           <div className="flex flex-col gap-1 lg:flex-1">
             <span className="text-sm font-medium text-zinc-700">ZIP Code</span>
-            <div className="h-12 flex items-center px-3 rounded-lg border border-zinc-200 bg-zinc-50">
-              <span className="text-zinc-500">{zip}</span>
+            <div className="h-12 flex items-center px-3 rounded-lg border-2 border-red-400 bg-white">
+              <span className="text-zinc-900">{zip}</span>
             </div>
           </div>
         </div>
