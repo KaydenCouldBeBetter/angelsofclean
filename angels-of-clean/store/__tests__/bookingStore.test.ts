@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { useBookingStore } from "@/store/bookingStore";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { useBookingStore, isSavedDateExpired } from "@/store/bookingStore";
 
 describe("bookingStore", () => {
   beforeEach(() => {
@@ -87,5 +87,142 @@ describe("bookingStore", () => {
     expect(state.address).toBe("");
     expect(state.name).toBe("");
     expect(state.isSubmitting).toBe(false);
+  });
+});
+
+// 2026-07-15 10:00 AM in New York (EDT).
+const NOW = new Date("2026-07-15T14:00:00Z");
+
+function saveToSession(state: Record<string, unknown>) {
+  sessionStorage.setItem("booking-store", JSON.stringify({ state, version: 0 }));
+}
+
+describe("isSavedDateExpired", () => {
+  it("never expires an empty date", () => {
+    expect(isSavedDateExpired("", null, NOW)).toBe(false);
+    expect(isSavedDateExpired("", "morning", NOW)).toBe(false);
+  });
+
+  it("expires a past day, with or without a slot", () => {
+    expect(isSavedDateExpired("2026-07-14", null, NOW)).toBe(true);
+    expect(isSavedDateExpired("2026-07-14", "afternoon", NOW)).toBe(true);
+  });
+
+  it("keeps a future day", () => {
+    expect(isSavedDateExpired("2026-07-16", "morning", NOW)).toBe(false);
+    expect(isSavedDateExpired("2026-07-16", null, NOW)).toBe(false);
+  });
+
+  it("expires today only once the chosen slot has started", () => {
+    expect(isSavedDateExpired("2026-07-15", "morning", NOW)).toBe(true);
+    expect(isSavedDateExpired("2026-07-15", "afternoon", NOW)).toBe(false);
+  });
+
+  it("keeps today when no slot is chosen, since a later slot may be open", () => {
+    expect(isSavedDateExpired("2026-07-15", null, NOW)).toBe(false);
+  });
+
+  it("expires a malformed or impossible date", () => {
+    expect(isSavedDateExpired("tomorrow", null, NOW)).toBe(true);
+    expect(isSavedDateExpired("2026-02-30", "morning", NOW)).toBe(true);
+  });
+});
+
+describe("saved wizard state on load", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(NOW);
+    useBookingStore.getState().reset();
+    sessionStorage.clear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const SAVED = {
+    service: "deep",
+    address: "1 Test St",
+    city: "Cicero",
+    zip: "13039",
+    name: "Jane Doe",
+    timeSlot: "afternoon",
+  };
+
+  it("does not revive a date that has passed, and flags it", async () => {
+    saveToSession({ ...SAVED, date: "2026-07-10" });
+
+    await useBookingStore.persist.rehydrate();
+
+    const state = useBookingStore.getState();
+    expect(state.date).toBe("");
+    expect(state.dateExpired).toBe(true);
+  });
+
+  it("keeps everything else the customer entered, slot included", async () => {
+    saveToSession({ ...SAVED, date: "2026-07-10" });
+
+    await useBookingStore.persist.rehydrate();
+
+    const state = useBookingStore.getState();
+    expect(state.service).toBe("deep");
+    expect(state.address).toBe("1 Test St");
+    expect(state.name).toBe("Jane Doe");
+    expect(state.timeSlot).toBe("afternoon");
+  });
+
+  it("clears today's date when its saved slot has already started", async () => {
+    saveToSession({ ...SAVED, date: "2026-07-15", timeSlot: "morning" });
+
+    await useBookingStore.persist.rehydrate();
+
+    expect(useBookingStore.getState().date).toBe("");
+    expect(useBookingStore.getState().dateExpired).toBe(true);
+  });
+
+  it("revives a date that is still bookable", async () => {
+    saveToSession({ ...SAVED, date: "2026-07-20" });
+
+    await useBookingStore.persist.rehydrate();
+
+    const state = useBookingStore.getState();
+    expect(state.date).toBe("2026-07-20");
+    expect(state.dateExpired).toBe(false);
+  });
+
+  it("does not flag a customer who never chose a date", async () => {
+    saveToSession({ ...SAVED, date: "" });
+
+    await useBookingStore.persist.rehydrate();
+
+    expect(useBookingStore.getState().dateExpired).toBe(false);
+  });
+
+  it("never writes the flag to sessionStorage", async () => {
+    saveToSession({ ...SAVED, date: "2026-07-10" });
+    await useBookingStore.persist.rehydrate();
+
+    useBookingStore.getState().setStep5("Jane Doe", "jane@example.com", "(315) 555-0100");
+
+    expect(sessionStorage.getItem("booking-store")).not.toContain("dateExpired");
+  });
+
+  it("choosing a new date clears the flag", async () => {
+    saveToSession({ ...SAVED, date: "2026-07-10" });
+    await useBookingStore.persist.rehydrate();
+
+    useBookingStore.getState().setStep4("2026-07-20", "morning");
+
+    expect(useBookingStore.getState().dateExpired).toBe(false);
+  });
+
+  it("clearDateExpired() and reset() drop the flag", () => {
+    useBookingStore.setState({ dateExpired: true });
+    useBookingStore.getState().clearDateExpired();
+    expect(useBookingStore.getState().dateExpired).toBe(false);
+
+    useBookingStore.setState({ dateExpired: true });
+    useBookingStore.getState().reset();
+    expect(useBookingStore.getState().dateExpired).toBe(false);
   });
 });

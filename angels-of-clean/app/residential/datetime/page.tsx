@@ -6,6 +6,7 @@ import Link from "next/link";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
+import DateExpiredNotice from "@/components/booking/DateExpiredNotice";
 import WhenHydrated from "@/components/booking/WhenHydrated";
 import { useBookingStore } from "@/store/bookingStore";
 import { TIME_SLOT_WINDOWS } from "@/lib/constants";
@@ -111,6 +112,8 @@ function DateTimePageContent() {
         <h1 className="text-2xl font-bold leading-tight lg:text-3xl">
           When would you like us to come?
         </h1>
+
+        {store.dateExpired && <DateExpiredNotice />}
 
         {/* Month navigation */}
         <div className="hidden lg:flex items-center gap-2 text-sm font-medium text-zinc-700">

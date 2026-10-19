@@ -7,15 +7,18 @@ import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
 import { AgreementNote } from "@/components/booking/PolicyNotes";
+import SubmitErrorAlert from "@/components/booking/SubmitErrorAlert";
+import ServiceUnavailable from "@/components/booking/ServiceUnavailable";
 import { useBookingStore, useBookingHydrated } from "@/store/bookingStore";
 import { SERVICE_LABELS, FREQUENCY_LABELS, TIME_LABELS } from "@/lib/constants";
-import { submitBooking } from "@/app/actions/submitBooking";
+import { submitBooking, type BookingResult } from "@/app/actions/submitBooking";
 
 export default function ReviewPage() {
   const router = useRouter();
   const store = useBookingStore();
   const hydrated = useBookingHydrated();
   const [error, setError] = useState<string | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
 
   const {
     service, frequency,
@@ -23,12 +26,18 @@ export default function ReviewPage() {
     bedrooms, bathrooms, notes,
     date, timeSlot,
     name, email, phone,
+    dateExpired,
     isSubmitting, setSubmitting,
   } = store;
 
   useEffect(() => {
-    if (hydrated && (!service || !address || !date || !name)) router.replace("/residential");
-  }, [hydrated, service, address, date, name, router]);
+    // Wait for the store to fill from sessionStorage: until then it reads as empty.
+    if (!hydrated) return;
+    // A saved date that had passed was cleared on load: send the customer to
+    // the date step (which explains why) instead of back to the start.
+    if (dateExpired) router.replace("/residential/datetime?returnTo=review");
+    else if (!service || !address || !date || !name) router.replace("/residential");
+  }, [hydrated, service, address, date, name, dateExpired, router]);
 
   const formattedDate = date
     ? new Date(date + "T12:00:00").toLocaleDateString("en-US", {
@@ -38,26 +47,43 @@ export default function ReviewPage() {
 
   async function handleConfirm() {
     if (isSubmitting) return;
-    setError(null);
+    // Any earlier error stays on screen while this attempt runs, so the retry
+    // button the customer just pressed doesn't vanish under them.
     setSubmitting(true);
 
-    const result = await submitBooking({
-      service: service ?? "",
-      frequency: frequency ?? "",
-      address, city, zip,
-      bedrooms, bathrooms, notes,
-      date,
-      timeSlot: timeSlot ?? "",
-      name, email, phone,
-    });
+    let result: BookingResult;
+    try {
+      result = await submitBooking({
+        service: service ?? "",
+        frequency: frequency ?? "",
+        address, city, zip,
+        bedrooms, bathrooms, notes,
+        date,
+        timeSlot: timeSlot ?? "",
+        name, email, phone,
+      });
+    } catch {
+      // The request never reached the server (offline, timeout).
+      result = {
+        success: false,
+        error: "We couldn't send your booking. Check your connection and try again.",
+      };
+    }
 
-    if (!result.success) {
+    if (!result.success || !result.bookingRef) {
       setSubmitting(false);
+      setUnavailable(result.unavailable === true);
       setError(result.error ?? "Something went wrong. Please try again.");
       return;
     }
 
     router.push(`/residential/confirmation?ref=${result.bookingRef}`);
+  }
+
+  if (unavailable) {
+    return (
+      <ServiceUnavailable subject="booking" onRetry={handleConfirm} retrying={isSubmitting} />
+    );
   }
 
   const reviewCards = [
@@ -168,29 +194,12 @@ export default function ReviewPage() {
         </div>
 
         {error && (
-          <div
-            role="alert"
-            className="flex items-start gap-3 rounded-xl border border-red-300 bg-red-50 p-4"
-          >
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 24 24"
-              className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-700"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 8v4" />
-              <path d="M12 16h.01" />
-            </svg>
-            <div className="text-sm">
-              <p className="font-semibold text-red-900">Your booking was not sent</p>
-              <p className="mt-0.5 text-red-800">{error}</p>
-            </div>
-          </div>
+          <SubmitErrorAlert
+            title="Your booking was not sent"
+            message={error}
+            onRetry={handleConfirm}
+            retrying={isSubmitting}
+          />
         )}
 
         <AgreementNote action="Confirm Booking" />

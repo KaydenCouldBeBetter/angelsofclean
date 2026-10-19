@@ -186,7 +186,12 @@ describe("submitCommercialQuote", () => {
 
     const result = await submitCommercialQuote(VALID_INPUT);
 
-    expect(result).toEqual({ success: false, error: "Something went wrong. Please try again." });
+    // `unavailable` is what sends the form to the service-unavailable screen.
+    expect(result).toEqual({
+      success: false,
+      error: "Something went wrong. Please try again.",
+      unavailable: true,
+    });
     expect(result.quoteRef).toBeUndefined();
     const logged = JSON.stringify(consoleSpy.mock.calls);
     expect(logged).toContain("42P01");
