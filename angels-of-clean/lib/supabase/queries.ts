@@ -8,6 +8,7 @@ import {
   FACILITY_TYPE_LABELS,
   SCHEDULE_PREFERENCE_LABELS,
   SQFT_DISPLAY,
+  formatBathroomCount,
 } from "@/lib/constants";
 import type { ServiceType, Frequency } from "@/store/bookingStore";
 import { formatNy, formatNyDateTime, nyTodayStr } from "@/lib/datetime";
@@ -101,6 +102,7 @@ type BookingWithEmployees = {
   address: string;
   city: string;
   bedrooms: number;
+  // numeric(2,1): PostgREST returns it as a JSON number, so 2.5 arrives as 2.5.
   bathrooms: number;
   notes?: string | null;
   start_at: string;
@@ -128,7 +130,7 @@ function mapBookingToJob(row: BookingWithEmployees): Job {
     email: row.email,
     phone: row.phone,
     frequency: FREQUENCY_LABELS[row.frequency as NonNullable<Frequency>] ?? row.frequency,
-    property: `${pluralize(row.bedrooms, "Bedroom")} · ${pluralize(row.bathrooms, "Bathroom")}`,
+    property: `${pluralize(row.bedrooms, "Bedroom")} · ${formatBathroomCount(row.bathrooms)}`,
     notes: row.notes ?? undefined,
     submittedAt: row.submitted_at,
   };

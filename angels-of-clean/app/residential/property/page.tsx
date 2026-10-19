@@ -8,7 +8,7 @@ import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
 import WhenHydrated from "@/components/booking/WhenHydrated";
 import { useBookingStore } from "@/store/bookingStore";
-import { FIELD_MAX_LENGTHS } from "@/lib/constants";
+import { BATHROOM_LIMITS, FIELD_MAX_LENGTHS } from "@/lib/constants";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
@@ -17,16 +17,20 @@ interface StepperProps {
   value: number;
   min: number;
   max: number;
+  // Bathrooms move in half steps (1, 1.5, 2 …); bedrooms in whole ones.
+  step?: number;
+  // Singular and plural noun, spoken after the value: "1.5 bathrooms".
+  units: [one: string, other: string];
   onChange: (value: number) => void;
 }
 
-function Stepper({ label, value, min, max, onChange }: StepperProps) {
+function Stepper({ label, value, min, max, step = 1, units, onChange }: StepperProps) {
   return (
     <div className="flex flex-col gap-2">
       <Label id={`${label}-label`}>{label}</Label>
       <div className="flex items-center border-2 border-zinc-200 rounded-xl overflow-hidden h-14" role="group" aria-labelledby={`${label}-label`}>
         <button
-          onClick={() => onChange(value - 1)}
+          onClick={() => onChange(value - step)}
           disabled={value <= min}
           aria-label={`Decrease ${label}`}
           className="w-14 h-full flex items-center justify-center text-xl font-semibold text-primary disabled:text-zinc-300 disabled:cursor-not-allowed hover:bg-zinc-50 transition-colors"
@@ -35,9 +39,10 @@ function Stepper({ label, value, min, max, onChange }: StepperProps) {
         </button>
         <span className="flex-1 text-center text-xl font-bold text-zinc-900" aria-live="polite">
           {value}
+          <span className="sr-only"> {value === 1 ? units[0] : units[1]}</span>
         </span>
         <button
-          onClick={() => onChange(value + 1)}
+          onClick={() => onChange(value + step)}
           disabled={value >= max}
           aria-label={`Increase ${label}`}
           className="w-14 h-full flex items-center justify-center text-xl font-semibold text-primary disabled:text-zinc-300 disabled:cursor-not-allowed hover:bg-zinc-50 transition-colors"
@@ -91,6 +96,7 @@ function PropertyPageContent() {
               value={bedrooms}
               min={1}
               max={5}
+              units={["bedroom", "bedrooms"]}
               onChange={setBedrooms}
             />
           </div>
@@ -98,8 +104,10 @@ function PropertyPageContent() {
             <Stepper
               label="Bathrooms"
               value={bathrooms}
-              min={1}
-              max={5}
+              min={BATHROOM_LIMITS.min}
+              max={BATHROOM_LIMITS.max}
+              step={BATHROOM_LIMITS.step}
+              units={["bathroom", "bathrooms"]}
               onChange={setBathrooms}
             />
           </div>

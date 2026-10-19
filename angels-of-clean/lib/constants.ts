@@ -75,6 +75,23 @@ export const FIELD_MAX_LENGTHS = {
   accessInstructions: 500,
 } as const;
 
+// Bathrooms per booking: 1 to 5 in half steps (2.5 = two full baths and a
+// half-bath). Enforced in createBooking (app/actions/submitBooking.ts) and by
+// the bookings_bathrooms_check constraint (numeric(2,1)); the property step's
+// stepper moves by `step`.
+export const BATHROOM_LIMITS = { min: 1, max: 5, step: 0.5 } as const;
+
+// Every allowed count, for the admin New Booking select: 1, 1.5, 2 … 5.
+export const BATHROOM_OPTIONS: number[] = Array.from(
+  { length: (BATHROOM_LIMITS.max - BATHROOM_LIMITS.min) / BATHROOM_LIMITS.step + 1 },
+  (_, i) => BATHROOM_LIMITS.min + i * BATHROOM_LIMITS.step,
+);
+
+// "1 Bathroom", "1.5 Bathrooms", "2 Bathrooms": only exactly one is singular.
+export function formatBathroomCount(count: number): string {
+  return `${count} ${count === 1 ? "Bathroom" : "Bathrooms"}`;
+}
+
 // Shortest admin password the reset form accepts. Supabase's own project
 // setting may be stricter; its message is shown if so.
 export const PASSWORD_MIN_LENGTH = 8;

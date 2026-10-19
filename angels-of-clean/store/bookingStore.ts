@@ -44,6 +44,7 @@ interface BookingState {
 
   // ── Residential Step 3 ──────────────────────────────────────────────
   bedrooms: number;
+  // Half steps allowed: 1, 1.5 … 5 (BATHROOM_LIMITS in lib/constants.ts).
   bathrooms: number;
   notes: string;
   // Entry instructions (door code, gate, pets). Sent to booking_access, never
