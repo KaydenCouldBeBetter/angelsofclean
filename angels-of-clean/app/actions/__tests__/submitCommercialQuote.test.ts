@@ -21,6 +21,7 @@ vi.mock("@/lib/rate-limit", () => ({
 }));
 
 import { submitCommercialQuote, type QuoteData } from "../submitCommercialQuote";
+import { MIN_FILL_MS, type BotCheck } from "@/lib/bot-check";
 import {
   COMMERCIAL_FACILITY_TYPES,
   COMMERCIAL_FREQUENCIES,
@@ -48,6 +49,9 @@ const VALID_INPUT: QuoteData = {
   schedulePreference: "after",
 };
 
+// What a person's browser sends: empty honeypot, well past the minimum fill time.
+const HUMAN: BotCheck = { website: "", elapsedMs: 60_000 };
+
 beforeEach(() => {
   vi.clearAllMocks();
   quotesInsertMock.mockImplementation(() => ({ select: selectMock }));
@@ -58,7 +62,7 @@ beforeEach(() => {
 
 describe("submitCommercialQuote", () => {
   it("stores the quote and returns a reference built from its stored number", async () => {
-    const result = await submitCommercialQuote({ ...VALID_INPUT, notes: "  Badge access after 6  " });
+    const result = await submitCommercialQuote({ ...VALID_INPUT, notes: "  Badge access after 6  " }, HUMAN);
 
     expect(result).toEqual({ success: true, quoteRef: "COM-1007" });
     expect(quotesInsertMock).toHaveBeenCalledTimes(1);
@@ -81,7 +85,7 @@ describe("submitCommercialQuote", () => {
   });
 
   it("stores empty notes and an unset schedule preference as null", async () => {
-    await submitCommercialQuote({ ...VALID_INPUT, notes: "   ", schedulePreference: null });
+    await submitCommercialQuote({ ...VALID_INPUT, notes: "   ", schedulePreference: null }, HUMAN);
 
     expect(quotesInsertMock).toHaveBeenCalledWith(
       expect.objectContaining({ notes: null, schedule_preference: null }),
@@ -89,10 +93,10 @@ describe("submitCommercialQuote", () => {
   });
 
   it("stores each selected area once", async () => {
-    await submitCommercialQuote({
-      ...VALID_INPUT,
-      serviceAreas: ["lobbies", "lobbies", "restrooms"],
-    });
+    await submitCommercialQuote(
+      { ...VALID_INPUT, serviceAreas: ["lobbies", "lobbies", "restrooms"] },
+      HUMAN,
+    );
 
     expect(quotesInsertMock).toHaveBeenCalledWith(
       expect.objectContaining({ service_areas: ["lobbies", "restrooms"] }),
@@ -109,7 +113,7 @@ describe("submitCommercialQuote", () => {
   ];
 
   it.each(OFFERED)("accepts every %s the form offers: %o", async (_kind, override) => {
-    const result = await submitCommercialQuote({ ...VALID_INPUT, ...override });
+    const result = await submitCommercialQuote({ ...VALID_INPUT, ...override }, HUMAN);
 
     expect(result.success).toBe(true);
   });
@@ -135,7 +139,7 @@ describe("submitCommercialQuote", () => {
     ["an unknown frequency", { frequency: "hourly" }, "Invalid frequency."],
     ["an unknown schedule preference", { schedulePreference: "midnight" }, "Invalid schedule preference."],
   ])("rejects %s without touching the database", async (_case, override, error) => {
-    const result = await submitCommercialQuote({ ...VALID_INPUT, ...override });
+    const result = await submitCommercialQuote({ ...VALID_INPUT, ...override }, HUMAN);
 
     expect(result).toEqual({ success: false, error });
     expect(quotesInsertMock).not.toHaveBeenCalled();
@@ -151,7 +155,7 @@ describe("submitCommercialQuote", () => {
     ["notes", "Special requirements"],
   ] as const)("rejects an over-long %s without touching the database", async (field, label) => {
     const max = FIELD_MAX_LENGTHS[field];
-    const result = await submitCommercialQuote({ ...VALID_INPUT, [field]: "x".repeat(max + 1) });
+    const result = await submitCommercialQuote({ ...VALID_INPUT, [field]: "x".repeat(max + 1) }, HUMAN);
 
     expect(result).toEqual({
       success: false,
@@ -170,7 +174,7 @@ describe("submitCommercialQuote", () => {
     ["no payload at all", null],
   ])("rejects %s instead of throwing", async (_case, payload) => {
     // Server Action arguments are not type-checked at runtime.
-    const result = await submitCommercialQuote(payload as unknown as QuoteData);
+    const result = await submitCommercialQuote(payload as unknown as QuoteData, HUMAN);
 
     expect(result).toEqual({ success: false, error: "Invalid quote details." });
     expect(quotesInsertMock).not.toHaveBeenCalled();
@@ -184,7 +188,7 @@ describe("submitCommercialQuote", () => {
       error: { code: "42P01", message: "row echo: dana@example.com (315) 555-0100" },
     });
 
-    const result = await submitCommercialQuote(VALID_INPUT);
+    const result = await submitCommercialQuote(VALID_INPUT, HUMAN);
 
     // `unavailable` is what sends the form to the service-unavailable screen.
     expect(result).toEqual({
@@ -203,7 +207,7 @@ describe("submitCommercialQuote", () => {
   it("refuses a caller who is over the limit, without touching the database", async () => {
     allowPublicSubmissionMock.mockResolvedValue(false);
 
-    const result = await submitCommercialQuote(VALID_INPUT);
+    const result = await submitCommercialQuote(VALID_INPUT, HUMAN);
 
     expect(result).toEqual({
       success: false,
@@ -214,15 +218,110 @@ describe("submitCommercialQuote", () => {
   });
 
   it("counts a valid request once, against the quote allowance", async () => {
-    await submitCommercialQuote(VALID_INPUT);
+    await submitCommercialQuote(VALID_INPUT, HUMAN);
 
     expect(allowPublicSubmissionMock).toHaveBeenCalledTimes(1);
     expect(allowPublicSubmissionMock).toHaveBeenCalledWith("quote");
   });
 
   it("does not spend the caller's allowance on a request that fails validation", async () => {
-    await submitCommercialQuote({ ...VALID_INPUT, email: "not-an-email" });
+    await submitCommercialQuote({ ...VALID_INPUT, email: "not-an-email" }, HUMAN);
 
     expect(allowPublicSubmissionMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("submitCommercialQuote bot check", () => {
+  // A bot must get exactly what a real failure gets.
+  const GENERIC_FAILURE = {
+    success: false,
+    error: "Something went wrong. Please try again.",
+    unavailable: true,
+  };
+
+  function expectRejectedQuietly(result: unknown, logSpies: ReturnType<typeof vi.spyOn>[]) {
+    expect(result).toEqual(GENERIC_FAILURE);
+    expect(quotesInsertMock).not.toHaveBeenCalled();
+    expect(allowPublicSubmissionMock).not.toHaveBeenCalled();
+    for (const spy of logSpies) expect(spy).not.toHaveBeenCalled();
+  }
+
+  function spyOnConsole() {
+    return (["error", "warn", "log", "info"] as const).map((level) =>
+      vi.spyOn(console, level).mockImplementation(() => {}),
+    );
+  }
+
+  it("accepts a normal submit: empty honeypot, well past the minimum fill time", async () => {
+    const result = await submitCommercialQuote(VALID_INPUT, { website: "", elapsedMs: 45_000 });
+
+    expect(result).toEqual({ success: true, quoteRef: "COM-1007" });
+    expect(quotesInsertMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects a submit whose honeypot is filled, with the generic error and no trace", async () => {
+    const spies = spyOnConsole();
+
+    const result = await submitCommercialQuote(VALID_INPUT, {
+      website: "http://spam.example",
+      elapsedMs: 60_000,
+    });
+
+    expectRejectedQuietly(result, spies);
+    spies.forEach((spy) => spy.mockRestore());
+  });
+
+  it("rejects a submit that is too fast, with the generic error and no trace", async () => {
+    const spies = spyOnConsole();
+
+    const result = await submitCommercialQuote(VALID_INPUT, { website: "", elapsedMs: 400 });
+
+    expectRejectedQuietly(result, spies);
+    spies.forEach((spy) => spy.mockRestore());
+  });
+
+  it("gives a bot the same answer as a failed insert", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    singleMock.mockResolvedValue({ data: null, error: { code: "42P01" } });
+
+    const failedInsert = await submitCommercialQuote(VALID_INPUT, HUMAN);
+    const bot = await submitCommercialQuote(VALID_INPUT, { website: "x", elapsedMs: 60_000 });
+
+    expect(bot).toEqual(failedInsert);
+    consoleSpy.mockRestore();
+  });
+
+  it("rejects a bot even when its payload is otherwise invalid, without revealing why", async () => {
+    const result = await submitCommercialQuote(
+      { ...VALID_INPUT, email: "not-an-email" },
+      { website: "x", elapsedMs: 0 },
+    );
+
+    expect(result).toEqual(GENERIC_FAILURE);
+  });
+
+  it("draws the line at the minimum fill time", async () => {
+    expect(
+      await submitCommercialQuote(VALID_INPUT, { website: "", elapsedMs: MIN_FILL_MS - 1 }),
+    ).toEqual(GENERIC_FAILURE);
+    expect(quotesInsertMock).not.toHaveBeenCalled();
+
+    const result = await submitCommercialQuote(VALID_INPUT, { website: "", elapsedMs: MIN_FILL_MS });
+    expect(result.success).toBe(true);
+  });
+
+  it.each([
+    ["no bot check at all", undefined],
+    ["a null bot check", null],
+    ["a missing fill time", { website: "" }],
+    ["a missing honeypot", { elapsedMs: 60_000 }],
+    ["a string fill time", { website: "", elapsedMs: "60000" }],
+    ["a NaN fill time", { website: "", elapsedMs: NaN }],
+    ["a non-string honeypot", { website: null, elapsedMs: 60_000 }],
+  ])("treats %s as a bot", async (_case, botCheck) => {
+    const result = await submitCommercialQuote(VALID_INPUT, botCheck as unknown as BotCheck);
+
+    expect(result).toEqual(GENERIC_FAILURE);
+    expect(quotesInsertMock).not.toHaveBeenCalled();
   });
 });

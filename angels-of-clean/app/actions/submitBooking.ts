@@ -1,6 +1,7 @@
 "use server";
 
 import { FIELD_MAX_LENGTHS, SERVICE_AREA_ZIPS, TIME_SLOT_WINDOWS } from "@/lib/constants";
+import { looksLikeBot, type BotCheck } from "@/lib/bot-check";
 import { allowPublicSubmission } from "@/lib/rate-limit";
 import { createServiceRoleClient } from "@/lib/supabase/service";
 import { requireAdmin } from "@/lib/supabase/require-admin";
@@ -211,7 +212,13 @@ async function createBooking(
   };
 }
 
-export async function submitBooking(data: BookingData): Promise<BookingResult> {
+export async function submitBooking(data: BookingData, botCheck: BotCheck): Promise<BookingResult> {
+  // First, and answered exactly like a failed insert (same error, same
+  // `unavailable` flag) so a bot learns nothing. Nothing is logged: the payload
+  // is the bot's, not ours to keep.
+  if (looksLikeBot(botCheck)) {
+    return { success: false, error: "Something went wrong. Please try again.", unavailable: true };
+  }
   return createBooking(data, "submitBooking", "Booking submitted by client", true);
 }
 
