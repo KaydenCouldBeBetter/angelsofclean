@@ -190,7 +190,12 @@ describe("submitCommercialQuote", () => {
 
     const result = await submitCommercialQuote(VALID_INPUT, HUMAN);
 
-    expect(result).toEqual({ success: false, error: "Something went wrong. Please try again." });
+    // `unavailable` is what sends the form to the service-unavailable screen.
+    expect(result).toEqual({
+      success: false,
+      error: "Something went wrong. Please try again.",
+      unavailable: true,
+    });
     expect(result.quoteRef).toBeUndefined();
     const logged = JSON.stringify(consoleSpy.mock.calls);
     expect(logged).toContain("42P01");
@@ -228,7 +233,11 @@ describe("submitCommercialQuote", () => {
 
 describe("submitCommercialQuote bot check", () => {
   // A bot must get exactly what a real failure gets.
-  const GENERIC_FAILURE = { success: false, error: "Something went wrong. Please try again." };
+  const GENERIC_FAILURE = {
+    success: false,
+    error: "Something went wrong. Please try again.",
+    unavailable: true,
+  };
 
   function expectRejectedQuietly(result: unknown, logSpies: ReturnType<typeof vi.spyOn>[]) {
     expect(result).toEqual(GENERIC_FAILURE);
@@ -269,6 +278,17 @@ describe("submitCommercialQuote bot check", () => {
 
     expectRejectedQuietly(result, spies);
     spies.forEach((spy) => spy.mockRestore());
+  });
+
+  it("gives a bot the same answer as a failed insert", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    singleMock.mockResolvedValue({ data: null, error: { code: "42P01" } });
+
+    const failedInsert = await submitCommercialQuote(VALID_INPUT, HUMAN);
+    const bot = await submitCommercialQuote(VALID_INPUT, { website: "x", elapsedMs: 60_000 });
+
+    expect(bot).toEqual(failedInsert);
+    consoleSpy.mockRestore();
   });
 
   it("rejects a bot even when its payload is otherwise invalid, without revealing why", async () => {

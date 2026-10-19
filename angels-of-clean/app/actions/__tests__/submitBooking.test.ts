@@ -202,9 +202,11 @@ describe.each(ACTIONS)("%s validation", (_name, action) => {
 
     const result = await action(VALID_INPUT);
 
+    // `unavailable` is what sends the form to the service-unavailable screen.
     expect(result).toEqual({
       success: false,
       error: "Something went wrong. Please try again.",
+      unavailable: true,
     });
     expect(activityLogInsertMock).not.toHaveBeenCalled();
 
@@ -378,7 +380,11 @@ describe("submitBooking rate limiting", () => {
 
 describe("submitBooking bot check", () => {
   // A bot must get exactly what a real failure gets.
-  const GENERIC_FAILURE = { success: false, error: "Something went wrong. Please try again." };
+  const GENERIC_FAILURE = {
+    success: false,
+    error: "Something went wrong. Please try again.",
+    unavailable: true,
+  };
 
   function spyOnConsole() {
     return (["error", "warn", "log", "info"] as const).map((level) =>

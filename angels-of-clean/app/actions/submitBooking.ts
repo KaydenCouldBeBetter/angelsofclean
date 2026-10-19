@@ -28,6 +28,10 @@ export interface BookingResult {
   bookingRef?: string;
   bookingId?: string;
   error?: string;
+  // Set only when the booking could not be stored (the database was unreachable
+  // or refused the insert), so the form can show the "service unavailable"
+  // screen instead of a message about the customer's input.
+  unavailable?: boolean;
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -189,7 +193,7 @@ async function createBooking(
 
   if (insertError || !booking) {
     logDbError(`${logLabel}: insert`, insertError);
-    return { success: false, error: "Something went wrong. Please try again." };
+    return { success: false, error: "Something went wrong. Please try again.", unavailable: true };
   }
 
   const { error: activityError } = await supabase.from("activity_log").insert({
@@ -209,10 +213,11 @@ async function createBooking(
 }
 
 export async function submitBooking(data: BookingData, botCheck: BotCheck): Promise<BookingResult> {
-  // First, and answered like any other failure so a bot learns nothing. Nothing
-  // is logged: the payload is the bot's, not ours to keep.
+  // First, and answered exactly like a failed insert (same error, same
+  // `unavailable` flag) so a bot learns nothing. Nothing is logged: the payload
+  // is the bot's, not ours to keep.
   if (looksLikeBot(botCheck)) {
-    return { success: false, error: "Something went wrong. Please try again." };
+    return { success: false, error: "Something went wrong. Please try again.", unavailable: true };
   }
   return createBooking(data, "submitBooking", "Booking submitted by client", true);
 }

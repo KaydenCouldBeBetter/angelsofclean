@@ -36,6 +36,10 @@ export interface QuoteResult {
   success: boolean;
   quoteRef?: string;
   error?: string;
+  // Set only when the quote could not be stored (the database was unreachable
+  // or refused the insert), so the form can show the "service unavailable"
+  // screen instead of a message about the customer's input.
+  unavailable?: boolean;
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -90,10 +94,11 @@ export async function submitCommercialQuote(
   data: QuoteData,
   botCheck: BotCheck,
 ): Promise<QuoteResult> {
-  // First, and answered like any other failure so a bot learns nothing. Nothing
-  // is logged: the payload is the bot's, not ours to keep.
+  // First, and answered exactly like a failed insert (same error, same
+  // `unavailable` flag) so a bot learns nothing. Nothing is logged: the payload
+  // is the bot's, not ours to keep.
   if (looksLikeBot(botCheck)) {
-    return { success: false, error: "Something went wrong. Please try again." };
+    return { success: false, error: "Something went wrong. Please try again.", unavailable: true };
   }
 
   if (!hasQuoteShape(data)) {
@@ -208,7 +213,7 @@ export async function submitCommercialQuote(
   // success screen is exactly what this action exists to prevent.
   if (insertError || !quote) {
     logDbError("submitCommercialQuote: insert", insertError);
-    return { success: false, error: "Something went wrong. Please try again." };
+    return { success: false, error: "Something went wrong. Please try again.", unavailable: true };
   }
 
   return { success: true, quoteRef: `COM-${quote.quote_number}` };

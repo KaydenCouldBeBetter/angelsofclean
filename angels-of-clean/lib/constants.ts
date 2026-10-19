@@ -8,6 +8,16 @@ import type {
   SchedulePreference,
 } from "@/store/bookingStore";
 
+// ── Business ─────────────────────────────────────────────────────────────────
+
+// The number customers are told to call when a submission fails. Placeholder
+// until the real line exists: backlog B32 replaces it (and the other 555
+// numbers) with the business's actual phone.
+export const BUSINESS_PHONE = {
+  display: "(315) 555-0100",
+  tel: "tel:+13155550100",
+} as const;
+
 // ── Residential ──────────────────────────────────────────────────────────────
 
 export const SERVICE_LABELS: Record<NonNullable<ServiceType>, string> = {
