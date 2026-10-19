@@ -17,11 +17,6 @@ export default function Home() {
           <Link href="/commercial">
             <Button variant="outline" className="w-full h-14">Get a Quote — Commercial</Button>
           </Link>
-          <div className="border-t border-zinc-100 pt-3">
-            <Link href="/admin">
-              <Button variant="ghost" className="w-full h-10 text-zinc-500 text-xs">Admin Dashboard →</Button>
-            </Link>
-          </div>
         </CardContent>
       </Card>
       <footer className="flex gap-4 text-xs text-zinc-600">
