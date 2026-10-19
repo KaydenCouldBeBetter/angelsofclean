@@ -21,7 +21,7 @@ export default function ProgressDots({ currentStep, totalSteps }: ProgressDotsPr
             aria-label={`Step ${i + 1}${isCompleted ? ", completed" : isCurrent ? ", current" : ""}`}
             aria-current={isCurrent ? "step" : undefined}
             className={`w-2 h-2 rounded-full transition-colors ${
-              isCompleted || isCurrent ? "bg-teal-600" : "bg-zinc-200"
+              isCompleted || isCurrent ? "bg-primary" : "bg-zinc-200"
             }`}
           />
         );

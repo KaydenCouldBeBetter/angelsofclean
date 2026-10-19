@@ -157,7 +157,7 @@ export default function BookingActions({ job, employees }: BookingActionsProps) 
               <button
                 onClick={() => handleSaveAssignment(false)}
                 disabled={isPending}
-                className="h-8 flex-1 rounded-lg bg-[#1a6b5a] text-white text-[13px] font-semibold hover:bg-[#155a4b] transition-colors disabled:opacity-50"
+                className="h-8 flex-1 rounded-lg bg-primary text-white text-[13px] font-semibold hover:bg-primary-pressed transition-colors disabled:opacity-50"
               >
                 {isPending ? "Saving…" : "Save Assignment"}
               </button>
@@ -174,7 +174,7 @@ export default function BookingActions({ job, employees }: BookingActionsProps) 
         <button
           onClick={openPicker}
           disabled={isClosed}
-          className="h-9 w-full rounded-lg bg-[#1a6b5a] text-white text-[13px] font-semibold hover:bg-[#155a4b] transition-colors disabled:opacity-50"
+          className="h-9 w-full rounded-lg bg-primary text-white text-[13px] font-semibold hover:bg-primary-pressed transition-colors disabled:opacity-50"
         >
           Assign Employee
         </button>

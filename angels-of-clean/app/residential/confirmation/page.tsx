@@ -121,7 +121,7 @@ export default function ConfirmationPage() {
 
         <div className="flex flex-col items-center gap-6 px-4 pt-10 pb-10">
           {/* Success icon */}
-          <div className="w-20 h-20 rounded-full bg-[#1a6b5a] flex items-center justify-center" role="img" aria-label="Booking confirmed">
+          <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center" role="img" aria-label="Booking confirmed">
             <span className="text-3xl text-white" aria-hidden="true">&#10003;</span>
           </div>
 
@@ -176,7 +176,7 @@ export default function ConfirmationPage() {
       {/* ── Desktop ── */}
       <div className="hidden lg:flex flex-col items-center py-10">
         {/* Success icon */}
-        <div className="w-[120px] h-[120px] rounded-full bg-[#1a6b5a] flex items-center justify-center mb-6" role="img" aria-label="Booking confirmed">
+        <div className="w-[120px] h-[120px] rounded-full bg-primary flex items-center justify-center mb-6" role="img" aria-label="Booking confirmed">
           <span className="text-5xl text-white" aria-hidden="true">&#10003;</span>
         </div>
 
@@ -208,12 +208,12 @@ export default function ConfirmationPage() {
         )}
 
         {/* Upsell card */}
-        <div className="w-[640px] mt-4 rounded-xl bg-teal-50 border border-teal-100 p-5">
+        <div className="w-[640px] mt-4 rounded-xl bg-primary/5 border border-primary/20 p-5">
           <p className="font-semibold text-zinc-900">Save your details for faster booking next time</p>
           <p className="text-sm text-zinc-500 mt-1">
             Create a free account &mdash; no password required during booking.
           </p>
-          <Button className="mt-3 h-9 px-5 bg-[#1a6b5a] hover:bg-[#155a4b] text-sm">
+          <Button className="mt-3 h-9 px-5 text-sm">
             Create Account
           </Button>
         </div>

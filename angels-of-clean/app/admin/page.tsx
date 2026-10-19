@@ -24,7 +24,7 @@ export default async function AdminIndexPage({
             middleware checks the session again. */}
         <a
           href={authRetryTarget(params.next)}
-          className="mt-4 flex w-full h-[52px] items-center justify-center rounded-lg bg-[#1a6b5a] text-white text-base font-semibold hover:bg-[#155a4b] transition-colors"
+          className="mt-4 flex w-full h-[52px] items-center justify-center rounded-lg bg-primary text-white text-base font-semibold hover:bg-primary-pressed transition-colors"
         >
           Try again
         </a>

@@ -160,7 +160,7 @@ export default function NewBookingModal({ open, onClose }: NewBookingModalProps)
                     id="nb-service"
                     value={service}
                     onChange={(e) => setService(e.target.value)}
-                    className="h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    className="h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
                   >
                     {SERVICES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                   </select>
@@ -171,7 +171,7 @@ export default function NewBookingModal({ open, onClose }: NewBookingModalProps)
                     id="nb-frequency"
                     value={frequency}
                     onChange={(e) => setFrequency(e.target.value)}
-                    className="h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    className="h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
                   >
                     {FREQUENCIES.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
                   </select>
@@ -210,7 +210,7 @@ export default function NewBookingModal({ open, onClose }: NewBookingModalProps)
                     id="nb-bed"
                     value={bedrooms}
                     onChange={(e) => setBedrooms(Number(e.target.value))}
-                    className="h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    className="h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
                   >
                     {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}
                   </select>
@@ -221,7 +221,7 @@ export default function NewBookingModal({ open, onClose }: NewBookingModalProps)
                     id="nb-bath"
                     value={bathrooms}
                     onChange={(e) => setBathrooms(Number(e.target.value))}
-                    className="h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    className="h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
                   >
                     {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}
                   </select>
@@ -243,7 +243,7 @@ export default function NewBookingModal({ open, onClose }: NewBookingModalProps)
                     id="nb-time"
                     value={timeSlot}
                     onChange={(e) => setTimeSlot(e.target.value)}
-                    className="h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    className="h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
                   >
                     {TIME_SLOTS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
@@ -288,7 +288,7 @@ export default function NewBookingModal({ open, onClose }: NewBookingModalProps)
             type="submit"
             disabled={isPending}
             onClick={handleSubmit}
-            className="h-9 px-5 text-sm bg-[#1a6b5a] hover:bg-[#155a4b]"
+            className="h-9 px-5 text-sm"
           >
             {isPending ? "Creating..." : "Create Booking"}
           </Button>
@@ -306,7 +306,7 @@ export function NewBookingButton() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="bg-[#1a6b5a] hover:bg-[#155a4b] text-white text-xs font-semibold px-5 py-2 rounded-lg transition-colors"
+        className="bg-primary hover:bg-primary-pressed text-white text-xs font-semibold px-5 py-2 rounded-lg transition-colors"
       >
         + New Booking
       </button>

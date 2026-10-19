@@ -83,7 +83,7 @@ export default function CommercialError() {
             <p className="text-sm text-zinc-700 mt-2">
               <a
                 href="tel:+13155550100"
-                className="text-[#1a6b5a] font-medium hover:text-[#124d41] transition-colors"
+                className="text-primary font-medium hover:text-primary-pressed transition-colors"
               >
                 (315) 555-0100
               </a>
@@ -101,7 +101,7 @@ export default function CommercialError() {
           </Button>
           <Link
             href="/"
-            className="text-sm text-teal-700 hover:text-teal-800 text-center md:text-left transition-colors"
+            className="text-sm text-primary hover:text-primary-pressed text-center md:text-left transition-colors"
           >
             ← Return to Homepage
           </Link>

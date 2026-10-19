@@ -3,12 +3,12 @@
 export default function AuthShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col bg-[#f5f5f5]">
-      <div className="h-1 bg-[#1a6b5a]" />
+      <div className="h-1 bg-primary" />
 
       <div className="flex-1 flex items-center justify-center px-4">
         <div className="w-full max-w-[400px] bg-white rounded-xl shadow-sm p-8">
           <div className="flex flex-col items-center">
-            <div className="w-16 h-16 rounded-2xl bg-[#1a6b5a] flex items-center justify-center">
+            <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center">
               <span className="text-white text-2xl font-bold">A</span>
             </div>
             <h1 className="mt-4 text-xl font-bold text-zinc-900">Angels of Clean</h1>

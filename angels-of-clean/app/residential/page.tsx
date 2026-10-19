@@ -80,7 +80,7 @@ function ResidentialPageContent() {
                 onClick={() => setSelectedService(service.id)}
                 className={`w-full text-left rounded-xl border-2 p-4 transition-colors lg:flex-1 lg:flex lg:flex-col lg:justify-between lg:min-h-[200px] ${
                   isSelected
-                    ? "border-teal-600 bg-teal-50"
+                    ? "border-primary bg-primary/5"
                     : "border-zinc-200 bg-white hover:border-zinc-300"
                 }`}
               >
@@ -88,13 +88,13 @@ function ResidentialPageContent() {
                   <div className="flex items-center justify-between lg:block">
                     <div className="flex items-center gap-2">
                       {isSelected && (
-                        <span className="text-teal-600 text-sm font-semibold lg:hidden" aria-hidden="true">&#10003;</span>
+                        <span className="text-primary text-sm font-semibold lg:hidden" aria-hidden="true">&#10003;</span>
                       )}
-                      <span className={`font-semibold ${isSelected ? "text-teal-700" : "text-zinc-900"}`}>
+                      <span className={`font-semibold ${isSelected ? "text-primary" : "text-zinc-900"}`}>
                         {service.name}
                       </span>
                     </div>
-                    <span className={`text-sm font-semibold lg:hidden ${isSelected ? "text-[#1a6b5a]" : "text-zinc-500"}`}>
+                    <span className={`text-sm font-semibold lg:hidden ${isSelected ? "text-primary" : "text-zinc-500"}`}>
                       {service.price}
                     </span>
                   </div>
@@ -104,7 +104,7 @@ function ResidentialPageContent() {
                   <p className="hidden lg:block text-sm text-zinc-500 mt-2">{service.description}</p>
                 </div>
                 {/* Desktop: price at bottom */}
-                <p className={`hidden lg:block text-sm font-semibold mt-4 ${isSelected ? "text-[#1a6b5a]" : "text-zinc-500"}`}>
+                <p className={`hidden lg:block text-sm font-semibold mt-4 ${isSelected ? "text-primary" : "text-zinc-500"}`}>
                   {service.price}
                 </p>
               </button>
@@ -126,7 +126,7 @@ function ResidentialPageContent() {
                   onClick={() => setSelectedFrequency(freq.id)}
                   className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors lg:px-6 lg:py-2.5 ${
                     isSelected
-                      ? "border-teal-600 bg-teal-600 text-white"
+                      ? "border-primary bg-primary text-white"
                       : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
                   }`}
                 >
@@ -141,12 +141,12 @@ function ResidentialPageContent() {
         <div className="hidden lg:block mt-4">
           <button
             onClick={handleNext}
-            className="w-[360px] h-14 rounded-xl bg-[#1a6b5a] text-white text-base font-semibold hover:bg-[#155a4b] transition-colors"
+            className="w-[360px] h-14 rounded-xl bg-primary text-white text-base font-semibold hover:bg-primary-pressed transition-colors"
           >
             {returnTo === "review" ? "Save & Return to Review" : "Next \u2192"}
           </button>
           <div className="mt-3">
-            <Link href="/" className="text-sm font-medium text-[#1a6b5a] hover:underline">
+            <Link href="/" className="text-sm font-medium text-primary hover:underline">
               &larr; Back to Home
             </Link>
           </div>

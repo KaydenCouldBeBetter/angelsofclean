@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-const LINK_CLASS = "font-medium text-[#1a6b5a] underline underline-offset-2";
+const LINK_CLASS = "font-medium text-primary underline underline-offset-2";
 
 // Shown under the contact fields on both flows.
 export function PrivacyNote() {

@@ -50,7 +50,7 @@ export default function ServiceUnavailable({
         <h1
           ref={headingRef}
           tabIndex={-1}
-          className="text-2xl font-bold text-[#1c1c1e] focus:outline-none"
+          className="text-2xl font-bold text-[#1c1c1e]"
         >
           Something went wrong
         </h1>
@@ -71,7 +71,7 @@ export default function ServiceUnavailable({
         type="button"
         onClick={onRetry}
         disabled={retrying}
-        className="h-14 w-full rounded-xl bg-[#1a6b5a] text-base font-semibold text-white transition-colors hover:bg-[#124d41] disabled:opacity-50"
+        className="h-14 w-full rounded-xl bg-primary text-base font-semibold text-white transition-colors hover:bg-primary-pressed disabled:opacity-50"
       >
         {retrying ? "Trying…" : "Try Again"}
       </button>
@@ -89,7 +89,7 @@ export default function ServiceUnavailable({
           Call us directly:{" "}
           <a
             href={BUSINESS_PHONE.tel}
-            className="font-medium text-[#1a6b5a] underline underline-offset-2"
+            className="font-medium text-primary underline underline-offset-2"
           >
             {BUSINESS_PHONE.display}
           </a>

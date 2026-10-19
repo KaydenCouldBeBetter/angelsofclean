@@ -33,7 +33,7 @@ export default function ForgotPasswordForm({ linkFailed }: { linkFailed: boolean
         <h2
           ref={sentHeadingRef}
           tabIndex={-1}
-          className="text-lg font-semibold text-zinc-900 focus:outline-none"
+          className="text-lg font-semibold text-zinc-900"
         >
           Check your email
         </h2>
@@ -42,7 +42,7 @@ export default function ForgotPasswordForm({ linkFailed }: { linkFailed: boolean
           account, we&apos;ve sent it a link to reset your password. The link works once. Check
           your spam folder if it doesn&apos;t arrive in a few minutes.
         </p>
-        <Link href="/admin" className="mt-2 text-sm text-[#1a6b5a] font-medium hover:underline">
+        <Link href="/admin" className="mt-2 text-sm text-primary font-medium hover:underline">
           Back to sign in
         </Link>
       </div>
@@ -78,7 +78,7 @@ export default function ForgotPasswordForm({ linkFailed }: { linkFailed: boolean
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="jordan@angelsofclean.com"
-            className="w-full h-12 rounded-lg border border-zinc-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a6b5a]"
+            className="w-full h-12 rounded-lg border border-zinc-300 px-3 text-sm"
           />
         </div>
 
@@ -87,13 +87,13 @@ export default function ForgotPasswordForm({ linkFailed }: { linkFailed: boolean
         <button
           type="submit"
           disabled={isPending}
-          className="w-full h-[52px] rounded-lg bg-[#1a6b5a] text-white text-base font-semibold hover:bg-[#155a4b] transition-colors disabled:opacity-50 mt-1"
+          className="w-full h-[52px] rounded-lg bg-primary text-white text-base font-semibold hover:bg-primary-pressed transition-colors disabled:opacity-50 mt-1"
         >
           {isPending ? "Sending…" : "Send Reset Link"}
         </button>
       </form>
 
-      <Link href="/admin" className="text-center text-sm text-[#1a6b5a] font-medium hover:underline">
+      <Link href="/admin" className="text-center text-sm text-primary font-medium hover:underline">
         Back to sign in
       </Link>
     </div>
