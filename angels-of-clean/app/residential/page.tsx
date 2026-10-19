@@ -6,8 +6,10 @@ import Link from "next/link";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
+import Selectable, { SelectableGroup } from "@/components/booking/Selectable";
 import WhenHydrated from "@/components/booking/WhenHydrated";
 import { useBookingStore } from "@/store/bookingStore";
+import { FREQUENCY_OPTIONS } from "@/lib/constants";
 
 const SERVICES = [
   {
@@ -31,13 +33,6 @@ const SERVICES = [
     shortDesc: "Full property reset",
     price: "From $250",
   },
-];
-
-const FREQUENCIES = [
-  { id: "one-time" as const, label: "One-time" },
-  { id: "weekly" as const, label: "Weekly" },
-  { id: "bi-weekly" as const, label: "Bi-weekly" },
-  { id: "monthly" as const, label: "Monthly" },
 ];
 
 function ResidentialPageContent() {
@@ -69,72 +64,65 @@ function ResidentialPageContent() {
         </h1>
 
         {/* Service Cards — mobile: stacked, desktop: horizontal row */}
-        <div role="radiogroup" aria-label="Service type" className="flex flex-col gap-3 lg:flex-row">
-          {SERVICES.map((service) => {
-            const isSelected = selectedService === service.id;
-            return (
-              <button
-                key={service.id}
-                role="radio"
-                aria-checked={isSelected}
-                onClick={() => setSelectedService(service.id)}
-                className={`w-full text-left rounded-xl border-2 p-4 transition-colors lg:flex-1 lg:flex lg:flex-col lg:justify-between lg:min-h-[200px] ${
-                  isSelected
-                    ? "border-primary bg-primary/5"
-                    : "border-zinc-200 bg-white hover:border-zinc-300"
-                }`}
-              >
-                <div>
-                  <div className="flex items-center justify-between lg:block">
-                    <div className="flex items-center gap-2">
-                      {isSelected && (
-                        <span className="text-primary text-sm font-semibold lg:hidden" aria-hidden="true">&#10003;</span>
-                      )}
-                      <span className={`font-semibold ${isSelected ? "text-primary" : "text-zinc-900"}`}>
-                        {service.name}
-                      </span>
-                    </div>
-                    <span className={`text-sm font-semibold lg:hidden ${isSelected ? "text-primary" : "text-zinc-500"}`}>
-                      {service.price}
-                    </span>
-                  </div>
-                  {/* Mobile: short description */}
-                  <p className="text-sm text-zinc-500 mt-1 lg:hidden">{service.shortDesc}</p>
-                  {/* Desktop: full description */}
-                  <p className="hidden lg:block text-sm text-zinc-500 mt-2">{service.description}</p>
-                </div>
-                {/* Desktop: price at bottom */}
-                <p className={`hidden lg:block text-sm font-semibold mt-4 ${isSelected ? "text-primary" : "text-zinc-500"}`}>
-                  {service.price}
-                </p>
-              </button>
-            );
-          })}
-        </div>
+        <SelectableGroup
+          type="radio"
+          aria-label="Service type"
+          className="flex flex-col gap-3 lg:flex-row"
+        >
+          {SERVICES.map((service) => (
+            <Selectable
+              key={service.id}
+              value={service.id}
+              selected={selectedService === service.id}
+              onSelect={() => setSelectedService(service.id)}
+              className="block w-full p-4 pr-10 text-left lg:flex lg:flex-1 lg:flex-col lg:justify-between lg:min-h-[200px]"
+            >
+              <span className="block">
+                <span className="flex items-center justify-between lg:block">
+                  <span className="text-base font-semibold text-zinc-900 group-data-selected:text-white">
+                    {service.name}
+                  </span>
+                  <span className="text-sm font-semibold text-zinc-500 group-data-selected:text-white lg:hidden">
+                    {service.price}
+                  </span>
+                </span>
+                {/* Mobile: short description */}
+                <span className="block text-sm font-normal text-zinc-500 group-data-selected:text-white mt-1 lg:hidden">
+                  {service.shortDesc}
+                </span>
+                {/* Desktop: full description */}
+                <span className="hidden lg:block text-sm font-normal text-zinc-500 group-data-selected:text-white mt-2">
+                  {service.description}
+                </span>
+              </span>
+              {/* Desktop: price at bottom */}
+              <span className="hidden lg:block text-sm font-semibold text-zinc-500 group-data-selected:text-white mt-4">
+                {service.price}
+              </span>
+            </Selectable>
+          ))}
+        </SelectableGroup>
 
         {/* Frequency */}
         <div className="flex flex-col gap-3">
           <h2 className="text-base font-semibold text-zinc-900">How often?</h2>
-          <div role="radiogroup" aria-label="Cleaning frequency" className="flex gap-2 flex-wrap">
-            {FREQUENCIES.map((freq) => {
-              const isSelected = selectedFrequency === freq.id;
-              return (
-                <button
-                  key={freq.id}
-                  role="radio"
-                  aria-checked={isSelected}
-                  onClick={() => setSelectedFrequency(freq.id)}
-                  className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-colors lg:px-6 lg:py-2.5 ${
-                    isSelected
-                      ? "border-primary bg-primary text-white"
-                      : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
-                  }`}
-                >
-                  {freq.label}
-                </button>
-              );
-            })}
-          </div>
+          <SelectableGroup
+            type="radio"
+            aria-label="Cleaning frequency"
+            className="flex gap-2 flex-wrap"
+          >
+            {FREQUENCY_OPTIONS.map((freq) => (
+              <Selectable
+                key={freq.id}
+                value={freq.id}
+                selected={selectedFrequency === freq.id}
+                onSelect={() => setSelectedFrequency(freq.id)}
+                className="flex items-center justify-center px-6 py-2 lg:py-2.5"
+              >
+                {freq.label}
+              </Selectable>
+            ))}
+          </SelectableGroup>
         </div>
 
         {/* Desktop inline CTA */}

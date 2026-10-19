@@ -7,6 +7,7 @@ import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
 import DateExpiredNotice from "@/components/booking/DateExpiredNotice";
+import Selectable, { SelectableGroup } from "@/components/booking/Selectable";
 import WhenHydrated from "@/components/booking/WhenHydrated";
 import { useBookingStore } from "@/store/bookingStore";
 import { TIME_SLOT_WINDOWS } from "@/lib/constants";
@@ -123,37 +124,27 @@ function DateTimePageContent() {
         </div>
 
         {/* Date chips — mobile: horizontal scroll, desktop: 3-col grid */}
-        <div
-          role="radiogroup"
+        <SelectableGroup
+          type="radio"
           aria-label="Select a date"
           className="flex gap-2 overflow-x-auto pb-1 lg:grid lg:grid-cols-3 lg:overflow-visible lg:pb-0 lg:gap-3"
         >
-          {days.map((day) => {
-            const isSelected = selectedDate === day.full;
-            const isDisabled = day.isFull;
-            return (
-              <button
-                key={day.full}
-                role="radio"
-                aria-checked={isSelected}
-                aria-label={`${day.label} the ${day.date}`}
-                disabled={isDisabled}
-                onClick={() => !isDisabled && handleSelectDate(day.full)}
-                className={`flex flex-col items-center justify-center min-w-[52px] h-16 lg:h-[72px] rounded-xl border-2 text-sm font-medium transition-colors flex-shrink-0 ${
-                  isDisabled
-                    ? "border-zinc-100 bg-zinc-50 text-zinc-400 cursor-not-allowed"
-                    : isSelected
-                      ? "border-primary bg-primary text-white"
-                      : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
-                }`}
-              >
-                <span className="text-xs">{day.label}</span>
-                <span className="text-lg font-bold">{day.date}</span>
-                {isDisabled && <span className="text-[10px]">Full</span>}
-              </button>
-            );
-          })}
-        </div>
+          {days.map((day) => (
+            <Selectable
+              key={day.full}
+              value={day.full}
+              aria-label={`${day.label} the ${day.date}`}
+              selected={selectedDate === day.full}
+              disabled={day.isFull}
+              onSelect={() => handleSelectDate(day.full)}
+              className="flex flex-col items-center justify-center min-w-[52px] h-16 lg:h-[72px] flex-shrink-0"
+            >
+              <span className="text-xs">{day.label}</span>
+              <span className="text-lg font-bold">{day.date}</span>
+              {day.isFull && <span className="text-[10px]">Full</span>}
+            </Selectable>
+          ))}
+        </SelectableGroup>
 
         {/* Time slots */}
         <div className="flex flex-col gap-3">
@@ -162,8 +153,8 @@ function DateTimePageContent() {
           </h2>
 
           {/* Mobile: stacked, Desktop: row */}
-          <div
-            role="radiogroup"
+          <SelectableGroup
+            type="radio"
             aria-labelledby="time-slot-label"
             className="flex flex-col gap-3 lg:flex-row"
           >
@@ -174,34 +165,34 @@ function DateTimePageContent() {
                 slot.id !== "evening" &&
                 !isSlotBookable(selectedDate, slot.id as "morning" | "afternoon");
               const disabled = slot.disabled || cutoffPassed;
-              const isSelected = selectedSlot === slot.id && !disabled;
               const sub = cutoffPassed ? "Unavailable" : slot.sub;
               return (
-                <button
+                <Selectable
                   key={slot.id}
-                  role="radio"
-                  aria-checked={isSelected}
-                  aria-disabled={disabled}
-                  onClick={() => !disabled && setSelectedSlot(slot.id as "morning" | "afternoon")}
+                  value={slot.id}
+                  selected={selectedSlot === slot.id && !disabled}
                   disabled={disabled}
-                  className={`w-full text-left rounded-xl border-2 p-4 transition-colors lg:flex-1 lg:text-center ${
-                    disabled
-                      ? "border-zinc-100 bg-zinc-50 cursor-not-allowed"
-                      : isSelected
-                        ? "border-primary bg-primary text-white"
-                        : "border-zinc-200 bg-white hover:border-zinc-300"
-                  }`}
+                  onSelect={() => setSelectedSlot(slot.id as "morning" | "afternoon")}
+                  className="block w-full p-4 text-left lg:flex-1 lg:text-center"
                 >
-                  <span className={`font-semibold ${disabled ? "text-zinc-400" : isSelected ? "text-white" : "text-zinc-900"}`}>
+                  <span
+                    className={`text-base font-semibold ${
+                      disabled ? "" : "text-zinc-900 group-data-selected:text-white"
+                    }`}
+                  >
                     {slot.label}
                   </span>
-                  <p className={`text-xs mt-1 ${disabled ? "text-zinc-400" : isSelected ? "text-white/80" : "text-zinc-500"}`}>
+                  <span
+                    className={`block text-xs font-normal mt-1 ${
+                      disabled ? "text-zinc-400" : "text-zinc-500 group-data-selected:text-white"
+                    }`}
+                  >
                     {sub}
-                  </p>
-                </button>
+                  </span>
+                </Selectable>
               );
             })}
-          </div>
+          </SelectableGroup>
         </div>
 
         {/* Desktop inline CTA */}

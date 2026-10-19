@@ -28,10 +28,19 @@ export const SERVICE_LABELS: Record<NonNullable<ServiceType>, string> = {
 
 export const FREQUENCY_LABELS: Record<NonNullable<Frequency>, string> = {
   "one-time": "One-time",
-  weekly: "Weekly",
-  "bi-weekly": "Bi-weekly",
   monthly: "Monthly",
+  "bi-weekly": "Bi-weekly",
+  weekly: "Weekly",
 };
+
+// Frequency choices, least to most frequent. Both flows show them in this
+// order; the commercial list continues it with its extra, more frequent options.
+export const FREQUENCY_OPTIONS: { id: NonNullable<Frequency>; label: string }[] = [
+  { id: "one-time",  label: FREQUENCY_LABELS["one-time"] },
+  { id: "monthly",   label: FREQUENCY_LABELS.monthly },
+  { id: "bi-weekly", label: FREQUENCY_LABELS["bi-weekly"] },
+  { id: "weekly",    label: FREQUENCY_LABELS.weekly },
+];
 
 // Single source of truth for slot windows: the customer picker, the admin
 // New Booking modal, and the stored start_at/end_at must all agree.
@@ -132,21 +141,21 @@ export const COMMERCIAL_FREQUENCIES: {
   id: NonNullable<CommercialFrequency>;
   label: string;
 }[] = [
-  { id: "daily",     label: "Daily" },
-  { id: "2-3x",      label: "2–3x / Week" },
-  { id: "weekly",    label: "Weekly" },
-  { id: "bi-weekly", label: "Bi-Weekly" },
-  { id: "monthly",   label: "Monthly" },
   { id: "one-time",  label: "One-Time" },
+  { id: "monthly",   label: "Monthly" },
+  { id: "bi-weekly", label: "Bi-Weekly" },
+  { id: "weekly",    label: "Weekly" },
+  { id: "2-3x",      label: "2–3x / Week" },
+  { id: "daily",     label: "Daily" },
 ];
 
 export const COMMERCIAL_FREQUENCY_LABELS: Record<NonNullable<CommercialFrequency>, string> = {
-  daily:      "Daily",
-  "2-3x":     "2–3x / Week",
-  weekly:     "Weekly",
-  "bi-weekly":"Bi-Weekly",
-  monthly:    "Monthly",
   "one-time": "One-Time",
+  monthly:    "Monthly",
+  "bi-weekly":"Bi-Weekly",
+  weekly:     "Weekly",
+  "2-3x":     "2–3x / Week",
+  daily:      "Daily",
 };
 
 export const SCHEDULE_PREFERENCES: {
