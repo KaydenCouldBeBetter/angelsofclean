@@ -191,6 +191,7 @@ export type Database = {
           service_areas: string[]
           sqft_range: string
           submitted_at: string
+          updated_at: string
           zip: string
         }
         Insert: {
@@ -210,6 +211,7 @@ export type Database = {
           service_areas: string[]
           sqft_range: string
           submitted_at?: string
+          updated_at?: string
           zip: string
         }
         Update: {
@@ -229,6 +231,7 @@ export type Database = {
           service_areas?: string[]
           sqft_range?: string
           submitted_at?: string
+          updated_at?: string
           zip?: string
         }
         Relationships: []

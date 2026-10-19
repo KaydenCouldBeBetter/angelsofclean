@@ -17,6 +17,7 @@ const APPLIED = [
   "20261013224928_rate_limits.sql",
   "20261013230608_commercial_quotes.sql",
   "20261018142718_assign_booking_employees.sql",
+  "20261019033138_db_defense_in_depth.sql",
 ];
 
 const migrations = readdirSync(MIGRATIONS_DIR).sort();
