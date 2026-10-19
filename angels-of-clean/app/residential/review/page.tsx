@@ -80,7 +80,7 @@ export default function ReviewPage() {
       label: "Property Details",
       editHref: "/residential/property?returnTo=review",
       lines: [
-        `${bedrooms} Bedrooms, ${bathrooms} Bathroom`,
+        `${bedrooms} ${bedrooms === 1 ? "Bedroom" : "Bedrooms"}, ${bathrooms} ${bathrooms === 1 ? "Bathroom" : "Bathrooms"}`,
         notes ? `Notes: ${notes}` : null,
       ].filter(Boolean) as string[],
     },

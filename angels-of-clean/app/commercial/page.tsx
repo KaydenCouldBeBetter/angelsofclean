@@ -190,7 +190,7 @@ export default function CommercialStep1() {
 
           <p className="text-xs text-zinc-500">
             We serve the greater Syracuse, NY area. Call{" "}
-            <span className="font-medium">(315) 555-0100</span> if you&apos;re
+            <span className="font-medium">(315) 555-0100</span>{" "}if you&apos;re
             unsure about your location.
           </p>
         </div>
@@ -205,7 +205,7 @@ export default function CommercialStep1() {
             Next →
           </Button>
           <Link
-            href="/"
+            href="/commercial"
             className="text-sm text-teal-700 hover:text-teal-800 transition-colors"
           >
             ← Back to Commercial Services
