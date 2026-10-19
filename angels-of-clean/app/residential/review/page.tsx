@@ -11,11 +11,7 @@ import { AgreementNote } from "@/components/booking/PolicyNotes";
 import SubmitErrorAlert from "@/components/booking/SubmitErrorAlert";
 import ServiceUnavailable from "@/components/booking/ServiceUnavailable";
 import { useBookingStore, useBookingHydrated } from "@/store/bookingStore";
-
-import { SERVICE_LABELS, FREQUENCY_LABELS, TIME_LABELS, PRICE_NOTE } from "@/lib/constants";
-
-import { SERVICE_LABELS, FREQUENCY_LABELS, TIME_LABELS, formatBathroomCount } from "@/lib/constants";
-
+import { SERVICE_LABELS, FREQUENCY_LABELS, TIME_LABELS, PRICE_NOTE, formatBathroomCount } from "@/lib/constants";
 import { submitBooking, type BookingResult } from "@/app/actions/submitBooking";
 
 export default function ReviewPage() {
