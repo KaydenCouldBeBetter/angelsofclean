@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin, NOT_SIGNED_IN_ERROR } from "@/lib/supabase/require-admin";
+import {
+  requireAdmin,
+  AUTH_UNAVAILABLE_ERROR,
+  NOT_SIGNED_IN_ERROR,
+} from "@/lib/supabase/require-admin";
 import { getJobsInRange } from "@/lib/supabase/queries";
 
 export async function GET(req: NextRequest) {
   // Verify the user is a signed-in admin, not just any authenticated account.
   const auth = await requireAdmin();
+
+  // Auth not answering is an outage, not a refusal (same as a failed query).
+  if (!auth.ok && auth.error === AUTH_UNAVAILABLE_ERROR) {
+    return NextResponse.json({ error: "Could not verify sign-in" }, { status: 503 });
+  }
 
   if (!auth.ok) {
     const status = auth.error === NOT_SIGNED_IN_ERROR ? 401 : 403;

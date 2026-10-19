@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { DASHBOARD_STATUS } from "../status-config";
-import type { Job, JobStatus, Employee } from "@/lib/admin-types";
+import type { Job, JobStatus, StaffMember } from "@/lib/admin-types";
 import { formatNy, formatNyTimeRange, nyDateStr, nyTodayStr } from "@/lib/datetime";
 import BookingsSearch from "./BookingsSearch";
 
@@ -32,6 +32,22 @@ function groupJobsByDate(jobs: Job[]): { date: string; label: string; jobs: Job[
     }));
 }
 
+// Not built yet: shown disabled and labelled, like BookingActions' Reschedule.
+function ComingSoonFilter({ children }: { children: string }) {
+  return (
+    <button
+      type="button"
+      disabled
+      className="h-8 px-3 rounded-md border border-[#e2e8e6] bg-[#f7f9f8] text-[#5c5c5e] text-[12px] font-medium cursor-not-allowed flex items-center gap-2"
+    >
+      <span>{children}</span>
+      <span className="rounded-full bg-[#fef3c7] px-2 py-0.5 text-[11px] font-semibold text-[#92400e]">
+        Coming soon
+      </span>
+    </button>
+  );
+}
+
 function StatusChip({ status }: { status: JobStatus }) {
   const cfg = DASHBOARD_STATUS[status];
   return (
@@ -43,7 +59,7 @@ function StatusChip({ status }: { status: JobStatus }) {
   );
 }
 
-function EmployeeDisplay({ job, employeeMap }: { job: Job; employeeMap: Record<string, Employee> }) {
+function EmployeeDisplay({ job, employeeMap }: { job: Job; employeeMap: Record<string, StaffMember> }) {
   if (job.employeeIds.length === 0) {
     return <span className="text-[13px] font-medium text-[#c0392b]">Unassigned</span>;
   }
@@ -81,7 +97,7 @@ function EmployeeDisplay({ job, employeeMap }: { job: Job; employeeMap: Record<s
   );
 }
 
-function JobCard({ job, employeeMap }: { job: Job; employeeMap: Record<string, Employee> }) {
+function JobCard({ job, employeeMap }: { job: Job; employeeMap: Record<string, StaffMember> }) {
   const cfg = DASHBOARD_STATUS[job.status];
 
   return (
@@ -152,7 +168,7 @@ export default function BookingsList({
   activeTab,
 }: {
   jobs: Job[];
-  employeeMap: Record<string, Employee>;
+  employeeMap: Record<string, StaffMember>;
   activeTab: FilterTab;
 }) {
   // Search stays in client state — never in the URL query string, where
@@ -203,13 +219,11 @@ export default function BookingsList({
         </TabLink>
 
 
-        {/* Dropdown filters */}
-        <button className="h-8 px-4 rounded-md border border-[#e2e8e6] bg-white text-[#5c5c5e] text-[12px] font-medium ml-2">
-          All Status &nbsp;&#9662;
-        </button>
-        <button className="h-8 px-4 rounded-md border border-[#e2e8e6] bg-white text-[#5c5c5e] text-[12px] font-medium">
-          All Employees &nbsp;&#9662;
-        </button>
+        {/* Dropdown filters: not built yet */}
+        <div className="ml-2 flex items-center gap-2">
+          <ComingSoonFilter>All Status</ComingSoonFilter>
+          <ComingSoonFilter>All Employees</ComingSoonFilter>
+        </div>
 
         {/* Search */}
         <BookingsSearch value={search} onChange={setSearch} />

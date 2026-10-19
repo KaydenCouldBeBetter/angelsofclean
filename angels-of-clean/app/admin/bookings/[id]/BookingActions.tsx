@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { assignEmployees, updateBookingStatus } from "../../actions";
 import { canChangeStatus, type StatusChangeTarget } from "../../status-config";
-import type { Employee, Job } from "@/lib/admin-types";
+import type { Job, StaffMember } from "@/lib/admin-types";
 
 // Not built yet: shown disabled and labelled, like the Settings page.
 function ComingSoonButton({ children }: { children: string }) {
@@ -24,7 +24,7 @@ function ComingSoonButton({ children }: { children: string }) {
 
 interface BookingActionsProps {
   job: Job;
-  employees: Employee[];
+  employees: StaffMember[];
 }
 
 export default function BookingActions({ job, employees }: BookingActionsProps) {
