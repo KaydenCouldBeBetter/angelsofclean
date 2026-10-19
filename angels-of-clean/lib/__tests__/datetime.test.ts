@@ -3,6 +3,7 @@ import {
   addDaysToDateStr,
   formatNyTime,
   formatNyTimeRange,
+  formatWallClockTime,
   isNyWallClockInFuture,
   isValidDateStr,
   nyDateStr,
@@ -132,6 +133,25 @@ describe("formatting helpers", () => {
     expect(
       formatNyTimeRange("2026-08-01T12:00:00.000Z", "2026-08-01T16:00:00.000Z"),
     ).toBe("8:00 AM – 12:00 PM");
+  });
+
+  it("always shows minutes and a plain space before AM/PM, including noon and midnight", () => {
+    expect(formatNyTime("2026-08-01T16:00:00.000Z")).toBe("12:00 PM");
+    expect(formatNyTime("2026-08-01T04:00:00.000Z")).toBe("12:00 AM");
+    expect(formatNyTime("2026-08-01T13:30:00.000Z")).toBe("9:30 AM");
+  });
+
+  it("reads the New York hour across DST, whatever zone the process runs in", () => {
+    // 13:00 UTC is 9 AM in EDT (summer) but 8 AM in EST (winter).
+    expect(formatNyTime("2026-07-15T13:00:00.000Z")).toBe("9:00 AM");
+    expect(formatNyTime("2026-12-15T13:00:00.000Z")).toBe("8:00 AM");
+  });
+
+  it("formats FullCalendar slot labels (UTC-coerced wall clock) like every other time", () => {
+    const nyInstant = "2026-08-01T13:00:00.000Z"; // 9:00 AM in New York
+    const marker = new Date(`${nyWallClockISO(nyInstant)}Z`);
+    expect(formatWallClockTime(marker)).toBe("9:00 AM");
+    expect(formatWallClockTime(marker)).toBe(formatNyTime(nyInstant));
   });
 
   it("emits offset-less New York wall-clock ISO for FullCalendar", () => {

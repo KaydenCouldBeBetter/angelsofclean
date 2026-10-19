@@ -152,9 +152,34 @@ export function formatNy(
   );
 }
 
+// The one time format used everywhere a time is shown: "9:00 AM", never "9am"
+// or "09:00". Newer ICU builds put a narrow no-break space before AM/PM; swap
+// it for a plain space so every surface (and every test) sees the same string.
+const TIME_FORMAT: Intl.DateTimeFormatOptions = {
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+};
+
+function plainSpaces(s: string): string {
+  return s.replace(/[  ]/g, " ");
+}
+
 /** "8:00 AM" — New York time with AM/PM. */
 export function formatNyTime(instant: Date | string): string {
-  return formatNy(instant, { hour: "numeric", minute: "2-digit", hour12: true });
+  return plainSpaces(formatNy(instant, TIME_FORMAT));
+}
+
+/**
+ * "8:00 AM" for a FullCalendar `Date` in UTC-coercion mode, where the UTC
+ * fields already hold the New York wall-clock time (see nyWallClockISO). Same
+ * output as formatNyTime for the same moment; the calendar's slot labels use it
+ * so they match every other time on the site.
+ */
+export function formatWallClockTime(marker: Date): string {
+  return plainSpaces(
+    new Intl.DateTimeFormat("en-US", { timeZone: "UTC", ...TIME_FORMAT }).format(marker),
+  );
 }
 
 /** "8:00 AM – 12:00 PM" — New York time range with AM/PM. */
@@ -167,11 +192,7 @@ export function formatNyTimeRange(
 
 /** "Aug 1, 8:00 AM" — compact date + time in New York, for logs/timelines. */
 export function formatNyDateTime(instant: Date | string): string {
-  return formatNy(instant, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
+  return plainSpaces(
+    formatNy(instant, { month: "short", day: "numeric", ...TIME_FORMAT }),
+  );
 }

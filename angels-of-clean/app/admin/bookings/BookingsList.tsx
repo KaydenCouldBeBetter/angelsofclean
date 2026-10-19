@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { DASHBOARD_STATUS } from "../status-config";
 import type { Job, JobStatus, Employee } from "@/lib/admin-types";
-import { formatNy, formatNyTime, nyDateStr, nyTodayStr } from "@/lib/datetime";
+import { formatNy, formatNyTimeRange, nyDateStr, nyTodayStr } from "@/lib/datetime";
 import BookingsSearch from "./BookingsSearch";
 
 export type FilterTab = "today" | "upcoming" | "past" | "all";
@@ -30,10 +30,6 @@ function groupJobsByDate(jobs: Job[]): { date: string; label: string; jobs: Job[
       }),
       jobs: dateJobs.sort((a, b) => a.start.localeCompare(b.start)),
     }));
-}
-
-function formatTime(iso: string) {
-  return formatNyTime(iso);
 }
 
 function StatusChip({ status }: { status: JobStatus }) {
@@ -109,7 +105,7 @@ function JobCard({ job, employeeMap }: { job: Job; employeeMap: Record<string, E
         {/* Time + address */}
         <div className="w-[240px] flex-shrink-0">
           <p className="text-[13px] font-medium text-[#1c1c1e]">
-            {formatTime(job.start)}&ndash;{formatTime(job.end)}
+            {formatNyTimeRange(job.start, job.end)}
           </p>
           <p className="text-[12px] text-[#5c5c5e] mt-0.5 truncate">{job.address}</p>
         </div>
