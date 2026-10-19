@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { AuthRetryableFetchError } from "@supabase/supabase-js";
 
 const getUserMock = vi.fn();
 
@@ -10,7 +11,9 @@ import {
   requireAdmin,
   NOT_SIGNED_IN_ERROR,
   NOT_AUTHORIZED_ERROR,
+  AUTH_UNAVAILABLE_ERROR,
 } from "../require-admin";
+import { AUTH_TIMEOUT_MS } from "../auth-timeout";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -71,5 +74,38 @@ describe("requireAdmin", () => {
     const result = await requireAdmin();
 
     expect(result).toMatchObject({ ok: true, user });
+  });
+
+  it("refuses with a retry message when Auth can't be reached", async () => {
+    getUserMock.mockResolvedValue({
+      data: { user: null },
+      error: new AuthRetryableFetchError("fetch failed", 0),
+    });
+
+    const result = await requireAdmin();
+
+    expect(result).toEqual({ ok: false, error: AUTH_UNAVAILABLE_ERROR });
+  });
+
+  describe("when Auth is slow", () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it("refuses at the timeout instead of hanging, even for an admin who answers late", async () => {
+      let answer!: (value: unknown) => void;
+      getUserMock.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+
+      let settled: unknown = "pending";
+      void requireAdmin().then((r) => (settled = r));
+
+      await vi.advanceTimersByTimeAsync(AUTH_TIMEOUT_MS - 1);
+      expect(settled).toBe("pending");
+      await vi.advanceTimersByTimeAsync(1);
+      expect(settled).toEqual({ ok: false, error: AUTH_UNAVAILABLE_ERROR });
+
+      answer({ data: { user: { app_metadata: { role: "admin" } } }, error: null });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(settled).toEqual({ ok: false, error: AUTH_UNAVAILABLE_ERROR });
+    });
   });
 });
