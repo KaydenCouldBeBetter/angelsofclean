@@ -62,8 +62,8 @@ export default function ServiceUnavailable({
       <div className="w-full rounded-xl border border-[#e0e0e0] bg-[#f7ffff] p-4 text-left">
         <p className="text-[13px] font-medium text-[#1c1c1e]">What happened:</p>
         <p className="mt-1.5 text-[13px] text-[#5c5c5e]">
-          Error 503 &mdash; Our server is temporarily unavailable. Your {subject} was NOT
-          submitted.
+          We couldn&apos;t save your {subject} because our service is temporarily
+          unavailable. Your {subject} was NOT submitted.
         </p>
       </div>
 

@@ -149,7 +149,7 @@ describe.each([
     expect(phone).toHaveLength(1);
     expect(phone[0].textContent).toBe(BUSINESS_PHONE.display);
     // An ordinary failure is not the outage screen.
-    expect(container.textContent).not.toContain("Error 503");
+    expect(container.textContent).not.toContain("temporarily unavailable");
   });
 
   it("Try again sends the form a second time and continues on success", async () => {
