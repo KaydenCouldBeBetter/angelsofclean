@@ -6,7 +6,8 @@ import Link from "next/link";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
-import { useBookingStore, useBookingHydrated } from "@/store/bookingStore";
+import WhenHydrated from "@/components/booking/WhenHydrated";
+import { useBookingStore } from "@/store/bookingStore";
 import { FIELD_MAX_LENGTHS } from "@/lib/constants";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -48,17 +49,16 @@ function Stepper({ label, value, min, max, onChange }: StepperProps) {
   );
 }
 
-export default function PropertyPage() {
+function PropertyPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo");
   const store = useBookingStore();
-  const hydrated = useBookingHydrated();
   const { setStep3 } = store;
 
   useEffect(() => {
-    if (hydrated && !store.address) router.replace("/residential");
-  }, [hydrated, store.address, router]);
+    if (!store.address) router.replace("/residential");
+  }, [store.address, router]);
 
   const [bedrooms, setBedrooms] = useState(store.bedrooms);
   const [bathrooms, setBathrooms] = useState(store.bathrooms);
@@ -137,5 +137,13 @@ export default function PropertyPage() {
         <BottomCTA label={returnTo === "review" ? "Save & Return to Review" : "Next"} onClick={handleNext} />
       </div>
     </>
+  );
+}
+
+export default function PropertyPage() {
+  return (
+    <WhenHydrated>
+      <PropertyPageContent />
+    </WhenHydrated>
   );
 }

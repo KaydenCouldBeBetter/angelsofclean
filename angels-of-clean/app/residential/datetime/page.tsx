@@ -6,7 +6,8 @@ import Link from "next/link";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
-import { useBookingStore, useBookingHydrated } from "@/store/bookingStore";
+import WhenHydrated from "@/components/booking/WhenHydrated";
+import { useBookingStore } from "@/store/bookingStore";
 import { TIME_SLOT_WINDOWS } from "@/lib/constants";
 import { addDaysToDateStr, isNyWallClockInFuture, nyTodayStr } from "@/lib/datetime";
 
@@ -57,17 +58,16 @@ function getWeekDays() {
   return days;
 }
 
-export default function DateTimePage() {
+function DateTimePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo");
   const store = useBookingStore();
-  const hydrated = useBookingHydrated();
   const { setStep4 } = store;
 
   useEffect(() => {
-    if (hydrated && !store.address) router.replace("/residential");
-  }, [hydrated, store.address, router]);
+    if (!store.address) router.replace("/residential");
+  }, [store.address, router]);
 
   const days = getWeekDays();
   // Only trust a stored date if it's still one of the offered (future) days —
@@ -222,5 +222,13 @@ export default function DateTimePage() {
         <BottomCTA label={returnTo === "review" ? "Save & Return to Review" : "Next"} onClick={handleNext} />
       </div>
     </>
+  );
+}
+
+export default function DateTimePage() {
+  return (
+    <WhenHydrated>
+      <DateTimePageContent />
+    </WhenHydrated>
   );
 }
