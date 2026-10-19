@@ -55,11 +55,10 @@ export const TIME_LABELS: Record<NonNullable<TimeSlot>, string> = {
   afternoon: `Afternoon (${TIME_SLOT_WINDOWS.afternoon.display})`,
 };
 
-export const PRICE_MAP: Record<NonNullable<ServiceType>, string> = {
-  standard: "$85",
-  deep: "$149",
-  moveinout: "$199",
-};
+// The one sentence customers see instead of a price (backlog B28): the office
+// confirms the price after reviewing each booking, and nothing is charged online.
+export const PRICE_NOTE =
+  "We\u2019ll confirm your price after reviewing your booking \u2014 you won\u2019t be charged anything online.";
 
 // Longest accepted value for each free-text booking or quote field. Enforced on
 // the server (app/actions/) and mirrored as maxLength on the inputs.

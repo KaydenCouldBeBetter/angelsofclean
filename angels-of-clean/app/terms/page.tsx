@@ -6,6 +6,7 @@ import LegalPage, {
   LegalValue,
 } from "@/components/legal/LegalPage";
 import { isLegalDraft } from "@/lib/legal";
+import { PRICE_NOTE } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
@@ -50,8 +51,7 @@ export default function TermsPage() {
 
       <LegalSection title="Prices and payment">
         <p>
-          Any price shown on this website is an estimate. We confirm your price with you before
-          your cleaning.
+          {PRICE_NOTE}
         </p>
         <p><LegalValue field="paymentTerms" /></p>
       </LegalSection>

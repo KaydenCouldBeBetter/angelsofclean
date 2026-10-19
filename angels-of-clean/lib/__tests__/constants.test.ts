@@ -4,7 +4,7 @@ import {
   FREQUENCY_LABELS,
   TIME_LABELS,
   TIME_SLOT_WINDOWS,
-  PRICE_MAP,
+  PRICE_NOTE,
   SERVICE_AREA_ZIPS,
   BATHROOM_LIMITS,
   BATHROOM_OPTIONS,
@@ -64,11 +64,11 @@ describe("TIME_SLOT_WINDOWS", () => {
   });
 });
 
-describe("PRICE_MAP", () => {
-  it("has a price for each service type", () => {
-    expect(PRICE_MAP.standard).toBe("$85");
-    expect(PRICE_MAP.deep).toBe("$149");
-    expect(PRICE_MAP.moveinout).toBe("$199");
+describe("PRICE_NOTE", () => {
+  it("says the price is confirmed later and nothing is charged online", () => {
+    expect(PRICE_NOTE).toContain("confirm your price");
+    expect(PRICE_NOTE).toContain("charged anything online");
+    expect(PRICE_NOTE).not.toMatch(/\$/);
   });
 });
 
