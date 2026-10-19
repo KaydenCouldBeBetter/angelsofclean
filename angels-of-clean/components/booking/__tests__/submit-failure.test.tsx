@@ -85,8 +85,10 @@ describe("ServiceUnavailable", () => {
     expect(text).toContain("We couldn't complete your request. This is usually temporary.");
     expect(text).toContain("What happened:");
     expect(text).toContain(
-      "Error 503 — Our server is temporarily unavailable. Your booking was NOT submitted.",
+      "We couldn't save your booking because our service is temporarily unavailable. Your booking was NOT submitted.",
     );
+    // The designed copy said "Error 503", but no HTTP status is involved.
+    expect(text).not.toContain("503");
     expect(text).toContain("Return to Homepage");
     expect(text).toContain("Need immediate help?");
     expect(container.querySelector(`a[href="${BUSINESS_PHONE.tel}"]`)!.textContent).toBe(
