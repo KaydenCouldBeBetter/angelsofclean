@@ -147,7 +147,7 @@ function CommercialStep3Content() {
             <Input
               id="phone"
               type="tel"
-              placeholder="(315) 555-0100"
+              placeholder="(315) 555-0123"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               onBlur={() => setTouched((t) => ({ ...t, phone: true }))}

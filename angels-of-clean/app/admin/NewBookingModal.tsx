@@ -144,7 +144,7 @@ export default function NewBookingModal({ open, onClose }: NewBookingModalProps)
                   </div>
                   <div>
                     <Label htmlFor="nb-phone" className="text-[13px] text-[#1c1c1e] mb-1">Phone</Label>
-                    <Input id="nb-phone" type="tel" required maxLength={FIELD_MAX_LENGTHS.phone} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(315) 555-0100" className="h-10" />
+                    <Input id="nb-phone" type="tel" required maxLength={FIELD_MAX_LENGTHS.phone} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(315) 555-0123" className="h-10" />
                   </div>
                 </div>
               </div>
