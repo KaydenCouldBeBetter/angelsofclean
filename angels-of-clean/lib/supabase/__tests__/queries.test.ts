@@ -99,6 +99,28 @@ describe("getJobsInRange (calendar projection)", () => {
     expect(columns).toContain("status");
   });
 
+  it("keeps the crew embed, so the calendar can tell which jobs have nobody assigned (B15)", async () => {
+    const { recorded, client } = makeSupabaseStub({
+      data: [
+        { ...BOOKING_ROW, id: "no-crew", booking_employees: [] },
+        { ...BOOKING_ROW, id: "crewed", booking_employees: [{ employee_id: "e-1" }] },
+      ],
+      error: null,
+    });
+    createClientMock.mockResolvedValue(client);
+
+    const result = await getJobsInRange("2026-09-01", "2026-09-30");
+
+    expect(recorded.columns).toContain("booking_employees(employee_id)");
+    expect(result).toMatchObject({
+      ok: true,
+      data: [
+        { id: "no-crew", employeeIds: [] },
+        { id: "crewed", employeeIds: ["e-1"] },
+      ],
+    });
+  });
+
   it("logs only the error code and a correlation id when the query fails", async () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const { client } = makeSupabaseStub({
