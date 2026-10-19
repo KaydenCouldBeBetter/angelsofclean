@@ -58,7 +58,7 @@ export default function EntryInstructions({
           <button
             type="button"
             onClick={startEditing}
-            className="h-9 px-4 flex-shrink-0 rounded-lg border border-[#e2e8e6] text-[#1a6b5a] text-[13px] font-semibold hover:bg-[#eef1ef] transition-colors"
+            className="h-9 px-4 flex-shrink-0 rounded-lg border border-[#e2e8e6] text-primary text-[13px] font-semibold hover:bg-[#eef1ef] transition-colors"
           >
             {instructions ? "Edit" : "Add"}
             <span className="sr-only"> entry instructions</span>
@@ -85,7 +85,7 @@ export default function EntryInstructions({
               autoComplete="off"
               spellCheck={false}
               rows={3}
-              className="w-full rounded-lg border border-zinc-500 px-3 py-2 text-[13px] text-[#1c1c1e] focus:outline-none focus:ring-2 focus:ring-[#1a6b5a]"
+              className="w-full rounded-lg border border-zinc-500 px-3 py-2 text-[13px] text-[#1c1c1e]"
             />
             <p className="text-xs text-[#5c5c5e]">Leave blank and save to remove them.</p>
             {error && <p role="alert" className="text-xs text-[#c0392b]">{error}</p>}
@@ -94,7 +94,7 @@ export default function EntryInstructions({
                 type="button"
                 onClick={handleSave}
                 disabled={isPending}
-                className="h-9 px-4 rounded-lg bg-[#1a6b5a] text-white text-[13px] font-semibold hover:bg-[#155a4b] transition-colors disabled:opacity-50"
+                className="h-9 px-4 rounded-lg bg-primary text-white text-[13px] font-semibold hover:bg-primary-pressed transition-colors disabled:opacity-50"
               >
                 {isPending ? "Saving…" : "Save"}
               </button>

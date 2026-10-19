@@ -16,7 +16,7 @@ export default function ConfirmedWithoutDetails({
   return (
     <div className="max-w-sm mx-auto px-4 py-16 flex flex-col items-center text-center gap-4">
       <div
-        className="w-20 h-20 rounded-full bg-[#1a6b5a] flex items-center justify-center"
+        className="w-20 h-20 rounded-full bg-primary flex items-center justify-center"
         role="img"
         aria-label={title}
       >

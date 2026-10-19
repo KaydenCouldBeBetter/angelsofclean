@@ -29,7 +29,7 @@ function Stepper({ label, value, min, max, onChange }: StepperProps) {
           onClick={() => onChange(value - 1)}
           disabled={value <= min}
           aria-label={`Decrease ${label}`}
-          className="w-14 h-full flex items-center justify-center text-xl font-semibold text-[#1a6b5a] disabled:text-zinc-300 disabled:cursor-not-allowed hover:bg-zinc-50 transition-colors"
+          className="w-14 h-full flex items-center justify-center text-xl font-semibold text-primary disabled:text-zinc-300 disabled:cursor-not-allowed hover:bg-zinc-50 transition-colors"
         >
           −
         </button>
@@ -40,7 +40,7 @@ function Stepper({ label, value, min, max, onChange }: StepperProps) {
           onClick={() => onChange(value + 1)}
           disabled={value >= max}
           aria-label={`Increase ${label}`}
-          className="w-14 h-full flex items-center justify-center text-xl font-semibold text-[#1a6b5a] disabled:text-zinc-300 disabled:cursor-not-allowed hover:bg-zinc-50 transition-colors"
+          className="w-14 h-full flex items-center justify-center text-xl font-semibold text-primary disabled:text-zinc-300 disabled:cursor-not-allowed hover:bg-zinc-50 transition-colors"
         >
           +
         </button>
@@ -144,12 +144,12 @@ function PropertyPageContent() {
         <div className="hidden lg:block mt-2">
           <button
             onClick={handleNext}
-            className="w-[360px] h-14 rounded-xl bg-[#1a6b5a] text-white text-base font-semibold hover:bg-[#155a4b] transition-colors"
+            className="w-[360px] h-14 rounded-xl bg-primary text-white text-base font-semibold hover:bg-primary-pressed transition-colors"
           >
             {returnTo === "review" ? "Save & Return to Review" : "Next \u2192"}
           </button>
           <div className="mt-3">
-            <Link href="/residential/address" className="text-sm font-medium text-[#1a6b5a] hover:underline">
+            <Link href="/residential/address" className="text-sm font-medium text-primary hover:underline">
               &larr; Back
             </Link>
           </div>

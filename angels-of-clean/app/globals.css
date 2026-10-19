@@ -34,6 +34,7 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-pressed: var(--primary-pressed);
   --color-primary: var(--primary);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
@@ -55,7 +56,11 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  /* Brand teal (B21): the one source of the brand color. Use bg-primary,
+     text-primary, border-primary and hover:bg-primary-pressed rather than a
+     hex or a teal-* class (lib/__tests__/brand-token-usage.test.ts enforces it). */
+  --primary: #1a6b5a;
+  --primary-pressed: #124d41;
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -66,7 +71,7 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --ring: #124d41;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -129,6 +134,41 @@
   }
 }
 
+/* ── Focus ring (B25) ────────────────────────────────────────────────────
+   One visible focus indicator for every interactive element: 2px in the
+   pressed brand teal, 2px off the element, keyboard focus only. It sits
+   outside @layer on purpose, so it also beats utilities like outline-none.
+   Don't add per-component focus:ring-* / focus-visible:ring-* classes. */
+:focus-visible {
+  outline: 2px solid var(--primary-pressed);
+  outline-offset: 2px;
+}
+
+/* Script-focused, non-interactive targets (headings moved to after a step
+   changes) take focus with tabindex="-1"; they get no ring. */
+:where(:not(input, textarea, select, button, a, summary))[tabindex="-1"]:focus-visible {
+  outline: none;
+}
+
+/* #124d41 vanishes on dark chrome (the admin sidebar), so it takes white. */
+[data-focus-surface="dark"] :focus-visible {
+  outline-color: #ffffff;
+}
+
+/* A visually hidden (sr-only) checkbox or radio has no box of its own to ring,
+   so its label, which is the card the user sees, takes the ring instead. */
+label:has(input.sr-only:focus-visible) {
+  outline: 2px solid var(--primary-pressed);
+  outline-offset: 2px;
+}
+
+/* WCAG 2.2 "Focus Not Obscured" (2.4.11): the sticky bottom CTA of the booking
+   flows covers the bottom 89px of the viewport. Reserving that space as scroll
+   padding makes the browser scroll a focused element clear of it. */
+html:has([data-bottom-cta]) {
+  scroll-padding-bottom: 6rem;
+}
+
 /* ── FullCalendar overrides (admin calendar) ─────────────────────────── */
 .admin-calendar {
   --fc-border-color: #e4e4e7;
@@ -169,8 +209,7 @@
 .admin-calendar .fc-prev-button,
 .admin-calendar .fc-next-button { padding: 5px 10px !important; font-size: 16px !important; line-height: 1 !important; }
 .admin-calendar .fc-button:hover { background: #f4f4f5 !important; }
-.admin-calendar .fc-button-active,
-.admin-calendar .fc-button:focus { outline: none !important; box-shadow: none !important; }
+.admin-calendar .fc-button-active { box-shadow: none !important; }
 .admin-calendar .fc-timeGridWeek-button.fc-button-active,
 .admin-calendar .fc-dayGridMonth-button.fc-button-active {
   background: #1b3b36 !important; color: white !important; border-color: #1b3b36 !important;
@@ -186,8 +225,15 @@
 .admin-calendar .fc-event-main { padding: 0 !important; height: 100%; }
 .admin-calendar .fc-timegrid-event-harness { margin: 0 1px !important; }
 
-/* Events link to their booking page — kill the anchor underline and give
-   keyboard users a focus ring (the hover state lives on the card itself). */
+/* FullCalendar's own stylesheet sets outline: 0 / a box-shadow on :focus with
+   a higher specificity than the global ring, so restate it here. This covers
+   the toolbar buttons, event links, day-number links and "+ more" links. */
+.admin-calendar :focus-visible {
+  outline: 2px solid var(--primary-pressed) !important;
+  outline-offset: 2px !important;
+  box-shadow: none !important;
+}
+
+/* Events link to their booking page — kill the anchor underline (the hover
+   state lives on the card itself). */
 .admin-calendar a.fc-event { text-decoration: none !important; }
-.admin-calendar a.fc-event:focus { outline: none; }
-.admin-calendar a.fc-event:focus-visible { outline: 2px solid #1a6b5a; outline-offset: 1px; border-radius: 4px; }

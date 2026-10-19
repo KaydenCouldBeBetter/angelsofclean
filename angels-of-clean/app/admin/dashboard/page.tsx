@@ -63,7 +63,7 @@ export default async function AdminDashboardPage() {
       label: "Today's Bookings",
       value: String(todayJobs.length),
       sub: `${inProgressCount} in progress`,
-      accent: "#1a6b5a",
+      accent: "var(--primary)",
     },
     {
       label: "Pending Confirmation",

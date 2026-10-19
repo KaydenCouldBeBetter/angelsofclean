@@ -117,24 +117,24 @@ function CommercialStep2Content() {
                   key={area.id}
                   className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${
                     isChecked
-                      ? "border-teal-600 bg-teal-50"
+                      ? "border-primary bg-primary/5"
                       : "border-zinc-200 bg-white hover:border-zinc-300"
                   }`}
                 >
                   {/* The real checkbox is visually hidden; the box after it is
-                      its picture, so it's hidden from screen readers and
-                      shows the focus ring the hidden input can't. */}
+                      its picture, so it's hidden from screen readers. The
+                      focus ring goes on this label (see globals.css). */}
                   <input
                     type="checkbox"
                     checked={isChecked}
                     onChange={() => toggleArea(area.id)}
-                    className="peer sr-only"
+                    className="sr-only"
                   />
                   <div
                     aria-hidden="true"
-                    className={`w-5 h-5 rounded flex-shrink-0 border-2 flex items-center justify-center transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-teal-700 peer-focus-visible:ring-offset-2 ${
+                    className={`w-5 h-5 rounded flex-shrink-0 border-2 flex items-center justify-center transition-colors ${
                       isChecked
-                        ? "bg-teal-600 border-teal-600"
+                        ? "bg-primary border-primary"
                         : "border-zinc-300 bg-white"
                     }`}
                   >
@@ -157,7 +157,7 @@ function CommercialStep2Content() {
                   </div>
                   <span
                     className={`text-sm font-medium ${
-                      isChecked ? "text-teal-700" : "text-zinc-700"
+                      isChecked ? "text-primary" : "text-zinc-700"
                     }`}
                   >
                     {area.label}
@@ -203,7 +203,7 @@ function CommercialStep2Content() {
           </Button>
           <Link
             href="/commercial"
-            className="text-sm text-teal-700 hover:text-teal-800 transition-colors"
+            className="text-sm text-primary hover:text-primary-pressed transition-colors"
           >
             ← Back to Facility Info
           </Link>

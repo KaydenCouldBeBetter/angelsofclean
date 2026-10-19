@@ -36,7 +36,7 @@ function EmployeeCard({ employee, todayJobs }: { employee: Employee; todayJobs: 
           <div className="flex items-center gap-3">
             {/* Avatar with status dot */}
             <div className="relative">
-              <div className="w-10 h-10 rounded-full bg-[#1a6b5a] flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
                 <span className="text-white font-bold text-sm">{employee.initials}</span>
               </div>
               <span

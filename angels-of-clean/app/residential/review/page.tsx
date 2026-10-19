@@ -161,7 +161,7 @@ export default function ReviewPage() {
             <div key={card.label} className="rounded-xl border border-zinc-200 p-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-zinc-500 uppercase tracking-wide">{card.label}</span>
-                <Link href={card.editHref} className="text-sm text-[#1a6b5a] font-medium hover:underline">Edit</Link>
+                <Link href={card.editHref} className="text-sm text-primary font-medium hover:underline">Edit</Link>
               </div>
               {card.lines.map((line, i) => (
                 <p key={i} className={i === 0 ? "mt-1 font-semibold text-zinc-900" : "text-sm text-zinc-500"}>
@@ -172,9 +172,9 @@ export default function ReviewPage() {
           ))}
 
           {/* Price card — mobile */}
-          <div className="rounded-xl border border-teal-100 bg-teal-50 p-4">
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
             <p className="text-xs text-zinc-500">Estimated Price</p>
-            <p className="font-semibold text-[#1a6b5a] mt-1">Quote provided after confirmation</p>
+            <p className="font-semibold text-primary mt-1">Quote provided after confirmation</p>
           </div>
         </div>
 
@@ -184,7 +184,7 @@ export default function ReviewPage() {
             <div key={card.label} className="rounded-xl border border-zinc-200 p-5">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-zinc-500">{card.label}</span>
-                <Link href={card.editHref} className="text-sm text-[#1a6b5a] font-medium hover:underline">Edit</Link>
+                <Link href={card.editHref} className="text-sm text-primary font-medium hover:underline">Edit</Link>
               </div>
               {card.lines.map((line, i) => (
                 <p key={i} className={i === 0 ? "font-semibold text-zinc-900" : "text-sm text-zinc-500 mt-0.5"}>
@@ -195,9 +195,9 @@ export default function ReviewPage() {
           ))}
 
           {/* Price card — desktop (teal background) */}
-          <div className="rounded-xl bg-teal-50 border border-teal-100 p-5">
+          <div className="rounded-xl bg-primary/5 border border-primary/20 p-5">
             <p className="text-xs text-zinc-500">Estimated Price</p>
-            <p className="font-semibold text-[#1a6b5a] mt-2">Quote provided after confirmation</p>
+            <p className="font-semibold text-primary mt-2">Quote provided after confirmation</p>
           </div>
         </div>
 
@@ -217,12 +217,12 @@ export default function ReviewPage() {
           <button
             onClick={handleConfirm}
             disabled={isSubmitting}
-            className="w-full h-14 rounded-xl bg-[#1a6b5a] text-white text-base font-semibold hover:bg-[#155a4b] transition-colors disabled:opacity-50"
+            className="w-full h-14 rounded-xl bg-primary text-white text-base font-semibold hover:bg-primary-pressed transition-colors disabled:opacity-50"
           >
             {isSubmitting ? "Submitting\u2026" : "Confirm Booking"}
           </button>
           <div className="mt-3 text-center">
-            <Link href="/residential/contact" className="text-sm font-medium text-[#1a6b5a] hover:underline">
+            <Link href="/residential/contact" className="text-sm font-medium text-primary hover:underline">
               &larr; Back
             </Link>
           </div>

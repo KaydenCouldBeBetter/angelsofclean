@@ -113,7 +113,7 @@ export function UnassignedTray({ byDay, from, to }: UnassignedTrayProps) {
                     <li key={job.id}>
                       <Link
                         href={`/admin/bookings/${job.id}`}
-                        className={`flex min-h-11 items-center gap-2 rounded-sm border-l-[3px] px-2 py-1.5 text-xs text-zinc-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1a6b5a] ${cfg.cardBg} ${cfg.borderColor}`}
+                        className={`flex min-h-11 items-center gap-2 rounded-sm border-l-[3px] px-2 py-1.5 text-xs text-zinc-900 ${cfg.cardBg} ${cfg.borderColor}`}
                       >
                         <span className="font-semibold">{job.client}</span>
                         <span className="text-zinc-600">

@@ -106,8 +106,8 @@ function AddressPageContent() {
           </div>
 
           {/* Service area note */}
-          <div className="rounded-xl bg-teal-50 px-4 py-3">
-            <p className="text-sm text-[#1a6b5a]">
+          <div className="rounded-xl bg-primary/5 px-4 py-3">
+            <p className="text-sm text-primary">
               We currently serve: Cicero, Camillus, Syracuse, Liverpool, Baldwinsville, Brewerton, Solvay, Manlius, and Marcellus.
             </p>
           </div>
@@ -118,12 +118,12 @@ function AddressPageContent() {
           <button
             onClick={handleNext}
             disabled={!isValid}
-            className="w-[360px] h-14 rounded-xl bg-[#1a6b5a] text-white text-base font-semibold hover:bg-[#155a4b] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-[360px] h-14 rounded-xl bg-primary text-white text-base font-semibold hover:bg-primary-pressed transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {returnTo === "review" ? "Save & Return to Review" : "Next \u2192"}
           </button>
           <div className="mt-3">
-            <Link href="/residential" className="text-sm font-medium text-[#1a6b5a] hover:underline">
+            <Link href="/residential" className="text-sm font-medium text-primary hover:underline">
               &larr; Back
             </Link>
           </div>
