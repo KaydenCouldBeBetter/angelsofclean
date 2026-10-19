@@ -57,7 +57,7 @@ const STRING_FIELDS = [
   "facilityType", "sqftRange", "address", "city", "zip", "notes", "name", "businessName", "email", "phone", "frequency",
 ] as const;
 
-const LENGTH_LIMITED_FIELDS: [keyof typeof FIELD_MAX_LENGTHS, string][] = [
+const LENGTH_LIMITED_FIELDS: [keyof typeof FIELD_MAX_LENGTHS & keyof QuoteData, string][] = [
   ["name", "Contact name"],
   ["businessName", "Business name"],
   ["email", "Email address"],

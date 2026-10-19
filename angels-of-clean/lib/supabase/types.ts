@@ -2,8 +2,8 @@
 // (npm run db:types — never hand-edit that file). The generator types text
 // columns as plain `string` and jsonb as `Json`, so this file narrows the
 // columns that have a CHECK constraint, and the jsonb results of
-// assign_booking_employees and set_booking_status, back to the exact values
-// the database allows.
+// assign_booking_employees, set_booking_status and set_booking_access, back to
+// the exact values the database allows.
 
 import type { Database as GeneratedDatabase } from "./database.types";
 
@@ -76,6 +76,14 @@ export type SetBookingStatusResult =
   | { status: "refused"; booking_status: BookingStatus }
   | { status: "not_found" };
 
+// jsonb returned by set_booking_access
+// (supabase/migrations/20261019152751_booking_access.sql).
+export type SetBookingAccessResult =
+  | { status: "saved" }
+  | { status: "removed" }
+  | { status: "unchanged" }
+  | { status: "not_found" };
+
 // The generated Database with the narrowed tables and function result swapped
 // in. Passed to createServerClient / createClient so queries return these types.
 export type Database = Omit<GeneratedDatabase, "public"> & {
@@ -84,7 +92,10 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
       bookings: BookingsTable;
       commercial_quotes: CommercialQuotesTable;
     };
-    Functions: Omit<GeneratedPublic["Functions"], "assign_booking_employees" | "set_booking_status"> & {
+    Functions: Omit<
+      GeneratedPublic["Functions"],
+      "assign_booking_employees" | "set_booking_status" | "set_booking_access"
+    > & {
       assign_booking_employees: {
         Args: GeneratedPublic["Functions"]["assign_booking_employees"]["Args"];
         Returns: AssignBookingEmployeesResult;
@@ -92,6 +103,10 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
       set_booking_status: {
         Args: GeneratedPublic["Functions"]["set_booking_status"]["Args"];
         Returns: SetBookingStatusResult;
+      };
+      set_booking_access: {
+        Args: GeneratedPublic["Functions"]["set_booking_access"]["Args"];
+        Returns: SetBookingAccessResult;
       };
     };
   };

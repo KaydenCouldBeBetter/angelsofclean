@@ -11,6 +11,7 @@ describe("bookingStore", () => {
     expect(state.service).toBeNull();
     expect(state.frequency).toBeNull();
     expect(state.address).toBe("");
+    expect(state.accessInstructions).toBe("");
     expect(state.city).toBe("");
     expect(state.zip).toBe("");
     expect(state.bedrooms).toBe(2);
@@ -39,12 +40,13 @@ describe("bookingStore", () => {
     expect(state.zip).toBe("13202");
   });
 
-  it("setStep3 sets bedrooms, bathrooms, and notes", () => {
-    useBookingStore.getState().setStep3(3, 2, "Two dogs");
+  it("setStep3 sets bedrooms, bathrooms, notes, and entry instructions", () => {
+    useBookingStore.getState().setStep3(3, 2, "Skip the basement", "Gate code 4412");
     const state = useBookingStore.getState();
     expect(state.bedrooms).toBe(3);
     expect(state.bathrooms).toBe(2);
-    expect(state.notes).toBe("Two dogs");
+    expect(state.notes).toBe("Skip the basement");
+    expect(state.accessInstructions).toBe("Gate code 4412");
   });
 
   it("setStep4 sets date and timeSlot", () => {
@@ -73,7 +75,7 @@ describe("bookingStore", () => {
     // Set all steps
     useBookingStore.getState().setStep1("moveinout", "monthly");
     useBookingStore.getState().setStep2("456 Elm St", "Liverpool", "13088");
-    useBookingStore.getState().setStep3(4, 3, "Use unscented products");
+    useBookingStore.getState().setStep3(4, 3, "Use unscented products", "Side door, code 1234");
     useBookingStore.getState().setStep4("2026-08-01", "morning");
     useBookingStore.getState().setStep5("John Doe", "john@test.com", "315-555-0200");
     useBookingStore.getState().setSubmitting(true);
@@ -85,6 +87,7 @@ describe("bookingStore", () => {
     expect(state.service).toBeNull();
     expect(state.frequency).toBeNull();
     expect(state.address).toBe("");
+    expect(state.accessInstructions).toBe("");
     expect(state.name).toBe("");
     expect(state.isSubmitting).toBe(false);
   });

@@ -32,9 +32,13 @@ export default function PrivacyPage() {
           <li>the service you choose and how often you want it</li>
           <li>the address, city and ZIP code of the home</li>
           <li>the number of bedrooms and bathrooms</li>
+          <li>any notes you add</li>
           <li>
-            any notes you add. Notes can include entry or access instructions, so please include
-            only what our team needs.
+            any entry instructions you add, such as a door or gate code or a note about pets. We
+            store these separately from the rest of your booking: only our office staff with
+            administrator access can see them, on that booking&apos;s own page. They aren&apos;t
+            shown in our booking lists or calendar, written to our activity records or server
+            logs, or included in emails. Please include only what our team needs to get in.
           </li>
           <li>the date and time window you choose</li>
           <li>your name, email address and phone number</li>
@@ -98,7 +102,8 @@ export default function PrivacyPage() {
         <LegalList>
           <li>
             Our staff who schedule and carry out your cleaning. Viewing booking and quote records
-            requires a staff sign-in.
+            requires a staff sign-in. Entry instructions are seen only by our office staff with
+            administrator access.
           </li>
           <li>
             Service providers that run this website for us: Supabase, which stores booking and
