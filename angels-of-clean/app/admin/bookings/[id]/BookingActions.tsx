@@ -6,6 +6,22 @@ import { assignEmployees, updateBookingStatus } from "../../actions";
 import { canChangeStatus, type StatusChangeTarget } from "../../status-config";
 import type { Employee, Job } from "@/lib/admin-types";
 
+// Not built yet: shown disabled and labelled, like the Settings page.
+function ComingSoonButton({ children }: { children: string }) {
+  return (
+    <button
+      type="button"
+      disabled
+      className="h-9 w-full rounded-lg border border-[#e2e8e6] bg-[#f7f9f8] px-3 text-[#5c5c5e] text-[13px] font-semibold cursor-not-allowed flex items-center justify-between gap-2"
+    >
+      <span>{children}</span>
+      <span className="rounded-full bg-[#fef3c7] px-2 py-0.5 text-[11px] font-semibold text-[#92400e]">
+        Coming soon
+      </span>
+    </button>
+  );
+}
+
 interface BookingActionsProps {
   job: Job;
   employees: Employee[];
@@ -164,9 +180,7 @@ export default function BookingActions({ job, employees }: BookingActionsProps) 
         </button>
       )}
 
-      <button className="h-9 w-full rounded-lg border border-[#e2e8e6] bg-[#f7f9f8] text-[#1c1c1e] text-[13px] font-semibold hover:bg-[#eef1ef] transition-colors">
-        Reschedule
-      </button>
+      <ComingSoonButton>Reschedule</ComingSoonButton>
 
       <button
         onClick={() => changeStatus("done")}
@@ -184,12 +198,8 @@ export default function BookingActions({ job, employees }: BookingActionsProps) 
         Cancel Booking
       </button>
 
-      <button className="h-9 w-full rounded-lg border border-[#e2e8e6] bg-[#f7f9f8] text-[#1c1c1e] text-[13px] font-semibold hover:bg-[#eef1ef] transition-colors">
-        Send Client Message
-      </button>
-      <button className="h-9 w-full rounded-lg border border-[#e2e8e6] bg-[#f7f9f8] text-[#1c1c1e] text-[13px] font-semibold hover:bg-[#eef1ef] transition-colors">
-        Print / Export
-      </button>
+      <ComingSoonButton>Send Client Message</ComingSoonButton>
+      <ComingSoonButton>Print / Export</ComingSoonButton>
     </div>
   );
 }
