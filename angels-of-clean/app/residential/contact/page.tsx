@@ -7,7 +7,7 @@ import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
 import { PrivacyNote } from "@/components/booking/PolicyNotes";
-import { useBookingStore } from "@/store/bookingStore";
+import { useBookingStore, useBookingHydrated } from "@/store/bookingStore";
 import { FIELD_MAX_LENGTHS } from "@/lib/constants";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,11 +20,12 @@ export default function ContactPage() {
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo");
   const store = useBookingStore();
+  const hydrated = useBookingHydrated();
   const { setStep5 } = store;
 
   useEffect(() => {
-    if (!store.date) router.replace("/residential");
-  }, [store.date, router]);
+    if (hydrated && !store.date) router.replace("/residential");
+  }, [hydrated, store.date, router]);
 
   const [name, setName] = useState(store.name || "");
   const [email, setEmail] = useState(store.email || "");

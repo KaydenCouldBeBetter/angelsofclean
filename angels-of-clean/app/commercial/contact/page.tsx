@@ -12,7 +12,7 @@ import CommercialStepper from "@/components/booking/CommercialStepper";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { useBookingStore } from "@/store/bookingStore";
+import { useBookingStore, useBookingHydrated } from "@/store/bookingStore";
 import {
   COMMERCIAL_FREQUENCIES,
   FIELD_MAX_LENGTHS,
@@ -26,10 +26,11 @@ const PHONE_REGEX = /^\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$/;
 export default function CommercialStep3() {
   const router = useRouter();
   const store = useBookingStore();
+  const hydrated = useBookingHydrated();
 
   useEffect(() => {
-    if (!store.facilityType) router.replace("/commercial");
-  }, [store.facilityType, router]);
+    if (hydrated && !store.facilityType) router.replace("/commercial");
+  }, [hydrated, store.facilityType, router]);
 
   const [name, setName] = useState(store.name || "");
   const [businessName, setBusinessName] = useState(store.businessName || "");

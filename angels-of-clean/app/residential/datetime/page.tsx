@@ -6,7 +6,7 @@ import Link from "next/link";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
-import { useBookingStore } from "@/store/bookingStore";
+import { useBookingStore, useBookingHydrated } from "@/store/bookingStore";
 import { TIME_SLOT_WINDOWS } from "@/lib/constants";
 import { addDaysToDateStr, isNyWallClockInFuture, nyTodayStr } from "@/lib/datetime";
 
@@ -62,11 +62,12 @@ export default function DateTimePage() {
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo");
   const store = useBookingStore();
+  const hydrated = useBookingHydrated();
   const { setStep4 } = store;
 
   useEffect(() => {
-    if (!store.address) router.replace("/residential");
-  }, [store.address, router]);
+    if (hydrated && !store.address) router.replace("/residential");
+  }, [hydrated, store.address, router]);
 
   const days = getWeekDays();
   // Only trust a stored date if it's still one of the offered (future) days —
