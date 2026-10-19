@@ -1,6 +1,7 @@
 "use client";
 
 import { useBookingStore } from "@/store/bookingStore";
+import { TIME_LABELS } from "@/lib/constants";
 
 const SERVICE_LABELS: Record<string, string> = {
   standard: "Standard Clean",
@@ -13,11 +14,6 @@ const FREQUENCY_LABELS: Record<string, string> = {
   weekly: "Weekly",
   "bi-weekly": "Bi-weekly",
   monthly: "Monthly",
-};
-
-const TIMESLOT_LABELS: Record<string, string> = {
-  morning: "Morning (8am\u201312pm)",
-  afternoon: "Afternoon (12pm\u20134pm)",
 };
 
 function formatSummaryDate(iso: string): string {
@@ -68,7 +64,7 @@ export default function BookingSummary() {
   if (store.date && store.timeSlot) {
     rows.push({
       label: "Date & Time",
-      value: `${formatSummaryDate(store.date)} \u00B7 ${TIMESLOT_LABELS[store.timeSlot] ?? store.timeSlot}`,
+      value: `${formatSummaryDate(store.date)} \u00B7 ${TIME_LABELS[store.timeSlot] ?? store.timeSlot}`,
     });
   }
 

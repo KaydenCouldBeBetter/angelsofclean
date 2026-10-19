@@ -10,7 +10,14 @@ import type { EventContentArg, DatesSetArg, DayCellContentArg } from "@fullcalen
 import { STATUS_CONFIG } from "../status-config";
 import type { Job, Employee } from "@/lib/admin-types";
 import NewBookingModal from "../NewBookingModal";
-import { formatNy, formatNyTimeRange, nyDateStr, nyTodayStr, nyWallClockISO } from "@/lib/datetime";
+import {
+  formatNy,
+  formatNyTimeRange,
+  formatWallClockTime,
+  nyDateStr,
+  nyTodayStr,
+  nyWallClockISO,
+} from "@/lib/datetime";
 
 interface CalendarViewProps {
   jobs: Job[];
@@ -343,7 +350,7 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
       slotMinTime="07:00:00"
       slotMaxTime="17:00:00"
       slotDuration="01:00:00"
-      slotLabelFormat={{ hour: "numeric", meridiem: "short" }}
+      slotLabelFormat={(arg) => formatWallClockTime(arg.date.marker)}
       allDaySlot={false}
       weekends={true}
       events={fcEvents}
