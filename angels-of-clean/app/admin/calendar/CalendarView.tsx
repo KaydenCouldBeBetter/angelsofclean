@@ -8,7 +8,7 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import type { EventContentArg, DatesSetArg, DayCellContentArg } from "@fullcalendar/core";
 import { STATUS_CONFIG } from "../status-config";
-import type { Job, Employee } from "@/lib/admin-types";
+import type { Job, StaffMember } from "@/lib/admin-types";
 import NewBookingModal from "../NewBookingModal";
 import {
   formatNy,
@@ -21,7 +21,7 @@ import {
 
 interface CalendarViewProps {
   jobs: Job[];
-  employeeMap: Record<string, Employee>;
+  employeeMap: Record<string, StaffMember>;
 }
 
 // FullCalendar is configured with timeZone="UTC" (UTC-coercion — no timezone

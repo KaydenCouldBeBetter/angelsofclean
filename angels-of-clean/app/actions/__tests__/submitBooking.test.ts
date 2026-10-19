@@ -14,21 +14,31 @@ const bookingsDeleteEqMock = vi.fn<(column: string, value: string) => Promise<{ 
 );
 const bookingsDeleteMock = vi.fn(() => ({ eq: bookingsDeleteEqMock }));
 
+function fromTable(table: string) {
+  if (table === "bookings") return { insert: bookingsInsertMock, delete: bookingsDeleteMock };
+  if (table === "activity_log") return { insert: activityLogInsertMock };
+  if (table === "booking_access") return { insert: accessInsertMock };
+  throw new Error(`Unexpected table in test: ${table}`);
+}
+
+// The public path writes through the service role; the admin path through
+// the admin's own session client (from requireAdmin). Same tables, so both
+// share the spies above; these two tell the clients apart.
+const createServiceRoleClientMock = vi.fn(() => ({ from: fromTable }));
+const sessionFromMock = vi.fn(fromTable);
+
 vi.mock("@/lib/supabase/service", () => ({
-  createServiceRoleClient: () => ({
-    from: (table: string) => {
-      if (table === "bookings") return { insert: bookingsInsertMock, delete: bookingsDeleteMock };
-      if (table === "activity_log") return { insert: activityLogInsertMock };
-      if (table === "booking_access") return { insert: accessInsertMock };
-      throw new Error(`Unexpected table in test: ${table}`);
-    },
-  }),
+  createServiceRoleClient: () => createServiceRoleClientMock(),
 }));
 
 // adminCreateBooking derives the actor from the verified session.
 vi.mock("@/lib/supabase/require-admin", () => ({
   requireAdmin: vi.fn(() =>
-    Promise.resolve({ ok: true, user: { email: "admin@example.com" } }),
+    Promise.resolve({
+      ok: true,
+      user: { email: "admin@example.com" },
+      supabase: { from: sessionFromMock },
+    }),
   ),
 }));
 
@@ -352,8 +362,9 @@ describe("submitBooking", () => {
 });
 
 // B38: door codes live in booking_access, never in bookings.notes, the
-// activity log or the server logs.
-describe.each(ACTIONS)("%s entry instructions", (_name, action) => {
+// activity log or the server logs. Public form only: the admin path refuses
+// them (it couldn't roll a booking back; see adminCreateBooking below).
+describe.each([ACTIONS[0]])("%s entry instructions", (_name, action) => {
   const SECRET = "Side gate code 4412, the cat stays inside";
 
   beforeEach(() => {
@@ -640,5 +651,52 @@ describe("adminCreateBooking", () => {
       booking_id: "def-456",
       description: "Booking created by admin@example.com",
     });
+  });
+
+  it("writes through the admin's session and never creates a service-role client", async () => {
+    singleMock.mockResolvedValue({ data: { id: "def-456", booking_number: 1043 }, error: null });
+
+    const result = await adminCreateBooking(VALID_INPUT);
+
+    expect(result.success).toBe(true);
+    expect(sessionFromMock).toHaveBeenCalledWith("bookings");
+    expect(sessionFromMock).toHaveBeenCalledWith("activity_log");
+    expect(createServiceRoleClientMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses entry instructions without touching the database", async () => {
+    const result = await adminCreateBooking({ ...VALID_INPUT, accessInstructions: "Code 4412" });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Add entry instructions from the booking's page.",
+    });
+    expect(bookingsInsertMock).not.toHaveBeenCalled();
+    expect(accessInsertMock).not.toHaveBeenCalled();
+    expect(createServiceRoleClientMock).not.toHaveBeenCalled();
+  });
+
+  it.each([["left out", undefined], ["blank", "  "]])(
+    "accepts a booking whose entry instructions are %s",
+    async (_case, accessInstructions) => {
+      singleMock.mockResolvedValue({ data: { id: "def-456", booking_number: 1043 }, error: null });
+
+      const result = await adminCreateBooking({ ...VALID_INPUT, accessInstructions });
+
+      expect(result.success).toBe(true);
+      expect(accessInsertMock).not.toHaveBeenCalled();
+    },
+  );
+});
+
+describe("submitBooking client", () => {
+  it("still writes through the service role", async () => {
+    singleMock.mockResolvedValue({ data: { id: "abc-123", booking_number: 1042 }, error: null });
+
+    const result = await submitBooking(VALID_INPUT, HUMAN);
+
+    expect(result.success).toBe(true);
+    expect(createServiceRoleClientMock).toHaveBeenCalledTimes(1);
+    expect(sessionFromMock).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,6 @@
 import { getJobsInRange, getEmployees } from "@/lib/supabase/queries";
 import { formatNy } from "@/lib/datetime";
+import { toStaffMap } from "@/lib/admin-types";
 import CalendarView from "./CalendarView";
 import LoadError from "../LoadError";
 
@@ -24,7 +25,7 @@ export default async function AdminCalendarPage() {
         <div className="flex-1 overflow-auto p-0 admin-calendar">
           <CalendarView
             jobs={jobs.data}
-            employeeMap={Object.fromEntries(employees.data.map((e) => [e.id, e]))}
+            employeeMap={toStaffMap(employees.data)}
           />
         </div>
       ) : (

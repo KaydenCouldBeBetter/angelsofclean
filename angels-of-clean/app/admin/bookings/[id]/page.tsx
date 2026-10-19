@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getJobById, getActivityLog, getBookingAccess, getEmployees } from "@/lib/supabase/queries";
 import { DASHBOARD_STATUS } from "../../status-config";
 import { formatNy, formatNyTime, formatNyTimeRange } from "@/lib/datetime";
+import { toStaffMember } from "@/lib/admin-types";
 import BookingActions from "./BookingActions";
 import EntryInstructions from "./EntryInstructions";
 import LoadError from "../../LoadError";
@@ -20,12 +21,36 @@ function formatSubmitted(iso: string) {
   return `${date} · ${formatNyTime(iso)}`;
 }
 
+// Booking ids are UUIDs. Postgres rejects anything else as an error, which
+// would otherwise show "couldn't load" for what is really a bad link.
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function BookingNotFound() {
+  return (
+    <>
+      <header className="flex-shrink-0 h-16 bg-white border-b border-[#e2e8e6] flex items-center px-8">
+        <h1 className="font-semibold text-lg text-[#1c1c1e]">Booking not found</h1>
+      </header>
+      <div className="flex-1 flex items-center justify-center bg-[#f7f9f8]">
+        <div className="text-center">
+          <p className="text-[#5c5c5e] mb-4">This booking does not exist.</p>
+          <Link href="/admin/bookings" className="text-[#1a6b5a] font-medium hover:underline">
+            &larr; Back to Bookings
+          </Link>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default async function BookingDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  if (!UUID_PATTERN.test(id)) return <BookingNotFound />;
+
   // A failed entry-instructions lookup only affects its own card (below), so
   // it isn't part of the whole-page error check.
   const [jobResult, activityResult, employeesResult, accessResult] = await Promise.all([
@@ -55,23 +80,7 @@ export default async function BookingDetailPage({
   const activityLog = activityResult.data;
   const employees = employeesResult.data;
 
-  if (!job) {
-    return (
-      <>
-        <header className="flex-shrink-0 h-16 bg-white border-b border-[#e2e8e6] flex items-center px-8">
-          <h1 className="font-semibold text-lg text-[#1c1c1e]">Booking not found</h1>
-        </header>
-        <div className="flex-1 flex items-center justify-center bg-[#f7f9f8]">
-          <div className="text-center">
-            <p className="text-[#5c5c5e] mb-4">This booking does not exist.</p>
-            <Link href="/admin/bookings" className="text-[#1a6b5a] font-medium hover:underline">
-              &larr; Back to Bookings
-            </Link>
-          </div>
-        </div>
-      </>
-    );
-  }
+  if (!job) return <BookingNotFound />;
 
   const employeeMap = Object.fromEntries(employees.map((e) => [e.id, e]));
   const cfg = DASHBOARD_STATUS[job.status];
@@ -164,7 +173,7 @@ export default async function BookingDetailPage({
               </div>
               <div className="h-px bg-[#e2e8e6] mx-6" />
               <div className="px-6 py-4">
-                <BookingActions job={job} employees={employees} />
+                <BookingActions job={job} employees={employees.map(toStaffMember)} />
               </div>
             </div>
 
