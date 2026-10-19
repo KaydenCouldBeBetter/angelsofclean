@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import CommercialNav from "@/components/booking/CommercialNav";
+import DesktopNavbar, { COMMERCIAL_NAV_TAGLINE } from "@/components/booking/DesktopNavbar";
 import ConfirmedWithoutDetails from "@/components/booking/ConfirmedWithoutDetails";
 import { Button } from "@/components/ui/button";
 import { useBookingStore } from "@/store/bookingStore";
@@ -50,7 +50,7 @@ export default function CommercialConfirmation() {
   if (!hasDetails) {
     return (
       <>
-        <CommercialNav />
+        <DesktopNavbar tagline={COMMERCIAL_NAV_TAGLINE} />
         <ConfirmedWithoutDetails
           title="Quote request submitted!"
           referenceLabel="Reference:"
@@ -66,7 +66,7 @@ export default function CommercialConfirmation() {
 
   return (
     <>
-      <CommercialNav />
+      <DesktopNavbar tagline={COMMERCIAL_NAV_TAGLINE} />
 
       <div className="max-w-sm mx-auto md:max-w-3xl px-4 pt-8 pb-12 md:pt-14 md:px-8">
         {/* Success header */}

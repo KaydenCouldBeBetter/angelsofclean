@@ -9,8 +9,8 @@ import BottomCTA from "@/components/booking/BottomCTA";
 import { AgreementNote } from "@/components/booking/PolicyNotes";
 import SubmitErrorAlert from "@/components/booking/SubmitErrorAlert";
 import ServiceUnavailable from "@/components/booking/ServiceUnavailable";
-import CommercialNav from "@/components/booking/CommercialNav";
-import CommercialStepper from "@/components/booking/CommercialStepper";
+import DesktopNavbar, { COMMERCIAL_NAV_TAGLINE } from "@/components/booking/DesktopNavbar";
+import DesktopStepper from "@/components/booking/DesktopStepper";
 import { Button } from "@/components/ui/button";
 import { useBookingStore, useBookingHydrated } from "@/store/bookingStore";
 import {
@@ -18,6 +18,7 @@ import {
   SQFT_DISPLAY,
   COMMERCIAL_SERVICE_AREAS,
   COMMERCIAL_FREQUENCY_LABELS,
+  COMMERCIAL_STEP_LABELS,
   SCHEDULE_PREFERENCE_LABELS,
 } from "@/lib/constants";
 import { submitCommercialQuote, type QuoteResult } from "@/app/actions/submitCommercialQuote";
@@ -93,7 +94,7 @@ export default function CommercialReview() {
   if (unavailable) {
     return (
       <>
-        <CommercialNav />
+        <DesktopNavbar tagline={COMMERCIAL_NAV_TAGLINE} />
         <ServiceUnavailable subject="request" onRetry={handleSubmit} retrying={isSubmitting} />
       </>
     );
@@ -102,8 +103,8 @@ export default function CommercialReview() {
   return (
     <>
       {/* Desktop */}
-      <CommercialNav />
-      <CommercialStepper currentStep={4} />
+      <DesktopNavbar tagline={COMMERCIAL_NAV_TAGLINE} />
+      <DesktopStepper steps={COMMERCIAL_STEP_LABELS} currentStep={4} />
 
       {/* Mobile header */}
       <div className="md:hidden">

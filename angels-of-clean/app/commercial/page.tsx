@@ -6,8 +6,9 @@ import Link from "next/link";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
-import CommercialNav from "@/components/booking/CommercialNav";
-import CommercialStepper from "@/components/booking/CommercialStepper";
+import DesktopNavbar, { COMMERCIAL_NAV_TAGLINE } from "@/components/booking/DesktopNavbar";
+import DesktopStepper from "@/components/booking/DesktopStepper";
+import Selectable, { SelectableGroup } from "@/components/booking/Selectable";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import { useBookingStore } from "@/store/bookingStore";
 import {
   COMMERCIAL_FACILITY_TYPES,
   COMMERCIAL_SQFT_RANGES,
+  COMMERCIAL_STEP_LABELS,
   FIELD_MAX_LENGTHS,
   SERVICE_AREA_ZIPS,
 } from "@/lib/constants";
@@ -57,8 +59,8 @@ function CommercialStep1Content() {
   return (
     <>
       {/* Desktop */}
-      <CommercialNav />
-      <CommercialStepper currentStep={1} />
+      <DesktopNavbar tagline={COMMERCIAL_NAV_TAGLINE} />
+      <DesktopStepper steps={COMMERCIAL_STEP_LABELS} currentStep={1} />
 
       {/* Mobile header */}
       <div className="md:hidden">
@@ -80,31 +82,23 @@ function CommercialStep1Content() {
           <Label className="text-sm font-semibold text-zinc-900 mb-3 block">
             Facility Type
           </Label>
-          <div
-            role="radiogroup"
+          <SelectableGroup
+            type="radio"
             aria-label="Facility type"
             className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3"
           >
-            {COMMERCIAL_FACILITY_TYPES.map((ft) => {
-              const isSelected = facilityType === ft.id;
-              return (
-                <button
-                  key={ft.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={isSelected}
-                  onClick={() => setFacilityType(ft.id)}
-                  className={`h-12 md:h-12 rounded-xl border-2 text-sm font-medium transition-colors px-3 ${
-                    isSelected
-                      ? "border-primary bg-primary/5 text-primary"
-                      : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
-                  }`}
-                >
-                  {ft.label}
-                </button>
-              );
-            })}
-          </div>
+            {COMMERCIAL_FACILITY_TYPES.map((ft) => (
+              <Selectable
+                key={ft.id}
+                value={ft.id}
+                selected={facilityType === ft.id}
+                onSelect={() => setFacilityType(ft.id)}
+                className="flex items-center justify-center h-12 px-3"
+              >
+                {ft.label}
+              </Selectable>
+            ))}
+          </SelectableGroup>
         </div>
 
         {/* Square Footage */}
@@ -112,32 +106,24 @@ function CommercialStep1Content() {
           <Label className="text-sm font-semibold text-zinc-900 mb-3 block">
             Approximate Square Footage
           </Label>
-          <div
-            role="radiogroup"
+          <SelectableGroup
+            type="radio"
             aria-label="Square footage range"
             className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3"
           >
-            {COMMERCIAL_SQFT_RANGES.map((range) => {
-              const isSelected = sqftRange === range.id;
-              return (
-                <button
-                  key={range.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={isSelected}
-                  onClick={() => setSqftRange(range.id)}
-                  className={`h-11 rounded-xl border-2 text-sm font-medium transition-colors px-2 md:px-3 ${
-                    isSelected
-                      ? "border-primary bg-primary text-white"
-                      : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
-                  }`}
-                >
-                  <span className="md:hidden">{range.shortLabel}</span>
-                  <span className="hidden md:inline">{range.label}</span>
-                </button>
-              );
-            })}
-          </div>
+            {COMMERCIAL_SQFT_RANGES.map((range) => (
+              <Selectable
+                key={range.id}
+                value={range.id}
+                selected={sqftRange === range.id}
+                onSelect={() => setSqftRange(range.id)}
+                className="flex items-center justify-center h-11 px-2 md:px-3"
+              >
+                <span className="md:hidden">{range.shortLabel}</span>
+                <span className="hidden md:inline">{range.label}</span>
+              </Selectable>
+            ))}
+          </SelectableGroup>
         </div>
 
         {/* Service Address */}
