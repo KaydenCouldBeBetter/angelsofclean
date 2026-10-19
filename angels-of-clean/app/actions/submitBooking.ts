@@ -21,6 +21,10 @@ export interface BookingData {
   name: string;
   email: string;
   phone: string;
+  // Entry instructions (door code, gate, pets). Optional so callers without
+  // the field (the admin New Booking form) still match. Stored in
+  // booking_access, never in notes, and never logged.
+  accessInstructions?: string;
 }
 
 export interface BookingResult {
@@ -51,6 +55,7 @@ const LENGTH_LIMITED_FIELDS: [keyof typeof FIELD_MAX_LENGTHS & keyof BookingData
   ["address", "Address"],
   ["city", "City"],
   ["notes", "Special instructions"],
+  ["accessInstructions", "Entry instructions"],
 ];
 
 // Server Action arguments come straight from the caller: the BookingData type
@@ -60,6 +65,7 @@ function hasBookingShape(data: unknown): data is BookingData {
   const record = data as Record<string, unknown>;
   return (
     STRING_FIELDS.every((field) => typeof record[field] === "string") &&
+    (record.accessInstructions === undefined || typeof record.accessInstructions === "string") &&
     Number.isInteger(record.bedrooms) &&
     Number.isInteger(record.bathrooms)
   );
@@ -89,7 +95,7 @@ async function createBooking(
 
   for (const [field, label] of LENGTH_LIMITED_FIELDS) {
     const max = FIELD_MAX_LENGTHS[field];
-    if (data[field].length > max) {
+    if ((data[field] ?? "").length > max) {
       return { success: false, error: `${label} must be ${max} characters or fewer.` };
     }
   }
@@ -194,6 +200,27 @@ async function createBooking(
   if (insertError || !booking) {
     logDbError(`${logLabel}: insert`, insertError);
     return { success: false, error: "Something went wrong. Please try again.", unavailable: true };
+  }
+
+  // A separate, admin-only table (booking_access), so list and calendar
+  // queries on bookings can never pick the instructions up. If they can't be
+  // stored, the booking is taken back out: the customer is told to try again
+  // rather than having a cleaner turn up without the door code.
+  const accessInstructions = data.accessInstructions?.trim();
+  if (accessInstructions) {
+    const { error: accessError } = await supabase
+      .from("booking_access")
+      .insert({ booking_id: booking.id, instructions: accessInstructions });
+
+    if (accessError) {
+      logDbError(`${logLabel}: access insert`, accessError);
+      const { error: rollbackError } = await supabase
+        .from("bookings")
+        .delete()
+        .eq("id", booking.id);
+      if (rollbackError) logDbError(`${logLabel}: rollback`, rollbackError);
+      return { success: false, error: "Something went wrong. Please try again.", unavailable: true };
+    }
   }
 
   const { error: activityError } = await supabase.from("activity_log").insert({

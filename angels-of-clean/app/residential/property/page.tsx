@@ -63,9 +63,10 @@ function PropertyPageContent() {
   const [bedrooms, setBedrooms] = useState(store.bedrooms);
   const [bathrooms, setBathrooms] = useState(store.bathrooms);
   const [notes, setNotes] = useState(store.notes);
+  const [accessInstructions, setAccessInstructions] = useState(store.accessInstructions);
 
   function handleNext() {
-    setStep3(bedrooms, bathrooms, notes);
+    setStep3(bedrooms, bathrooms, notes, accessInstructions);
     router.push(returnTo === "review" ? "/residential/review" : "/residential/datetime");
   }
 
@@ -108,11 +109,34 @@ function PropertyPageContent() {
           <Label htmlFor="notes">Special instructions (optional)</Label>
           <Textarea
             id="notes"
-            placeholder="E.g., skip the basement, two friendly dogs, key under the mat..."
+            placeholder="E.g., skip the basement, use unscented products..."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             maxLength={FIELD_MAX_LENGTHS.notes}
             className="min-h-24 resize-none"
+          />
+        </div>
+
+        {/* Stored apart from the notes (booking_access) and seen only by
+            admins, so door codes stay out of lists, the calendar and logs. */}
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="access-instructions">
+            Entry instructions (optional)
+          </Label>
+          <p id="access-instructions-hint" className="text-sm text-zinc-600">
+            Door code, gate, pets. Kept separate from your other booking details and seen only by
+            our office staff.
+          </p>
+          <Textarea
+            id="access-instructions"
+            aria-describedby="access-instructions-hint"
+            placeholder="E.g., side gate code 4412, the cat stays inside"
+            value={accessInstructions}
+            onChange={(e) => setAccessInstructions(e.target.value)}
+            maxLength={FIELD_MAX_LENGTHS.accessInstructions}
+            autoComplete="off"
+            spellCheck={false}
+            className="min-h-20 resize-none"
           />
         </div>
 

@@ -46,6 +46,9 @@ interface BookingState {
   bedrooms: number;
   bathrooms: number;
   notes: string;
+  // Entry instructions (door code, gate, pets). Sent to booking_access, never
+  // to notes; cleared with everything else on the confirmation page.
+  accessInstructions: string;
 
   // ── Residential Step 4 ──────────────────────────────────────────────
   date: string;
@@ -86,7 +89,12 @@ interface BookingState {
   // ── Residential actions ─────────────────────────────────────────────
   setStep1: (service: ServiceType, frequency: Frequency) => void;
   setStep2: (address: string, city: string, zip: string) => void;
-  setStep3: (bedrooms: number, bathrooms: number, notes: string) => void;
+  setStep3: (
+    bedrooms: number,
+    bathrooms: number,
+    notes: string,
+    accessInstructions: string
+  ) => void;
   setStep4: (date: string, timeSlot: TimeSlot) => void;
   setStep5: (name: string, email: string, phone: string) => void;
 
@@ -138,6 +146,7 @@ const defaultState = {
   bedrooms: 2,
   bathrooms: 1,
   notes: "",
+  accessInstructions: "",
   date: "",
   timeSlot: null as TimeSlot,
   name: "",
@@ -170,7 +179,8 @@ export const useBookingStore = create<BookingState>()(
       setStep1: (service, frequency) =>
         set((state) => ({ service, frequency, formStartedAt: state.formStartedAt ?? Date.now() })),
       setStep2: (address, city, zip) => set({ address, city, zip }),
-      setStep3: (bedrooms, bathrooms, notes) => set({ bedrooms, bathrooms, notes }),
+      setStep3: (bedrooms, bathrooms, notes, accessInstructions) =>
+        set({ bedrooms, bathrooms, notes, accessInstructions }),
       setStep4: (date, timeSlot) => set({ date, timeSlot, dateExpired: false }),
       setStep5: (name, email, phone) => set({ name, email, phone }),
 
@@ -217,6 +227,7 @@ export const useBookingStore = create<BookingState>()(
         bedrooms: state.bedrooms,
         bathrooms: state.bathrooms,
         notes: state.notes,
+        accessInstructions: state.accessInstructions,
         date: state.date,
         timeSlot: state.timeSlot,
         name: state.name,
