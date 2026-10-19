@@ -14,7 +14,6 @@ export default function DesktopStepper({ steps, currentStep }: DesktopStepperPro
         const stepNum = i + 1;
         const isCompleted = stepNum < currentStep;
         const isCurrent = stepNum === currentStep;
-        const isUpcoming = stepNum > currentStep;
 
         return (
           <div key={step.label} className="flex items-center">
