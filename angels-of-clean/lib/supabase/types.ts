@@ -1,160 +1,57 @@
-// Hand-written row types mirroring the Supabase schema (see plan SQL).
-// Not generated — keep in sync manually if columns change.
+// Row types for the app, built from the generated lib/supabase/database.types.ts
+// (npm run db:types — never hand-edit that file). The generator types text
+// columns as plain `string` and jsonb as `Json`, so this file narrows the
+// columns that have a CHECK constraint, and assign_booking_employees' result,
+// back to the exact values the database allows.
 
-export type BookingStatus = "pending" | "confirmed" | "active" | "done" | "cancelled";
+import type { Database as GeneratedDatabase } from "./database.types";
 
-// Row shapes are `type` aliases, not `interface`s — TypeScript interfaces are
-// "open" (can be augmented via declaration merging) and don't satisfy a
-// `Record<string, unknown>` conditional-type check the way object type
-// literals do, which is exactly what postgrest-js's GenericTable requires.
-export type EmployeeRow = {
-  id: string;
-  name: string;
-  initials: string;
-  phone: string;
-  hired_date: string;
-  created_at: string;
-};
+type GeneratedPublic = GeneratedDatabase["public"];
+type GeneratedTables = GeneratedPublic["Tables"];
 
-export type BookingRow = {
-  id: string;
-  booking_number: number;
-  client_name: string;
-  email: string;
-  phone: string;
+export type BookingStatus = GeneratedPublic["Enums"]["booking_status"];
+
+// Values allowed by each column's CHECK constraint (supabase/migrations/).
+type BookingColumns = {
   service_type: "standard" | "deep" | "moveinout";
   frequency: "one-time" | "weekly" | "bi-weekly" | "monthly";
-  address: string;
-  city: string;
-  zip: string;
-  bedrooms: number;
-  bathrooms: number;
-  notes: string | null;
-  scheduled_date: string;
   time_slot: "morning" | "afternoon";
-  start_at: string;
-  end_at: string;
-  status: BookingStatus;
-  submitted_at: string;
-  created_at: string;
-  updated_at: string;
 };
 
-export type BookingEmployeeRow = {
-  booking_id: string;
-  employee_id: string;
-  assigned_at: string;
-};
-
-export type ActivityLogRow = {
-  id: string;
-  booking_id: string;
-  description: string;
-  created_at: string;
-};
-
-export type CommercialQuoteRow = {
-  id: string;
-  quote_number: number;
-  business_name: string;
-  contact_name: string;
-  email: string;
-  phone: string;
+type CommercialQuoteColumns = {
   facility_type: "office" | "retail" | "medical" | "warehouse" | "school" | "restaurant";
   sqft_range: "<1k" | "1k-2k" | "2k-5k" | "5k+";
-  address: string;
-  city: string;
-  zip: string;
-  floors: number;
-  service_areas: string[];
   frequency: "daily" | "2-3x" | "weekly" | "bi-weekly" | "monthly" | "one-time";
   schedule_preference: "before" | "during" | "after" | "weekends" | null;
-  notes: string | null;
-  submitted_at: string;
 };
 
-export type Database = {
-  public: {
-    Tables: {
-      employees: {
-        Row: EmployeeRow;
-        Insert: Omit<EmployeeRow, "id" | "created_at">;
-        Update: Partial<Omit<EmployeeRow, "id" | "created_at">>;
-        Relationships: [];
-      };
-      bookings: {
-        Row: BookingRow;
-        Insert: Omit<
-          BookingRow,
-          "id" | "booking_number" | "status" | "submitted_at" | "created_at" | "updated_at"
-        > & {
-          status?: BookingStatus;
-        };
-        Update: Partial<Omit<BookingRow, "id" | "booking_number" | "created_at">>;
-        Relationships: [];
-      };
-      booking_employees: {
-        Row: BookingEmployeeRow;
-        Insert: Omit<BookingEmployeeRow, "assigned_at">;
-        Update: Partial<BookingEmployeeRow>;
-        Relationships: [
-          {
-            foreignKeyName: "booking_employees_booking_id_fkey";
-            columns: ["booking_id"];
-            isOneToOne: false;
-            referencedRelation: "bookings";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "booking_employees_employee_id_fkey";
-            columns: ["employee_id"];
-            isOneToOne: false;
-            referencedRelation: "employees";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      activity_log: {
-        Row: ActivityLogRow;
-        Insert: Omit<ActivityLogRow, "id" | "created_at">;
-        Update: Partial<Omit<ActivityLogRow, "id" | "created_at">>;
-        Relationships: [
-          {
-            foreignKeyName: "activity_log_booking_id_fkey";
-            columns: ["booking_id"];
-            isOneToOne: false;
-            referencedRelation: "bookings";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      commercial_quotes: {
-        Row: CommercialQuoteRow;
-        Insert: Omit<CommercialQuoteRow, "id" | "quote_number" | "submitted_at">;
-        Update: Partial<Omit<CommercialQuoteRow, "id" | "quote_number" | "submitted_at">>;
-        Relationships: [];
-      };
-    };
-    Views: Record<string, never>;
-    Functions: {
-      check_rate_limit: {
-        Args: { p_bucket: string; p_limit: number; p_window_seconds: number };
-        Returns: boolean;
-      };
-      assign_booking_employees: {
-        Args: {
-          p_booking_id: string;
-          p_employee_ids: string[];
-          p_expected_employee_ids: string[];
-          p_allow_overlap?: boolean;
-        };
-        Returns: AssignBookingEmployeesResult;
-      };
-    };
-  };
+// Replaces the types of C's columns in T, keeping T's optional/required
+// modifiers (a homomorphic mapped type), so Insert/Update stay as generated.
+type NarrowColumns<T, C> = { [K in keyof T]: K extends keyof C ? C[K] : T[K] };
+
+// C may only name columns the generated row has, with types it accepts —
+// a renamed, dropped or retyped column fails to compile here after db:types.
+type NarrowTable<
+  T extends { Row: object; Insert: object; Update: object; Relationships: unknown },
+  C extends Partial<T["Row"]> & { [K in Exclude<keyof C, keyof T["Row"]>]: never },
+> = {
+  Row: NarrowColumns<T["Row"], C>;
+  Insert: NarrowColumns<T["Insert"], C>;
+  Update: NarrowColumns<T["Update"], C>;
+  Relationships: T["Relationships"];
 };
 
-// jsonb returned by assign_booking_employees (supabase/006).
+type BookingsTable = NarrowTable<GeneratedTables["bookings"], BookingColumns>;
+type CommercialQuotesTable = NarrowTable<GeneratedTables["commercial_quotes"], CommercialQuoteColumns>;
+
+export type EmployeeRow = GeneratedTables["employees"]["Row"];
+export type BookingRow = BookingsTable["Row"];
+export type BookingEmployeeRow = GeneratedTables["booking_employees"]["Row"];
+export type ActivityLogRow = GeneratedTables["activity_log"]["Row"];
+export type CommercialQuoteRow = CommercialQuotesTable["Row"];
+
+// jsonb returned by assign_booking_employees
+// (supabase/migrations/20261018142718_assign_booking_employees.sql).
 export type AssignmentConflictRow = {
   employee_id: string;
   employee_name: string;
@@ -170,3 +67,20 @@ export type AssignBookingEmployeesResult =
   | { status: "stale" }
   | { status: "closed"; booking_status: BookingStatus }
   | { status: "not_found" };
+
+// The generated Database with the narrowed tables and function result swapped
+// in. Passed to createServerClient / createClient so queries return these types.
+export type Database = Omit<GeneratedDatabase, "public"> & {
+  public: Omit<GeneratedPublic, "Tables" | "Functions"> & {
+    Tables: Omit<GeneratedTables, "bookings" | "commercial_quotes"> & {
+      bookings: BookingsTable;
+      commercial_quotes: CommercialQuotesTable;
+    };
+    Functions: Omit<GeneratedPublic["Functions"], "assign_booking_employees"> & {
+      assign_booking_employees: {
+        Args: GeneratedPublic["Functions"]["assign_booking_employees"]["Args"];
+        Returns: AssignBookingEmployeesResult;
+      };
+    };
+  };
+};
