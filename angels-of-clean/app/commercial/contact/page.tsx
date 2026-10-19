@@ -186,7 +186,7 @@ function CommercialStep3Content() {
                   onClick={() => setFrequency(freq.id)}
                   className={`h-11 px-4 rounded-xl border-2 text-sm font-medium transition-colors ${
                     isSelected
-                      ? "border-teal-600 bg-teal-700 text-white"
+                      ? "border-primary bg-primary text-white"
                       : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
                   }`}
                 >
@@ -218,7 +218,7 @@ function CommercialStep3Content() {
                   key={pref.id}
                   className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${
                     isSelected
-                      ? "border-teal-600 bg-teal-50"
+                      ? "border-primary bg-primary/5"
                       : "border-zinc-200 bg-white hover:border-zinc-300"
                   }`}
                 >
@@ -235,7 +235,7 @@ function CommercialStep3Content() {
                   <div
                     className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${
                       isSelected
-                        ? "border-teal-600 bg-teal-600"
+                        ? "border-primary bg-primary"
                         : "border-zinc-300"
                     }`}
                   >
@@ -245,7 +245,7 @@ function CommercialStep3Content() {
                   </div>
                   <span
                     className={`text-sm font-medium ${
-                      isSelected ? "text-teal-700" : "text-zinc-700"
+                      isSelected ? "text-primary" : "text-zinc-700"
                     }`}
                   >
                     {pref.label}
@@ -273,7 +273,7 @@ function CommercialStep3Content() {
           </Button>
           <Link
             href="/commercial/services"
-            className="text-sm text-teal-700 hover:text-teal-800 transition-colors"
+            className="text-sm text-primary hover:text-primary-pressed transition-colors"
           >
             ← Back to Service Scope
           </Link>

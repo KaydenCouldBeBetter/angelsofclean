@@ -21,10 +21,8 @@ export default function CommercialStepper({ currentStep }: CommercialStepperProp
                   <div
                     aria-current={isCurrent ? "step" : undefined}
                     className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
-                      isComplete
-                        ? "bg-teal-700 text-white"
-                        : isCurrent
-                        ? "bg-teal-600 text-white"
+                      isComplete || isCurrent
+                        ? "bg-primary text-white"
                         : "bg-zinc-200 text-zinc-500"
                     }`}
                   >
@@ -32,7 +30,7 @@ export default function CommercialStepper({ currentStep }: CommercialStepperProp
                   </div>
                   <span
                     className={`text-xs mt-1 text-center leading-tight max-w-[80px] ${
-                      isCurrent ? "text-teal-700 font-semibold" : "text-zinc-500"
+                      isCurrent ? "text-primary font-semibold" : "text-zinc-500"
                     }`}
                   >
                     {label}
@@ -43,7 +41,7 @@ export default function CommercialStepper({ currentStep }: CommercialStepperProp
                 {i < COMMERCIAL_STEP_LABELS.length - 1 && (
                   <div
                     className={`flex-1 h-0.5 mx-3 mb-5 transition-colors ${
-                      isComplete ? "bg-teal-600" : "bg-zinc-200"
+                      isComplete ? "bg-primary" : "bg-zinc-200"
                     }`}
                   />
                 )}

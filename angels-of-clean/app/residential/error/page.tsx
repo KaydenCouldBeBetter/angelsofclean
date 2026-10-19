@@ -66,7 +66,7 @@ export default function ServiceAreaErrorPage() {
         <div className="hidden lg:block mt-2">
           <button
             onClick={() => router.push("/residential/address")}
-            className="w-[360px] h-14 rounded-xl bg-[#1a6b5a] text-white text-base font-semibold hover:bg-[#155a4b] transition-colors"
+            className="w-[360px] h-14 rounded-xl bg-primary text-white text-base font-semibold hover:bg-primary-pressed transition-colors"
           >
             Try a Different Address
           </button>

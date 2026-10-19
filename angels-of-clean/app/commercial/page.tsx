@@ -96,7 +96,7 @@ function CommercialStep1Content() {
                   onClick={() => setFacilityType(ft.id)}
                   className={`h-12 md:h-12 rounded-xl border-2 text-sm font-medium transition-colors px-3 ${
                     isSelected
-                      ? "border-teal-600 bg-teal-50 text-teal-700"
+                      ? "border-primary bg-primary/5 text-primary"
                       : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
                   }`}
                 >
@@ -128,7 +128,7 @@ function CommercialStep1Content() {
                   onClick={() => setSqftRange(range.id)}
                   className={`h-11 rounded-xl border-2 text-sm font-medium transition-colors px-2 md:px-3 ${
                     isSelected
-                      ? "border-teal-600 bg-teal-700 text-white"
+                      ? "border-primary bg-primary text-white"
                       : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
                   }`}
                 >
@@ -207,7 +207,7 @@ function CommercialStep1Content() {
           </Button>
           <Link
             href="/commercial"
-            className="text-sm text-teal-700 hover:text-teal-800 transition-colors"
+            className="text-sm text-primary hover:text-primary-pressed transition-colors"
           >
             ← Back to Commercial Services
           </Link>

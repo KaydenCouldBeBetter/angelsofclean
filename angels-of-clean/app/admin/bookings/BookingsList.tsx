@@ -68,7 +68,7 @@ function EmployeeDisplay({ job, employeeMap }: { job: Job; employeeMap: Record<s
     const emp = employeeMap[job.employeeIds[0]];
     return (
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-full bg-[#1a6b5a] flex items-center justify-center flex-shrink-0">
+        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
           <span className="text-white font-bold text-[11px]">{emp.initials}</span>
         </div>
         <span className="text-[13px] text-[#1c1c1e]">{emp.name}</span>
@@ -84,7 +84,7 @@ function EmployeeDisplay({ job, employeeMap }: { job: Job; employeeMap: Record<s
         {employees.map((emp) => (
           <div
             key={emp.id}
-            className="w-[30px] h-[30px] rounded-full bg-[#1a6b5a] flex items-center justify-center border-2 border-white flex-shrink-0"
+            className="w-[30px] h-[30px] rounded-full bg-primary flex items-center justify-center border-2 border-white flex-shrink-0"
           >
             <span className="text-white font-bold text-[10px]">{emp.initials}</span>
           </div>
@@ -146,7 +146,7 @@ function TabLink({ href, active, children }: { href: string; active: boolean; ch
       href={href}
       className={`inline-flex items-center justify-center h-8 px-5 rounded-md text-[12px] font-semibold transition-colors ${
         active
-          ? "bg-[#1a6b5a] text-white"
+          ? "bg-primary text-white"
           : "bg-[#f0f0f0] text-[#5c5c5e] font-medium hover:bg-[#e5e5e5]"
       }`}
     >
@@ -254,7 +254,7 @@ export default function BookingsList({
                         {group.label}
                       </h3>
                       {isToday && (
-                        <span className="bg-[#1a6b5a] text-white text-[10px] font-semibold px-3 py-0.5 rounded-full">
+                        <span className="bg-primary text-white text-[10px] font-semibold px-3 py-0.5 rounded-full">
                           Today
                         </span>
                       )}

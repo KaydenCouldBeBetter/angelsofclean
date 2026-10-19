@@ -34,7 +34,7 @@ export default function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="jordan@angelsofclean.com"
-            className="w-full h-12 rounded-lg border border-zinc-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a6b5a]"
+            className="w-full h-12 rounded-lg border border-zinc-300 px-3 text-sm"
           />
         </div>
 
@@ -49,7 +49,7 @@ export default function LoginForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
-            className="w-full h-12 rounded-lg border border-zinc-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a6b5a]"
+            className="w-full h-12 rounded-lg border border-zinc-300 px-3 text-sm"
           />
         </div>
 
@@ -58,7 +58,7 @@ export default function LoginForm() {
         <button
           type="submit"
           disabled={isPending}
-          className="w-full h-[52px] rounded-lg bg-[#1a6b5a] text-white text-base font-semibold hover:bg-[#155a4b] transition-colors disabled:opacity-50 mt-1"
+          className="w-full h-[52px] rounded-lg bg-primary text-white text-base font-semibold hover:bg-primary-pressed transition-colors disabled:opacity-50 mt-1"
         >
           {isPending ? "Signing In…" : "Sign In"}
         </button>
@@ -67,7 +67,7 @@ export default function LoginForm() {
       <p className="text-center mt-4">
         <Link
           href="/admin/forgot-password"
-          className="text-sm text-[#1a6b5a] font-medium hover:underline"
+          className="text-sm text-primary font-medium hover:underline"
         >
           Forgot password?
         </Link>

@@ -51,7 +51,7 @@ export default function ResetPasswordForm() {
             aria-describedby="new-password-hint"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full h-12 rounded-lg border border-zinc-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a6b5a]"
+            className="w-full h-12 rounded-lg border border-zinc-300 px-3 text-sm"
           />
           <p id="new-password-hint" className="text-xs text-zinc-600 mt-1">
             At least {PASSWORD_MIN_LENGTH} characters.
@@ -69,7 +69,7 @@ export default function ResetPasswordForm() {
             autoComplete="new-password"
             value={confirmation}
             onChange={(e) => setConfirmation(e.target.value)}
-            className="w-full h-12 rounded-lg border border-zinc-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a6b5a]"
+            className="w-full h-12 rounded-lg border border-zinc-300 px-3 text-sm"
           />
         </div>
 
@@ -78,7 +78,7 @@ export default function ResetPasswordForm() {
         <button
           type="submit"
           disabled={isPending}
-          className="w-full h-[52px] rounded-lg bg-[#1a6b5a] text-white text-base font-semibold hover:bg-[#155a4b] transition-colors disabled:opacity-50 mt-1"
+          className="w-full h-[52px] rounded-lg bg-primary text-white text-base font-semibold hover:bg-primary-pressed transition-colors disabled:opacity-50 mt-1"
         >
           {isPending ? "Saving…" : "Save Password"}
         </button>
