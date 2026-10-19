@@ -10,7 +10,7 @@ import { AgreementNote } from "@/components/booking/PolicyNotes";
 import CommercialNav from "@/components/booking/CommercialNav";
 import CommercialStepper from "@/components/booking/CommercialStepper";
 import { Button } from "@/components/ui/button";
-import { useBookingStore } from "@/store/bookingStore";
+import { useBookingStore, useBookingHydrated } from "@/store/bookingStore";
 import {
   FACILITY_TYPE_LABELS,
   SQFT_DISPLAY,
@@ -23,6 +23,7 @@ import { submitCommercialQuote } from "@/app/actions/submitCommercialQuote";
 export default function CommercialReview() {
   const router = useRouter();
   const store = useBookingStore();
+  const hydrated = useBookingHydrated();
   const [error, setError] = useState<string | null>(null);
 
   const {
@@ -35,8 +36,8 @@ export default function CommercialReview() {
   } = store;
 
   useEffect(() => {
-    if (!facilityType || !name || !businessName) router.replace("/commercial");
-  }, [facilityType, name, businessName, router]);
+    if (hydrated && (!facilityType || !name || !businessName)) router.replace("/commercial");
+  }, [hydrated, facilityType, name, businessName, router]);
 
   const areaLabels = serviceAreas
     .map((id) => COMMERCIAL_SERVICE_AREAS.find((a) => a.id === id)?.label ?? id)
