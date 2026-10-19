@@ -18,20 +18,16 @@ import { assignEmployees, confirmBooking, updateBookingStatus } from "../actions
 
 // Chainable mocks mirroring the Supabase query builder calls the actions make.
 type DbError = { code: string; message?: string; details?: string } | null;
-// assign_booking_employees (supabase/006) returns jsonb; tests set the shape per case.
+// assign_booking_employees and set_booking_status return jsonb; tests set the
+// shape per case.
 const rpcMock = vi.fn(
   (): Promise<{ data: unknown; error: DbError }> =>
     Promise.resolve({ data: { status: "saved", added: [], removed: [], overridden: [] }, error: null }),
 );
-const updateSelectMock = vi.fn(() => Promise.resolve({ data: [{ id: "b-1" }], error: null }));
-// .eq() is chainable (confirmBooking filters on id and status) and ends in .select().
-type UpdateFilter = { eq: (column: string, value: string) => UpdateFilter; select: typeof updateSelectMock };
-const updateEqMock = vi.fn<UpdateFilter["eq"]>(() => updateFilter);
-const updateFilter: UpdateFilter = { eq: updateEqMock, select: updateSelectMock };
-const updateMock = vi.fn(() => ({ eq: updateEqMock }));
 const activityLogInsertMock = vi.fn(() => Promise.resolve({ error: null }));
+// Status changes never write a table directly (set_booking_status does both
+// writes), so "bookings" isn't mocked: a direct update would throw here.
 const fromMock = vi.fn((table: string) => {
-  if (table === "bookings") return { update: updateMock };
   if (table === "activity_log") return { insert: activityLogInsertMock };
   throw new Error(`Unexpected table in test: ${table}`);
 });
@@ -49,7 +45,6 @@ const NON_ADMIN = { ok: false, error: "You are not authorized to do this." };
 beforeEach(() => {
   vi.clearAllMocks();
   requireAdminMock.mockResolvedValue(ADMIN_CONTEXT);
-  updateSelectMock.mockResolvedValue({ data: [{ id: "b-1" }], error: null });
 });
 
 const OVERLAP = {
@@ -242,140 +237,161 @@ describe("assignEmployees", () => {
   });
 });
 
-describe("confirmBooking", () => {
-  it("rejects when there is no session at all, without touching the database", async () => {
-    requireAdminMock.mockResolvedValue(SIGNED_OUT);
+// set_booking_status (supabase/migrations/20261019032629_booking_status_flow.sql)
+// decides what's allowed; these tests cover what the actions send and how they
+// report each answer. The database side of every transition is tested in
+// supabase/tests/database/booking_status_flow.test.sql.
+describe("updateBookingStatus", () => {
+  it.each([
+    ["signed out", SIGNED_OUT, "You must be signed in to do this."],
+    ["signed in without the admin role", NON_ADMIN, "You are not authorized to do this."],
+  ])("refuses a caller who is %s, without touching the database", async (_who, auth, message) => {
+    requireAdminMock.mockResolvedValue(auth);
 
-    const result = await confirmBooking("b-1");
+    const result = await updateBookingStatus("b-1", "done");
 
-    expect(result).toEqual({
-      success: false,
-      error: "You must be signed in to do this.",
-    });
+    expect(result).toEqual({ success: false, error: message });
+    expect(rpcMock).not.toHaveBeenCalled();
     expect(fromMock).not.toHaveBeenCalled();
     expect(revalidatePathMock).not.toHaveBeenCalled();
   });
 
-  it("rejects a signed-in user without the admin role, without touching the database", async () => {
-    requireAdminMock.mockResolvedValue(NON_ADMIN);
+  it.each([
+    ["confirmed", "Confirmed"],
+    ["active", "Marked in progress"],
+    ["done", "Marked complete"],
+    ["cancelled", "Booking cancelled"],
+  ] as const)("moves a booking to %s in one call that also writes the log", async (status, label) => {
+    rpcReturns({ status: "changed", from: "pending", to: status });
 
-    const result = await confirmBooking("b-1");
-
-    expect(result).toEqual({
-      success: false,
-      error: "You are not authorized to do this.",
-    });
-    expect(fromMock).not.toHaveBeenCalled();
-    expect(revalidatePathMock).not.toHaveBeenCalled();
-  });
-
-  it("moves a pending booking to confirmed and logs the session admin's email", async () => {
-    const result = await confirmBooking("b-1");
+    const result = await updateBookingStatus("b-1", status);
 
     expect(result).toEqual({ success: true });
-    expect(updateMock).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "confirmed" }),
-    );
-    expect(updateEqMock).toHaveBeenCalledWith("id", "b-1");
-    expect(activityLogInsertMock).toHaveBeenCalledWith({
-      booking_id: "b-1",
-      description: "Confirmed by admin@example.com",
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+    // The actor is never sent: the database takes it from the session token.
+    expect(rpcMock).toHaveBeenCalledWith("set_booking_status", {
+      p_booking_id: "b-1",
+      p_status: status,
+      p_description: label,
     });
-    expect(revalidatePathMock).toHaveBeenCalledWith("/admin/dashboard");
-  });
-
-  it("only ever updates a booking that is still pending", async () => {
-    await confirmBooking("b-1");
-
-    // Without this filter a cancelled booking could be brought back.
-    expect(updateEqMock).toHaveBeenCalledWith("status", "pending");
-  });
-
-  it("refuses a booking that is no longer pending and does not log activity", async () => {
-    // The status filter matched nothing: cancelled, completed, or already confirmed.
-    updateSelectMock.mockResolvedValue({ data: [], error: null });
-
-    const result = await confirmBooking("b-1");
-
-    expect(result).toEqual({
-      success: false,
-      error: "This booking is no longer pending, so it can't be confirmed.",
-    });
-    expect(activityLogInsertMock).not.toHaveBeenCalled();
-    // Both places with a Confirm button get the booking's real status back.
+    expect(fromMock).not.toHaveBeenCalled();
     expect(revalidatePathMock).toHaveBeenCalledWith("/admin/bookings/b-1");
     expect(revalidatePathMock).toHaveBeenCalledWith("/admin/dashboard");
   });
 
-  it("logs only the error code and a correlation id when the write fails", async () => {
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    updateSelectMock.mockResolvedValue({
-      data: null,
-      error: { code: "42501", message: "row echo: jane@example.com" },
-    } as never);
+  it.each([
+    ["done", "done", "This booking is completed, so its status can't be changed."],
+    ["cancelled", "active", "This booking is cancelled, so its status can't be changed."],
+    ["done", "cancelled", "This booking is completed, so its status can't be changed."],
+    ["active", "active", "This booking is already in progress."],
+    ["pending", "done", "This booking is pending, so it can't be marked complete."],
+    ["pending", "active", "This booking is pending, so it can't be marked in progress."],
+    ["confirmed", "done", "This booking is confirmed, so it can't be marked complete."],
+  ] as const)(
+    "explains a refusal when the booking is %s and the admin asked for %s",
+    async (current, target, message) => {
+      rpcReturns({ status: "refused", booking_status: current });
 
-    const result = await confirmBooking("b-1");
+      const result = await updateBookingStatus("b-1", target);
 
-    expect(result).toEqual({
-      success: false,
-      error: "Something went wrong. Please try again.",
-    });
-    const logged = JSON.stringify(consoleSpy.mock.calls);
-    expect(logged).toContain("42501");
-    expect(logged).not.toContain("jane@example.com");
-    expect(activityLogInsertMock).not.toHaveBeenCalled();
-    consoleSpy.mockRestore();
-  });
-});
+      expect(result).toEqual({ success: false, error: message });
+      expect(fromMock).not.toHaveBeenCalled();
+      // The page reloads showing the booking's real status.
+      expect(revalidatePathMock).toHaveBeenCalledWith("/admin/bookings/b-1");
+    },
+  );
 
-describe("updateBookingStatus", () => {
-  it("rejects when there is no session at all, without touching the database", async () => {
-    requireAdminMock.mockResolvedValue(SIGNED_OUT);
-
-    const result = await updateBookingStatus("b-1", "done");
-
-    expect(result).toEqual({
-      success: false,
-      error: "You must be signed in to do this.",
-    });
-    expect(fromMock).not.toHaveBeenCalled();
-    expect(revalidatePathMock).not.toHaveBeenCalled();
-  });
-
-  it("rejects a signed-in user without the admin role, without touching the database", async () => {
-    requireAdminMock.mockResolvedValue(NON_ADMIN);
-
-    const result = await updateBookingStatus("b-1", "done");
-
-    expect(result).toEqual({
-      success: false,
-      error: "You are not authorized to do this.",
-    });
-    expect(fromMock).not.toHaveBeenCalled();
-    expect(revalidatePathMock).not.toHaveBeenCalled();
-  });
-
-  it("treats zero affected rows as failure and does not log activity", async () => {
-    updateSelectMock.mockResolvedValue({ data: [], error: null });
+  it("reports a missing booking", async () => {
+    rpcReturns({ status: "not_found" });
 
     const result = await updateBookingStatus("missing-id", "done");
 
     expect(result).toEqual({ success: false, error: "Booking not found." });
-    expect(activityLogInsertMock).not.toHaveBeenCalled();
     expect(revalidatePathMock).not.toHaveBeenCalled();
   });
 
-  it("updates the row and logs the session admin's email", async () => {
+  it.each(["pending", "reopened", "__proto__"])(
+    "refuses the target %j without calling the database",
+    async (status) => {
+      const result = await updateBookingStatus("b-1", status as never);
+
+      expect(result).toEqual({ success: false, error: "That status change isn't allowed." });
+      expect(rpcMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it("logs only the error code and a correlation id when the call fails", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    rpcMock.mockResolvedValueOnce({
+      data: null,
+      error: { code: "23514", message: "row echo: jane@example.com", details: "gate code 4321" },
+    });
+
     const result = await updateBookingStatus("b-1", "done");
 
+    expect(result).toEqual({ success: false, error: "Something went wrong. Please try again." });
+    const logged = JSON.stringify(consoleSpy.mock.calls);
+    expect(logged).toContain("23514");
+    expect(logged).not.toContain("jane@example.com");
+    expect(logged).not.toContain("gate code 4321");
+    consoleSpy.mockRestore();
+  });
+
+  it("fails closed when the status migration hasn't been run", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    // PostgREST's "function not found" error.
+    rpcMock.mockResolvedValueOnce({ data: null, error: { code: "PGRST202" } });
+
+    const result = await updateBookingStatus("b-1", "cancelled");
+
+    expect(result).toEqual({ success: false, error: "Something went wrong. Please try again." });
+    // No fallback to the old unchecked update.
+    expect(fromMock).not.toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+});
+
+describe("confirmBooking", () => {
+  it.each([
+    ["signed out", SIGNED_OUT, "You must be signed in to do this."],
+    ["signed in without the admin role", NON_ADMIN, "You are not authorized to do this."],
+  ])("refuses a caller who is %s, without touching the database", async (_who, auth, message) => {
+    requireAdminMock.mockResolvedValue(auth);
+
+    const result = await confirmBooking("b-1");
+
+    expect(result).toEqual({ success: false, error: message });
+    expect(rpcMock).not.toHaveBeenCalled();
+    expect(revalidatePathMock).not.toHaveBeenCalled();
+  });
+
+  it("confirms through set_booking_status", async () => {
+    rpcReturns({ status: "changed", from: "pending", to: "confirmed" });
+
+    const result = await confirmBooking("b-1");
+
     expect(result).toEqual({ success: true });
-    expect(updateMock).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "done" }),
-    );
-    expect(updateEqMock).toHaveBeenCalledWith("id", "b-1");
-    expect(activityLogInsertMock).toHaveBeenCalledWith({
-      booking_id: "b-1",
-      description: "Marked complete by admin@example.com",
+    expect(rpcMock).toHaveBeenCalledWith("set_booking_status", {
+      p_booking_id: "b-1",
+      p_status: "confirmed",
+      p_description: "Confirmed",
     });
+    expect(revalidatePathMock).toHaveBeenCalledWith("/admin/dashboard");
+  });
+
+  it.each([
+    ["active", "This booking is no longer pending, so it can't be confirmed."],
+    ["confirmed", "This booking is already confirmed."],
+    ["cancelled", "This booking is cancelled, so its status can't be changed."],
+    ["done", "This booking is completed, so its status can't be changed."],
+  ] as const)("refuses a booking that is already %s", async (current, message) => {
+    rpcReturns({ status: "refused", booking_status: current });
+
+    const result = await confirmBooking("b-1");
+
+    expect(result).toEqual({ success: false, error: message });
+    // Both places with a Confirm button get the booking's real status back.
+    expect(revalidatePathMock).toHaveBeenCalledWith("/admin/bookings/b-1");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/admin/dashboard");
   });
 });
