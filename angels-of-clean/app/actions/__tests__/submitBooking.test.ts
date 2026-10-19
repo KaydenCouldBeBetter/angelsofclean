@@ -198,9 +198,11 @@ describe.each(ACTIONS)("%s validation", (_name, action) => {
 
     const result = await action(VALID_INPUT);
 
+    // `unavailable` is what sends the form to the service-unavailable screen.
     expect(result).toEqual({
       success: false,
       error: "Something went wrong. Please try again.",
+      unavailable: true,
     });
     expect(activityLogInsertMock).not.toHaveBeenCalled();
 

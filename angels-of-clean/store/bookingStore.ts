@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from "react";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { TIME_SLOT_WINDOWS } from "@/lib/constants";
+import { isNyWallClockInFuture, isValidDateStr, nyDateStr } from "@/lib/datetime";
 
 // Residential types
 export type ServiceType = "standard" | "deep" | "moveinout" | null;
@@ -57,6 +59,10 @@ interface BookingState {
   // ── Submission flag ─────────────────────────────────────────────────
   isSubmitting: boolean;
 
+  // True when the saved date had passed on load and was cleared. Never
+  // persisted: it only lives long enough to explain the cleared date.
+  dateExpired: boolean;
+
   // ── Commercial Step 1 ───────────────────────────────────────────────
   facilityType: CommercialFacilityType;
   sqftRange: CommercialSqftRange;
@@ -97,7 +103,22 @@ interface BookingState {
   ) => void;
 
   setSubmitting: (value: boolean) => void;
+  clearDateExpired: () => void;
   reset: () => void;
+}
+
+/**
+ * True if a saved date can no longer be booked: malformed, on a past New York
+ * day, or (with a slot chosen) a slot whose start has already passed. Without a
+ * slot only the day matters, since a later slot may still be open today.
+ */
+export function isSavedDateExpired(date: string, timeSlot: TimeSlot, now: Date = new Date()) {
+  if (!date) return false;
+  if (!isValidDateStr(date)) return true;
+  if (timeSlot) {
+    return !isNyWallClockInFuture(date, TIME_SLOT_WINDOWS[timeSlot].start, now);
+  }
+  return date < nyDateStr(now);
 }
 
 const defaultState = {
@@ -116,6 +137,7 @@ const defaultState = {
   email: "",
   phone: "",
   isSubmitting: false,
+  dateExpired: false,
 
   // Commercial
   facilityType: null as CommercialFacilityType,
@@ -137,7 +159,7 @@ export const useBookingStore = create<BookingState>()(
       setStep1: (service, frequency) => set({ service, frequency }),
       setStep2: (address, city, zip) => set({ address, city, zip }),
       setStep3: (bedrooms, bathrooms, notes) => set({ bedrooms, bathrooms, notes }),
-      setStep4: (date, timeSlot) => set({ date, timeSlot }),
+      setStep4: (date, timeSlot) => set({ date, timeSlot, dateExpired: false }),
       setStep5: (name, email, phone) => set({ name, email, phone }),
 
       // Commercial
@@ -149,11 +171,22 @@ export const useBookingStore = create<BookingState>()(
         set({ name, businessName, email, phone, commercialFrequency: frequency, schedulePreference }),
 
       setSubmitting: (value) => set({ isSubmitting: value }),
+      clearDateExpired: () => set({ dateExpired: false }),
       reset: () => set(defaultState),
     }),
     {
       name: "booking-store",
       storage: createJSONStorage(() => sessionStorage),
+      // A saved date can go stale between visits (sessionStorage outlives a
+      // tab's idle hours): don't revive one that has passed. The slot is kept,
+      // since it is a preference rather than a date.
+      merge: (persisted, current) => {
+        const merged = { ...current, ...(persisted as Partial<BookingState> | undefined) };
+        if (isSavedDateExpired(merged.date, merged.timeSlot)) {
+          return { ...merged, date: "", dateExpired: true };
+        }
+        return merged;
+      },
       partialize: (state) => ({
         // Residential
         service: state.service,

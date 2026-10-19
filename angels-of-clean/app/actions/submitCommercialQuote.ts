@@ -35,6 +35,10 @@ export interface QuoteResult {
   success: boolean;
   quoteRef?: string;
   error?: string;
+  // Set only when the quote could not be stored (the database was unreachable
+  // or refused the insert), so the form can show the "service unavailable"
+  // screen instead of a message about the customer's input.
+  unavailable?: boolean;
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -198,7 +202,7 @@ export async function submitCommercialQuote(data: QuoteData): Promise<QuoteResul
   // success screen is exactly what this action exists to prevent.
   if (insertError || !quote) {
     logDbError("submitCommercialQuote: insert", insertError);
-    return { success: false, error: "Something went wrong. Please try again." };
+    return { success: false, error: "Something went wrong. Please try again.", unavailable: true };
   }
 
   return { success: true, quoteRef: `COM-${quote.quote_number}` };
