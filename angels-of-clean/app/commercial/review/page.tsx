@@ -7,6 +7,8 @@ import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
 import { AgreementNote } from "@/components/booking/PolicyNotes";
+import SubmitErrorAlert from "@/components/booking/SubmitErrorAlert";
+import ServiceUnavailable from "@/components/booking/ServiceUnavailable";
 import CommercialNav from "@/components/booking/CommercialNav";
 import CommercialStepper from "@/components/booking/CommercialStepper";
 import { Button } from "@/components/ui/button";
@@ -18,13 +20,14 @@ import {
   COMMERCIAL_FREQUENCY_LABELS,
   SCHEDULE_PREFERENCE_LABELS,
 } from "@/lib/constants";
-import { submitCommercialQuote } from "@/app/actions/submitCommercialQuote";
+import { submitCommercialQuote, type QuoteResult } from "@/app/actions/submitCommercialQuote";
 
 export default function CommercialReview() {
   const router = useRouter();
   const store = useBookingStore();
   const hydrated = useBookingHydrated();
   const [error, setError] = useState<string | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
 
   const {
     facilityType, sqftRange,
@@ -49,10 +52,11 @@ export default function CommercialReview() {
 
   async function handleSubmit() {
     if (isSubmitting) return;
-    setError(null);
+    // Any earlier error stays on screen while this attempt runs, so the retry
+    // button the customer just pressed doesn't vanish under them.
     setSubmitting(true);
 
-    let result;
+    let result: QuoteResult;
     try {
       result = await submitCommercialQuote({
         facilityType: facilityType ?? "",
@@ -78,11 +82,21 @@ export default function CommercialReview() {
     // The confirmation page is only ever reached with a stored quote's reference.
     if (!result.success || !result.quoteRef) {
       setSubmitting(false);
+      setUnavailable(result.unavailable === true);
       setError(result.error ?? "Something went wrong. Please try again.");
       return;
     }
 
     router.push(`/commercial/confirmation?ref=${result.quoteRef}`);
+  }
+
+  if (unavailable) {
+    return (
+      <>
+        <CommercialNav />
+        <ServiceUnavailable subject="request" onRetry={handleSubmit} retrying={isSubmitting} />
+      </>
+    );
   }
 
   return (
@@ -214,29 +228,12 @@ export default function CommercialReview() {
           </div>
 
           {error && (
-            <div
-              role="alert"
-              className="flex items-start gap-3 rounded-xl border border-red-300 bg-red-50 p-4"
-            >
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-700"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 8v4" />
-                <path d="M12 16h.01" />
-              </svg>
-              <div className="text-sm">
-                <p className="font-semibold text-red-900">Your request was not sent</p>
-                <p className="mt-0.5 text-red-800">{error}</p>
-              </div>
-            </div>
+            <SubmitErrorAlert
+              title="Your request was not sent"
+              message={error}
+              onRetry={handleSubmit}
+              retrying={isSubmitting}
+            />
           )}
 
           <AgreementNote action="Submit Quote Request" />
