@@ -76,16 +76,6 @@ export type SetBookingStatusResult =
   | { status: "refused"; booking_status: BookingStatus }
   | { status: "not_found" };
 
-// set_booking_status isn't in database.types.ts until the owner applies its
-// migration and runs npm run db:types. Its Args are written out here until
-// then; afterwards, take them from GeneratedPublic["Functions"] like
-// assign_booking_employees does.
-type SetBookingStatusArgs = {
-  p_booking_id: string;
-  p_status: BookingStatus;
-  p_description: string;
-};
-
 // The generated Database with the narrowed tables and function result swapped
 // in. Passed to createServerClient / createClient so queries return these types.
 export type Database = Omit<GeneratedDatabase, "public"> & {
@@ -100,7 +90,7 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
         Returns: AssignBookingEmployeesResult;
       };
       set_booking_status: {
-        Args: SetBookingStatusArgs;
+        Args: GeneratedPublic["Functions"]["set_booking_status"]["Args"];
         Returns: SetBookingStatusResult;
       };
     };
