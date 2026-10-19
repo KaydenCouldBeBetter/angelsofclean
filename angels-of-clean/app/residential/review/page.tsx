@@ -23,7 +23,7 @@ export default function ReviewPage() {
   const {
     service, frequency,
     address, city, zip,
-    bedrooms, bathrooms, notes,
+    bedrooms, bathrooms, notes, accessInstructions,
     date, timeSlot,
     name, email, phone,
     formStartedAt, honeypot,
@@ -61,7 +61,7 @@ export default function ReviewPage() {
         service: service ?? "",
         frequency: frequency ?? "",
         address, city, zip,
-        bedrooms, bathrooms, notes,
+        bedrooms, bathrooms, notes, accessInstructions,
         date,
         timeSlot: timeSlot ?? "",
         name, email, phone,
@@ -116,6 +116,7 @@ export default function ReviewPage() {
       lines: [
         `${bedrooms} ${bedrooms === 1 ? "Bedroom" : "Bedrooms"}, ${bathrooms} ${bathrooms === 1 ? "Bathroom" : "Bathrooms"}`,
         notes ? `Notes: ${notes}` : null,
+        accessInstructions ? `Entry instructions: ${accessInstructions}` : null,
       ].filter(Boolean) as string[],
     },
     {

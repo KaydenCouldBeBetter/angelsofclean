@@ -76,6 +76,38 @@ export type SetBookingStatusResult =
   | { status: "refused"; booking_status: BookingStatus }
   | { status: "not_found" };
 
+// jsonb returned by set_booking_access
+// (supabase/migrations/20261019152751_booking_access.sql).
+export type SetBookingAccessResult =
+  | { status: "saved" }
+  | { status: "removed" }
+  | { status: "unchanged" }
+  | { status: "not_found" };
+
+// booking_access and set_booking_access aren't in database.types.ts until the
+// owner applies 20261019152751_booking_access.sql and runs npm run db:types.
+// They are written out here until then; afterwards, take them from
+// GeneratedTables / GeneratedPublic["Functions"] like the others.
+type BookingAccessTable = {
+  Row: { booking_id: string; instructions: string; updated_at: string };
+  Insert: { booking_id: string; instructions: string; updated_at?: string };
+  Update: { booking_id?: string; instructions?: string; updated_at?: string };
+  Relationships: [
+    {
+      foreignKeyName: "booking_access_booking_id_fkey";
+      columns: ["booking_id"];
+      isOneToOne: true;
+      referencedRelation: "bookings";
+      referencedColumns: ["id"];
+    },
+  ];
+};
+
+type SetBookingAccessArgs = {
+  p_booking_id: string;
+  p_instructions: string;
+};
+
 // The generated Database with the narrowed tables and function result swapped
 // in. Passed to createServerClient / createClient so queries return these types.
 export type Database = Omit<GeneratedDatabase, "public"> & {
@@ -83,6 +115,7 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
     Tables: Omit<GeneratedTables, "bookings" | "commercial_quotes"> & {
       bookings: BookingsTable;
       commercial_quotes: CommercialQuotesTable;
+      booking_access: BookingAccessTable;
     };
     Functions: Omit<GeneratedPublic["Functions"], "assign_booking_employees" | "set_booking_status"> & {
       assign_booking_employees: {
@@ -92,6 +125,10 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
       set_booking_status: {
         Args: GeneratedPublic["Functions"]["set_booking_status"]["Args"];
         Returns: SetBookingStatusResult;
+      };
+      set_booking_access: {
+        Args: SetBookingAccessArgs;
+        Returns: SetBookingAccessResult;
       };
     };
   };
