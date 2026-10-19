@@ -31,12 +31,16 @@ export default function CommercialReview() {
     floors, serviceAreas, commercialNotes,
     name, businessName, email, phone,
     commercialFrequency, schedulePreference,
+    formStartedAt, honeypot,
     isSubmitting, setSubmitting,
   } = store;
 
+  // No start time means the wizard state predates the bot check: start over.
   useEffect(() => {
-    if (!facilityType || !name || !businessName) router.replace("/commercial");
-  }, [facilityType, name, businessName, router]);
+    if (!facilityType || !name || !businessName || formStartedAt === null) {
+      router.replace("/commercial");
+    }
+  }, [facilityType, name, businessName, formStartedAt, router]);
 
   const areaLabels = serviceAreas
     .map((id) => COMMERCIAL_SERVICE_AREAS.find((a) => a.id === id)?.label ?? id)
@@ -58,6 +62,9 @@ export default function CommercialReview() {
         name, businessName, email, phone,
         frequency: commercialFrequency ?? "",
         schedulePreference,
+      }, {
+        website: honeypot,
+        elapsedMs: Date.now() - (formStartedAt ?? Date.now()),
       });
     } catch {
       // The request never reached the server (offline, timeout).

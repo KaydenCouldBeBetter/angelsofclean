@@ -7,6 +7,7 @@ import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
 import { PrivacyNote } from "@/components/booking/PolicyNotes";
+import HoneypotField from "@/components/booking/HoneypotField";
 import CommercialNav from "@/components/booking/CommercialNav";
 import CommercialStepper from "@/components/booking/CommercialStepper";
 import { Input } from "@/components/ui/input";
@@ -41,6 +42,7 @@ export default function CommercialStep3() {
   const [schedulePreference, setSchedulePreference] = useState<SchedulePreference>(
     store.schedulePreference ?? null
   );
+  const [website, setWebsite] = useState("");
   const [touched, setTouched] = useState({
     name: false,
     email: false,
@@ -59,6 +61,7 @@ export default function CommercialStep3() {
   function handleNext() {
     if (!isValid) return;
     store.setCommercialContact(name, businessName, email, phone, frequency, schedulePreference);
+    store.setHoneypot(website);
     router.push("/commercial/review");
   }
 
@@ -251,6 +254,8 @@ export default function CommercialStep3() {
             })}
           </div>
         </div>
+
+        <HoneypotField value={website} onChange={setWebsite} />
 
         <div className="mb-6 md:mb-8">
           <PrivacyNote />

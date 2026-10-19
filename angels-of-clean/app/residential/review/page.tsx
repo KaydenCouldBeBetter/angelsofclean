@@ -22,12 +22,16 @@ export default function ReviewPage() {
     bedrooms, bathrooms, notes,
     date, timeSlot,
     name, email, phone,
+    formStartedAt, honeypot,
     isSubmitting, setSubmitting,
   } = store;
 
+  // No start time means the wizard state predates the bot check: start over.
   useEffect(() => {
-    if (!service || !address || !date || !name) router.replace("/residential");
-  }, [service, address, date, name, router]);
+    if (!service || !address || !date || !name || formStartedAt === null) {
+      router.replace("/residential");
+    }
+  }, [service, address, date, name, formStartedAt, router]);
 
   const formattedDate = date
     ? new Date(date + "T12:00:00").toLocaleDateString("en-US", {
@@ -48,6 +52,9 @@ export default function ReviewPage() {
       date,
       timeSlot: timeSlot ?? "",
       name, email, phone,
+    }, {
+      website: honeypot,
+      elapsedMs: Date.now() - (formStartedAt ?? Date.now()),
     });
 
     if (!result.success) {

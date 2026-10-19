@@ -139,9 +139,9 @@ Runs `updateSession` (refreshes the Supabase cookie), then for any `/admin/*` ro
 ### Server actions
 | Action | File | Auth | Client | Notes |
 |--------|------|------|--------|-------|
-| `submitBooking` | `app/actions/submitBooking.ts` | none (public) | service-role | Validates, then checks the per-IP rate limit (`allowPublicSubmission("booking")`, 5 per hour), then inserts a booking; logs "Booking submitted by client". |
+| `submitBooking` | `app/actions/submitBooking.ts` | none (public) | service-role | Takes a second `BotCheck` argument (`lib/bot-check.ts`); a filled honeypot, a fill time under 3 s, or a missing/malformed check returns the generic "Something went wrong" error before anything else, with nothing logged. Then validates, then checks the per-IP rate limit (`allowPublicSubmission("booking")`, 5 per hour), then inserts a booking; logs "Booking submitted by client". |
 | `adminCreateBooking` | same file | `requireAdmin` | service-role | Same shared `createBooking` (never rate-limited); actor email from verified session; logs "Booking created by {email}". |
-| `submitCommercialQuote` | `app/actions/submitCommercialQuote.ts` | none (public) | service-role | Validates (payload shape, length caps, and enums derived from the same `lib/constants.ts` lists the form renders), checks the per-IP rate limit (`allowPublicSubmission("quote")`), inserts into `commercial_quotes`, and returns `COM-{quote_number}`. Never returns success unless the row was stored. |
+| `submitCommercialQuote` | `app/actions/submitCommercialQuote.ts` | none (public) | service-role | Same `BotCheck` gate as `submitBooking`, first. Validates (payload shape, length caps, and enums derived from the same `lib/constants.ts` lists the form renders), checks the per-IP rate limit (`allowPublicSubmission("quote")`), inserts into `commercial_quotes`, and returns `COM-{quote_number}`. Never returns success unless the row was stored. |
 | `assignEmployees` | `app/admin/actions.ts` | `requireAdmin` | session-bound | Deletes then re-inserts `booking_employees`; logs activity; revalidates admin paths. |
 | `confirmBooking` | `app/admin/actions.ts` | `requireAdmin` | session-bound | Moves a booking pending → confirmed. The update filters on `status = 'pending'`, so a booking cancelled or completed in the meantime matches 0 rows and is refused rather than brought back; logs activity; revalidates. Called by the "Confirm Booking" button in `BookingActions` and the per-row "Confirm" button in `dashboard/JobRowActions` (both shown only while pending). |
 | `updateBookingStatus` | `app/admin/actions.ts` | `requireAdmin` | session-bound | Updates status with `.select()` to detect 0-row (missing/RLS-blocked) as failure; logs activity; revalidates. |
@@ -178,6 +178,7 @@ Rows are mapped to the UI `Job`/`Employee`/`ActivityEntry` shapes from `lib/admi
 - **`store/bookingStore.ts`** — Zustand store persisted to `sessionStorage` (key `booking-store`); holds the full residential + commercial wizard state and `setStep*` / `setCommercial*` / `reset` actions.
 - **`lib/admin-types.ts`** — the admin UI shapes `Job`/`Employee`/`ActivityEntry`/`EmployeeStatus` that queries map rows into; `JobStatus` is an alias of the database's `BookingStatus`.
 - **`app/admin/status-config.ts`** — status label/color dictionaries (`STATUS_CONFIG`, `DASHBOARD_STATUS`, `EMPLOYEE_STATUS_CONFIG`). Replaces the old `app/admin/data/mock.ts`, which no longer holds any mock data.
+- **`lib/bot-check.ts`** — bot check for the two public submits (backlog B5, no third-party service): `looksLikeBot()` fails a non-empty honeypot (`website`), a fill time under `MIN_FILL_MS` (3 s), or any missing/malformed value. `components/booking/HoneypotField.tsx` is the hidden field on both contact steps (off-screen, `aria-hidden`, `tabIndex -1`). The store's `formStartedAt` is stamped by the first step of either flow (`setStep1` / `setCommercialStep1`, persisted); the review pages send `{ website, elapsedMs }` (measured on the client's clock) with the submit, and send the customer back to step 1 if `formStartedAt` is missing. A script written for this site can still send a valid pair, so the rate limit remains the bound on that.
 - **`lib/utils.ts`** — `cn()` (clsx + tailwind-merge).
 - **`lib/legal.ts`** — `LEGAL_INFO` (owner-supplied business details and policies for `/privacy` and `/terms`, all `null` until provided), `missingLegalFields()`, `isLegalDraft()`.
 - **Booking components (`components/booking/`)** — `ResidentialShell`, `DesktopNavbar`, `DesktopStepper`, `CommercialNav`, `CommercialStepper`, `StepHeader`, `ProgressDots`, `BottomCTA`, `BookingSummary`. `BookingSummary` re-declares its own label maps rather than importing `lib/constants`.
@@ -207,7 +208,9 @@ Rows are mapped to the UI `Job`/`Employee`/`ActivityEntry` shapes from `lib/admi
 - **`lib/supabase/__tests__/require-admin.test.ts`** — signed-out, token error, no-role, `user_metadata` ignored, admin accepted. ✅ passing.
 - **`store/__tests__/bookingStore.test.ts`** — defaults, each setter, reset. ✅ passing.
 
-### Current test status: 268 passing (17 of 17 files green)
+- **`lib/__tests__/bot-check.test.ts`**, **`__tests__/bot-check-flow.test.tsx`** and the bot-check cases in both action tests — filled honeypot, too fast, normal, malformed checks, identical generic error, nothing logged; the honeypot's accessibility (aria-hidden, tabIndex -1, off-screen not display:none); contact steps store it; review pages send it; the store's fill-time clock. ✅ passing.
+
+### Current test status: 481 passing (30 of 30 files green)
 Passes under both `TZ=UTC` and `TZ=America/Los_Angeles`; `tsc --noEmit` clean.
 
 **History — the B16 ZIP swap.** Commit `fe85cd2` meant to change Camillus from `13035` (actually Cazenovia) to `13031`, but edited the Cicero line instead (`13039` → `13031`), which rejected Cicero customers and turned 26 tests red. Corrected 2026-10-13: Cicero is `13039`, Camillus is `13031`, and `13035` is no longer served.

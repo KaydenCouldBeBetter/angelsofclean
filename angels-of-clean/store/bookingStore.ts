@@ -56,6 +56,12 @@ interface BookingState {
   // ── Submission flag ─────────────────────────────────────────────────
   isSubmitting: boolean;
 
+  // ── Bot check (B5) ──────────────────────────────────────────────────
+  // When the first step was completed (ms since epoch); null until then.
+  formStartedAt: number | null;
+  // Value of the hidden honeypot field on the contact step. Not persisted.
+  honeypot: string;
+
   // ── Commercial Step 1 ───────────────────────────────────────────────
   facilityType: CommercialFacilityType;
   sqftRange: CommercialSqftRange;
@@ -95,6 +101,7 @@ interface BookingState {
     schedulePreference: SchedulePreference
   ) => void;
 
+  setHoneypot: (value: string) => void;
   setSubmitting: (value: boolean) => void;
   reset: () => void;
 }
@@ -115,6 +122,8 @@ const defaultState = {
   email: "",
   phone: "",
   isSubmitting: false,
+  formStartedAt: null as number | null,
+  honeypot: "",
 
   // Commercial
   facilityType: null as CommercialFacilityType,
@@ -133,7 +142,10 @@ export const useBookingStore = create<BookingState>()(
       ...defaultState,
 
       // Residential
-      setStep1: (service, frequency) => set({ service, frequency }),
+      // The first step of either flow starts the fill-time clock; editing it
+      // later (returnTo=review) doesn't restart it.
+      setStep1: (service, frequency) =>
+        set((state) => ({ service, frequency, formStartedAt: state.formStartedAt ?? Date.now() })),
       setStep2: (address, city, zip) => set({ address, city, zip }),
       setStep3: (bedrooms, bathrooms, notes) => set({ bedrooms, bathrooms, notes }),
       setStep4: (date, timeSlot) => set({ date, timeSlot }),
@@ -141,12 +153,20 @@ export const useBookingStore = create<BookingState>()(
 
       // Commercial
       setCommercialStep1: (facilityType, sqftRange, address, city, zip) =>
-        set({ facilityType, sqftRange, address, city, zip }),
+        set((state) => ({
+          facilityType,
+          sqftRange,
+          address,
+          city,
+          zip,
+          formStartedAt: state.formStartedAt ?? Date.now(),
+        })),
       setCommercialStep2: (floors, serviceAreas, notes) =>
         set({ floors, serviceAreas, commercialNotes: notes }),
       setCommercialContact: (name, businessName, email, phone, frequency, schedulePreference) =>
         set({ name, businessName, email, phone, commercialFrequency: frequency, schedulePreference }),
 
+      setHoneypot: (honeypot) => set({ honeypot }),
       setSubmitting: (value) => set({ isSubmitting: value }),
       reset: () => set(defaultState),
     }),
@@ -168,6 +188,7 @@ export const useBookingStore = create<BookingState>()(
         name: state.name,
         email: state.email,
         phone: state.phone,
+        formStartedAt: state.formStartedAt,
         // Commercial
         facilityType: state.facilityType,
         sqftRange: state.sqftRange,
