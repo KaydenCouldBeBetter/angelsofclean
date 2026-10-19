@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { confirmBooking } from "../actions";
+import { canChangeStatus } from "../status-config";
 import type { JobStatus } from "@/lib/admin-types";
 
 interface JobRowActionsProps {
@@ -29,7 +30,7 @@ export default function JobRowActions({ jobId, client, status }: JobRowActionsPr
   return (
     <div className="flex flex-col items-end gap-1.5">
       <div className="flex items-center gap-2">
-        {status === "pending" && (
+        {canChangeStatus(status, "confirmed") && (
           <button
             onClick={handleConfirm}
             disabled={isPending}

@@ -41,18 +41,24 @@ export type Database = {
     Tables: {
       activity_log: {
         Row: {
+          action: string | null
+          actor: string | null
           booking_id: string
           created_at: string
           description: string
           id: string
         }
         Insert: {
+          action?: string | null
+          actor?: string | null
           booking_id: string
           created_at?: string
           description: string
           id?: string
         }
         Update: {
+          action?: string | null
+          actor?: string | null
           booking_id?: string
           created_at?: string
           description?: string
@@ -295,9 +301,24 @@ export type Database = {
         }
         Returns: Json
       }
+      booking_status_transition_allowed: {
+        Args: {
+          p_from: Database["public"]["Enums"]["booking_status"]
+          p_to: Database["public"]["Enums"]["booking_status"]
+        }
+        Returns: boolean
+      }
       check_rate_limit: {
         Args: { p_bucket: string; p_limit: number; p_window_seconds: number }
         Returns: boolean
+      }
+      set_booking_status: {
+        Args: {
+          p_booking_id: string
+          p_description: string
+          p_status: Database["public"]["Enums"]["booking_status"]
+        }
+        Returns: Json
       }
     }
     Enums: {

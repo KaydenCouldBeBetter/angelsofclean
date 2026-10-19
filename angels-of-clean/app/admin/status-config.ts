@@ -1,6 +1,38 @@
 // Label and color dictionaries for job and employee statuses, shared by the
-// admin pages. Contrast is checked in __tests__/status-contrast.test.ts.
+// admin pages, plus the booking status flow. Contrast is checked in
+// __tests__/status-contrast.test.ts.
 import type { JobStatus, EmployeeStatus } from "@/lib/admin-types";
+
+// The one allowed booking status flow (backlog B12):
+//   pending → confirmed → active → done, and any non-final status → cancelled.
+// done and cancelled are final. Postgres enforces the same list
+// (booking_status_transition_allowed in
+// supabase/migrations/20261019035418_booking_status_flow.sql); this copy only
+// decides which buttons the admin sees. __tests__/status-flow.test.ts keeps
+// the two equal.
+export const STATUS_TRANSITIONS: Record<JobStatus, readonly JobStatus[]> = {
+  pending:   ["confirmed", "cancelled"],
+  confirmed: ["active", "cancelled"],
+  active:    ["done", "cancelled"],
+  done:      [],
+  cancelled: [],
+};
+
+export function canChangeStatus(from: JobStatus, to: JobStatus): boolean {
+  return STATUS_TRANSITIONS[from].includes(to);
+}
+
+// Nothing moves a booking back to pending.
+export type StatusChangeTarget = Exclude<JobStatus, "pending">;
+
+// Activity log text for each status change; set_booking_status appends
+// " by {admin email}".
+export const STATUS_ACTIVITY_LABEL: Record<StatusChangeTarget, string> = {
+  confirmed: "Confirmed",
+  active:    "Marked in progress",
+  done:      "Marked complete",
+  cancelled: "Booking cancelled",
+};
 
 export const STATUS_CONFIG: Record<JobStatus, { label: string; cardBg: string; borderColor: string; chipBg: string; chipText: string }> = {
   done:      { label: "Done",       cardBg: "bg-emerald-50", borderColor: "border-l-emerald-500", chipBg: "bg-emerald-100", chipText: "text-emerald-700" },
