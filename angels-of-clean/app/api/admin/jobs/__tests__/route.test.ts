@@ -5,6 +5,7 @@ const requireAdminMock = vi.fn();
 vi.mock("@/lib/supabase/require-admin", () => ({
   requireAdmin: () => requireAdminMock(),
   NOT_SIGNED_IN_ERROR: "You must be signed in to do this.",
+  AUTH_UNAVAILABLE_ERROR: "We couldn't verify your sign-in. Try again.",
 }));
 
 const getJobsInRangeMock = vi.fn();
@@ -52,13 +53,24 @@ describe("GET /api/admin/jobs", () => {
     expect(await res.json()).toEqual({ error: "Could not load jobs" });
   });
 
-  it("refuses signed-out and non-admin callers without querying", async () => {
+  it("answers 401 to a signed-out caller without querying", async () => {
     requireAdminMock.mockResolvedValue({ ok: false, error: "You must be signed in to do this." });
     expect((await GET(request("?from=2026-09-01&to=2026-09-30"))).status).toBe(401);
+    expect(getJobsInRangeMock).not.toHaveBeenCalled();
+  });
 
+  it("answers 403 to a signed-in non-admin without querying", async () => {
     requireAdminMock.mockResolvedValue({ ok: false, error: "You are not authorized to do this." });
     expect((await GET(request("?from=2026-09-01&to=2026-09-30"))).status).toBe(403);
+    expect(getJobsInRangeMock).not.toHaveBeenCalled();
+  });
 
+  it("answers 503, not 403, when Auth is unreachable, without querying", async () => {
+    requireAdminMock.mockResolvedValue({
+      ok: false,
+      error: "We couldn't verify your sign-in. Try again.",
+    });
+    expect((await GET(request("?from=2026-09-01&to=2026-09-30"))).status).toBe(503);
     expect(getJobsInRangeMock).not.toHaveBeenCalled();
   });
 });

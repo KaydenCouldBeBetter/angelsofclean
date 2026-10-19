@@ -111,6 +111,11 @@ export default function PrivacyPage() {
             provide their services to us.
           </li>
           <li>
+            Google, only if you choose &ldquo;Add to Google Calendar&rdquo; after booking: that
+            sends your cleaning&rsquo;s date, time and address to Google. The Apple Calendar file
+            is saved on your device and isn&rsquo;t sent anywhere.
+          </li>
+          <li>
             Others, when the law requires it or when needed to protect the rights, property or
             safety of our customers, staff or others.
           </li>

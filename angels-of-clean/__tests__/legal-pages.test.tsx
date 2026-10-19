@@ -96,6 +96,13 @@ describe("legal pages", () => {
     expect(text).toContain("Supabase");
   });
 
+  it("privacy policy says Add to Google Calendar sends the booking to Google, and the Apple file doesn't", () => {
+    const text = render(<PrivacyPage />);
+    expect(text).toContain("Add to Google Calendar");
+    expect(text).toMatch(/date, time and address to Google/);
+    expect(text).toMatch(/Apple Calendar file is saved on your device/);
+  });
+
   it("terms of service renders with a draft banner and links to the privacy policy", () => {
     const text = render(<TermsPage />);
     expect(container.querySelector("h1")?.textContent).toBe("Terms of Service");
