@@ -237,7 +237,7 @@ describe("assignEmployees", () => {
   });
 });
 
-// set_booking_status (supabase/migrations/20261019032629_booking_status_flow.sql)
+// set_booking_status (supabase/migrations/20261019035418_booking_status_flow.sql)
 // decides what's allowed; these tests cover what the actions send and how they
 // report each answer. The database side of every transition is tested in
 // supabase/tests/database/booking_status_flow.test.sql.
