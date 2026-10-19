@@ -4,6 +4,14 @@ import type { Employee, EmployeeStatus, Job } from "@/lib/admin-types";
 import { formatNy } from "@/lib/datetime";
 import LoadError from "../LoadError";
 
+function ComingSoonBadge() {
+  return (
+    <span className="rounded-full bg-[#fef3c7] px-2 py-0.5 text-[11px] font-semibold text-[#92400e]">
+      Coming soon
+    </span>
+  );
+}
+
 function getEmployeeStatus(employeeId: string, todayJobs: Job[]): EmployeeStatus {
   const empJobs = todayJobs.filter((job) => job.employeeIds.includes(employeeId));
   if (empJobs.some((job) => job.status === "active")) return "on-a-job";
@@ -73,8 +81,13 @@ function EmployeeCard({ employee, todayJobs }: { employee: Employee; todayJobs: 
 
       {/* View Schedule button */}
       <div className="px-5 pb-5">
-        <button className="w-full h-9 rounded-lg border border-[#e2e8e6] bg-[#f7f9f8] text-[13px] font-medium text-[#1c1c1e] hover:bg-[#eef1ef] transition-colors">
-          View Schedule
+        <button
+          type="button"
+          disabled
+          className="w-full h-9 rounded-lg border border-[#e2e8e6] bg-[#f7f9f8] px-3 text-[13px] font-medium text-[#5c5c5e] cursor-not-allowed flex items-center justify-between gap-2"
+        >
+          <span>View Schedule</span>
+          <ComingSoonBadge />
         </button>
       </div>
     </div>
@@ -112,8 +125,13 @@ export default async function AdminEmployeesPage() {
             <h2 className="font-semibold text-[17px] text-[#1c1c1e]">
               Team Members
             </h2>
-            <button className="bg-[#1a6b5a] hover:bg-[#155a4b] text-white text-xs font-semibold px-5 py-2 rounded-lg transition-colors">
-              + Add Employee
+            <button
+              type="button"
+              disabled
+              className="flex items-center gap-2 border border-[#e2e8e6] bg-[#f7f9f8] text-[#5c5c5e] text-xs font-semibold px-5 py-2 rounded-lg cursor-not-allowed"
+            >
+              <span>+ Add Employee</span>
+              <ComingSoonBadge />
             </button>
           </div>
 
