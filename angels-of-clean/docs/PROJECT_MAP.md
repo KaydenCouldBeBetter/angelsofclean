@@ -22,9 +22,10 @@ Angels of Clean is a residential + commercial cleaning company in Syracuse, NY. 
 | Calendar | FullCalendar (core, react, daygrid, timegrid, interaction) | 6.1.21 |
 | State | Zustand + `persist` (sessionStorage) | 5.0.14 |
 | Utilities | clsx, tailwind-merge, class-variance-authority | — |
-| Testing | Vitest + @vitejs/plugin-react + jsdom | vitest ^4.1.9 |
+| Testing | Vitest + @vitejs/plugin-react + jsdom (unit); pgTAP via `supabase test db` (database) | vitest ^4.1.9 |
+| Tooling | Supabase CLI (dev dependency, run as `npx supabase …`) | supabase ^2.121.0 |
 
-**Scripts:** `dev` (`next dev`), `build` (`next build`), `start` (`next start`), `lint` (`eslint`), `test` (`vitest run`).
+**Scripts:** `dev` (`next dev`), `build` (`next build`), `start` (`next start`), `lint` (`eslint`), `test` (`vitest run`), `db:types` (`supabase gen types typescript --linked > lib/supabase/database.types.ts`). Node 22 is what CI uses; the README lists the requirements and setup.
 
 **tsconfig:** strict mode, `moduleResolution: bundler`, path alias `@/* → ./*`, Next plugin. **components.json:** aliases `@/components`, `@/lib`, `@/components/ui`, `@/lib/utils`, `@/hooks`.
 
@@ -37,13 +38,15 @@ Angels of Clean is a residential + commercial cleaning company in Syracuse, NY. 
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — anon key for session-bound clients.
 - `SUPABASE_SERVICE_ROLE_KEY` — **server-only** (no `NEXT_PUBLIC_` prefix); bypasses RLS, used only for the booking insert path and its rate limiter (where it also keys the hash of the caller's IP).
 
-**CI:** none. No `.github/workflows` or other CI config is present. Tests are run manually.
+**CI:** `.github/workflows/ci.yml` (at the git root), one job named `verify`, on every pull request and every push to `v2`. On Node 22 in `angels-of-clean/` it runs `npm ci`, `npm run lint`, `npx tsc --noEmit`, `npm test` and `npm run build` (placeholder Supabase env values; the build never contacts Supabase). It does not apply migrations or run the pgTAP tests (those need Docker). GitHub branch protection for `v2` is a repository setting, not a file in the repo; the README says what it should require.
 
 ---
 
-## 2. Database (supabase/, applied in numeric order)
+## 2. Database (supabase/)
 
-### `001_initial_schema.sql`
+Schema changes are **Supabase CLI migrations** in `supabase/migrations/`, named `<14-digit version>_<name>.sql` and applied in version order (`npx supabase migration new <name>`, `npx supabase db push`). Applied migrations are never edited or renamed: `supabase/__tests__/migrations.test.ts` pins the applied list and fails on a rename, an out-of-order file or a loose `.sql` the CLI would ignore. After the owner applies a schema change, `npm run db:types` regenerates `lib/supabase/database.types.ts` (never hand-edited). `lib/supabase/types.ts` re-exports the row types from it under the names the app imports, and narrows the columns that have CHECK constraints and the jsonb results of the two RPCs below (`lib/supabase/__tests__/types.test.ts`). One-off data fixes live in `supabase/scripts/` and are run by hand. `supabase/config.toml` configures the local stack (Postgres 17); `supabase/tests/database/` holds pgTAP tests, run with `npx supabase start` then `npx supabase test db` (needs Docker, not part of CI).
+
+### `20260726221400_initial_schema.sql`
 Enum `booking_status`: `pending | confirmed | active | done | cancelled`.
 
 **Tables**
@@ -52,27 +55,36 @@ Enum `booking_status`: `pending | confirmed | active | done | cancelled`.
 - **booking_employees** — join table; PK `(booking_id, employee_id)`; `booking_id` FK → bookings **ON DELETE CASCADE**, `employee_id` FK → employees **ON DELETE RESTRICT**; `assigned_at`. Index on `employee_id`.
 - **activity_log** — `id`, `booking_id` FK → bookings ON DELETE CASCADE, `description`, `created_at`. Index on `booking_id`.
 
-**RLS (as originally shipped):** enabled on all four tables. Policies granted access on `auth.role() = 'authenticated'` — meaning *any* signed-in Supabase account could read all customer PII. Deliberately **no INSERT/DELETE policy on bookings** (customer inserts go through the service-role client, which bypasses RLS).
+**RLS (as originally shipped):** enabled on all four tables, granting access on `auth.role() = 'authenticated'` — any signed-in account could read all customer PII. Deliberately **no INSERT/DELETE policy on bookings** (customer inserts go through the service-role client, which bypasses RLS). Replaced by the next migration.
 
-### `002_admin_role_rls.sql` (tightens 001 — this is the effective policy set)
+### `20260918194509_admin_role_rls.sql` (tightens the first; the effective policy base)
 Drops the `authenticated`-based policies and recreates them keyed on the JWT claim `app_metadata.role = 'admin'`:
 - **bookings** — SELECT + UPDATE for admins only.
 - **employees** — SELECT for admins only.
 - **booking_employees** — ALL for admins only.
-- **activity_log** — ALL for admins only.
+- **activity_log** — ALL for admins only (narrowed again by the status-flow migration below).
 
-`app_metadata` can only be set server-side (dashboard or service role); clients cannot self-grant it (unlike `user_metadata`). Requires manually granting an account the role first (SQL header documents the `update auth.users … raw_app_meta_data` step). Public booking flow is unaffected (service-role insert). Still no INSERT/DELETE policy on bookings and no anon policy anywhere.
+`app_metadata` can only be set server-side (dashboard or service role); clients cannot self-grant it (unlike `user_metadata`). An account must be granted the role first: the migration header holds the `update auth.users … raw_app_meta_data` SQL, repeated in the README. Public booking flow is unaffected (service-role insert). Still no INSERT/DELETE policy on bookings and no anon policy anywhere.
 
-### `004_rate_limits.sql` (rate limiting for the public booking form — run by hand, like the others)
-Table `rate_limits` (`bucket`, `window_start`, `hits`; PK on the first two; RLS enabled with **no policies**, so service-role only) and function `check_rate_limit(p_bucket, p_limit, p_window_seconds) returns boolean`, an atomic fixed-window counter (upsert + increment) that also prunes windows older than a day. `EXECUTE` is revoked from `public`/`anon`/`authenticated` and granted to `service_role` only. Buckets hold a keyed hash of the client IP, never the IP itself. Until this file is run the app's limiter fails open (logs and allows).
+### `20261013224928_rate_limits.sql` (rate limiting for the public forms)
+Table `rate_limits` (`bucket`, `window_start`, `hits`; PK on the first two; RLS enabled with **no policies**, so service-role only) and function `check_rate_limit(p_bucket, p_limit, p_window_seconds) returns boolean`, an atomic fixed-window counter (upsert + increment) that also prunes windows older than a day. `EXECUTE` is revoked from `public`/`anon`/`authenticated` and granted to `service_role` only. Buckets hold a keyed hash of the client IP, never the IP itself. Until this is applied the app's limiter fails open (logs and allows).
 
-### `005_commercial_quotes.sql` (commercial quote requests — run by hand, after 002)
+### `20261013230608_commercial_quotes.sql` (commercial quote requests)
 Table `commercial_quotes`: `id`, `quote_number int identity` (starts at 1000, shown as `COM-{n}`), `business_name`, `contact_name`, `email`, `phone`, `facility_type`, `sqft_range`, `address`, `city`, `zip`, `floors smallint` (1–20), `service_areas text[]` (≥1), `frequency`, `schedule_preference` (nullable), `notes`, `submitted_at`; CHECK constraints mirror the option lists in `lib/constants.ts`. RLS: admins (`app_metadata.role = 'admin'`) may SELECT; there is no insert/update/delete policy for any role, so rows are written only by the service-role client and are read-only in the admin UI.
 
-### `003_fix_booking_times_tz.sql` (data backfill — **not** an auto-run migration)
+### `20261018142718_assign_booking_employees.sql` (backlog B14)
+Function `assign_booking_employees(p_booking_id, p_employee_ids, p_expected_employee_ids, p_allow_overlap) returns jsonb`: changes a job's crew in one transaction. It checks the admin claim, refuses cancelled and done jobs, refuses the save if the crew changed since the admin loaded the page (`stale`), reports overlapping jobs for each newly added cleaner unless `p_allow_overlap` (`conflicts`), and applies only the difference. Result `status`: `saved | conflicts | stale | closed | not_found`. `EXECUTE` is revoked from `public`/`anon` and granted to `authenticated`.
+
+### `20261019033138_db_defense_in_depth.sql`
+Makes the database enforce what the actions already validate: length CHECKs on the free-text columns of `bookings` and `commercial_quotes` (must equal `FIELD_MAX_LENGTHS` in `lib/constants.ts`; `supabase/__tests__/field-lengths.test.ts` fails if they drift), ZIP and email format CHECKs, `bookings_end_after_start`, a `commercial_quotes.updated_at` column, and a `set_updated_at()` trigger function on both tables. Also trims the default table privileges Supabase grants the API roles. Whether a ZIP is in the service area stays an app rule.
+
+### `20261019035418_booking_status_flow.sql` (backlog B12)
+One status flow, enforced in Postgres: `pending → confirmed → active → done`, and `pending | confirmed | active → cancelled`; `done` and `cancelled` are final. A trigger on `bookings` refuses every other status change, whoever makes it (`booking_status_transition_allowed()` / `enforce_booking_status_transition()`). `app/admin/status-config.ts` mirrors the list as `STATUS_TRANSITIONS`, and a test keeps the two equal. Function `set_booking_status(p_booking_id, p_status, p_description) returns jsonb` changes the status and writes the activity entry in one transaction (`status`: `changed | refused | not_found`). `activity_log` gains `actor` (taken from the caller's JWT, never a parameter) and `action`, and becomes append-only: admins may read and insert, nobody can edit or delete an entry through the API. pgTAP coverage is in `supabase/tests/database/booking_status_flow.test.sql`.
+
+### `supabase/scripts/003_fix_booking_times_tz.sql` (data backfill — **not** a migration)
 A DIAGNOSTIC `SELECT` + a commented-out `UPDATE`. Fixes rows created before the B8 timezone fix, where `new Date(\`${date}T08:00:00\`)` parsed the slot window in the *server's* local zone (a UTC server stored NY 8 AM as 08:00Z, 4–5 h too early). The correction rebuilds `start_at`/`end_at` from `scheduled_date + time_slot` interpreted `AT TIME ZONE 'America/New_York'`. Idempotent; meant to be reviewed and run by hand only if the diagnostic returns rows.
 
-**Note:** there is no generated Supabase types file — `lib/supabase/types.ts` is hand-written and must be kept in sync manually.
+**Types:** `lib/supabase/database.types.ts` is generated (`npm run db:types`); `lib/supabase/types.ts` is the hand-written layer on top of it described above.
 
 ---
 
@@ -94,7 +106,7 @@ Wrapped by `layout.tsx` → `ResidentialShell` (desktop navbar + stepper + live 
 | `/residential/datetime` | 4 | Date chips (next ~6 NY days) + morning/afternoon slots. Enforces same-day cutoff via `isNyWallClockInFuture`. Evening slot always disabled; 3rd day hardcoded "Full" (Figma placeholder). |
 | `/residential/contact` | 5 | Name/email/phone with regex validation. |
 | `/residential/review` | 6 | Summary cards + **calls `submitBooking`** server action; on success → confirmation. Shows "Quote provided after confirmation" (no price). |
-| `/residential/confirmation` | — | Success screen. Copies the booking into local state, then clears the store and `sessionStorage` (backlog B50); a reload shows only the `?ref=` number with a privacy note. Calendar/create-account buttons are non-functional placeholders. |
+| `/residential/confirmation` | — | Success screen. Copies the booking into local state, then clears the store and `sessionStorage` (backlog B50); a reload shows only the `?ref=` number with a privacy note. The Add to Google Calendar link and Apple Calendar `.ics` download work (`lib/calendar-links.ts`); Create Account is a non-functional placeholder. |
 | `/residential/error` | — | Out-of-service-area screen; "Try a Different Address" → back to step 2. |
 
 ### Customer-facing — Commercial (`app/commercial/`, 4-step quote request)
@@ -110,7 +122,7 @@ Wrapped by `layout.tsx` (Suspense). Each step uses `CommercialNav` + `Commercial
 | `/commercial/error` | — | Out-of-area screen with call-to-phone. |
 
 ### Admin (`app/admin/`, all under middleware guard)
-`layout.tsx` is a server component that calls `connection()` so every admin page renders per request (required for the CSP nonce), then renders `AdminShell.tsx`: the sidebar shell (Dashboard / Calendar / Bookings / Quotes / Employees / Settings) for every route except the auth pages. `AdminShell` reads the display name via a **browser** Supabase client.
+`layout.tsx` is a server component that calls `connection()` so every admin page renders per request (required for the CSP nonce), then renders `AdminShell.tsx`: the sidebar shell (Dashboard / Calendar / Bookings / Quotes / Employees / Settings) for every route except the auth pages. `AdminShell` reads the display name via a **browser** Supabase client. `loading.tsx` is the skeleton shown inside the shell while a page's data loads (`role="status"`, motion-safe).
 
 | Route | Type | Purpose |
 |-------|------|---------|
@@ -119,10 +131,10 @@ Wrapped by `layout.tsx` (Suspense). Each step uses `CommercialNav` + `Commercial
 | `/admin/reset-password/confirm` | route handler (GET) | Public. Landing point of the reset email: verifies `token_hash` + `type=recovery` (custom template, any device) or exchanges `code` (Supabase's default template, same browser only), which signs the admin in; then redirects to `/admin/reset-password`, or to `/admin/forgot-password?error=link` on failure. The destination is fixed — any `next` param is ignored. |
 | `/admin/reset-password` | server → client | Admin session required (the reset link provides one). New password + confirmation → `updatePassword`, which redirects to the dashboard. |
 | `/admin/dashboard` | server | Stat cards (today's bookings, pending, active employees, completed this week) + today's jobs table; each row ends in the client `JobRowActions` (View link, plus one-click Confirm on pending rows). Data from `getDashboardStats` + `getEmployees`. |
-| `/admin/calendar` | server → client | `getJobsInRange()` (±2 months) + employees → `CalendarView` (FullCalendar). |
+| `/admin/calendar` | server → client | `getJobsInRange()` (±2 months) + employees → `CalendarView` (FullCalendar; week view by default, month view, a Today button and a New booking button that opens `NewBookingModal`). An "Unassigned" tray and per-day counts in month cells list jobs still needing a crew (pending, confirmed or active with nobody assigned; backlog B15). |
 | `/admin/bookings` | server | Filter tabs (today/upcoming/past/all via `?filter=`); `getJobsByDateFilter` → `BookingsList`. |
-| `/admin/bookings/[id]` | server | Booking detail: details card, status banner, `BookingActions`, activity log. `getJobById` + `getActivityLog` + `getEmployees`. |
-| `/admin/employees` | server | Employee cards with derived today-status. `getEmployees` + `getTodayJobs`. |
+| `/admin/bookings/[id]` | server | Booking detail: details card, status banner, `BookingActions` (only the buttons the status flow allows; Reschedule, Send Client Message and Print / Export are disabled and labelled "Coming soon"), activity log. `getJobById` + `getActivityLog` + `getEmployees`. |
+| `/admin/employees` | server | Employee cards with derived today-status. `getEmployees` + `getTodayJobs`. View Schedule and Add Employee are disabled and labelled "Coming soon". |
 | `/admin/quotes` | server | Commercial quote requests, newest first, one card each: business, contact (mailto/tel links), reference, received time, facility, address, areas, frequency, preference, notes. Read-only. Data from `getCommercialQuotes`. |
 | `/admin/settings` | server | Placeholder: Notifications card marked "Coming soon" with both toggles disabled and no Save button, since the app can't send email or SMS yet. |
 
@@ -130,7 +142,7 @@ Wrapped by `layout.tsx` (Suspense). Each step uses `CommercialNav` + `Commercial
 - **`GET /api/admin/jobs`** — requires admin (`requireAdmin`; 401 if signed out, 403 if not admin). Requires `from`/`to` (YYYY-MM-DD) query params (400 otherwise). Returns `getJobsInRange(from, to)` as JSON, or 503 if the query failed (never an empty list). Consumed by `CalendarView` when the visible range changes.
 
 ### Middleware (`middleware.ts`, matcher `/admin/:path*`)
-Runs `updateSession` (refreshes the Supabase cookie), then for any `/admin/*` route except the public ones (`/admin`, `/admin/forgot-password`, `/admin/reset-password/confirm` — exact matches), redirects to `/admin` unless `user.app_metadata.role === "admin"`. This guards **page loads only**; server actions and the API route each re-verify with `requireAdmin`. It also sets the admin `Content-Security-Policy`: a fresh nonce per request with `'strict-dynamic'` and no `'unsafe-inline'` for scripts, put on the forwarded request (Next.js stamps the nonce on its `<script>` tags while rendering) and on the response.
+Runs `updateSession` (refreshes the Supabase cookie and verifies the session with `auth.getClaims()`, which checks the JWT signature locally against the project's cached signing key, so a page load costs no Auth round trip). Then for any `/admin/*` route except the public ones (`/admin`, `/admin/forgot-password`, `/admin/reset-password/confirm` — exact matches), redirects to `/admin` unless the verified claims have `app_metadata.role === "admin"`; an admin visiting `/admin` goes on to the dashboard. The Auth call is bounded at 4 s (`lib/supabase/auth-timeout.ts`): if it times out or fails with a network/5xx error the session is `unavailable`, which never grants access, and protected pages (and `/admin` itself) redirect to a "couldn't verify your sign-in" retry screen that is part of the public sign-in page. `getClaims()` does not see a session revoked before its token expires; `requireAdmin` does. This guards **page loads only**; server actions and the API route each re-verify with `requireAdmin`. It also sets the admin `Content-Security-Policy`: a fresh nonce per request with `'strict-dynamic'` and no `'unsafe-inline'` for scripts, put on the forwarded request (Next.js stamps the nonce on its `<script>` tags while rendering) and on the response.
 
 ---
 
@@ -142,9 +154,9 @@ Runs `updateSession` (refreshes the Supabase cookie), then for any `/admin/*` ro
 | `submitBooking` | `app/actions/submitBooking.ts` | none (public) | service-role | Takes a second `BotCheck` argument (`lib/bot-check.ts`); a filled honeypot, a fill time under 3 s, or a missing/malformed check returns the generic "Something went wrong" error before anything else, with nothing logged. Then validates, then checks the per-IP rate limit (`allowPublicSubmission("booking")`, 5 per hour), then inserts a booking; logs "Booking submitted by client". |
 | `adminCreateBooking` | same file | `requireAdmin` | service-role | Same shared `createBooking` (never rate-limited); actor email from verified session; logs "Booking created by {email}". |
 | `submitCommercialQuote` | `app/actions/submitCommercialQuote.ts` | none (public) | service-role | Same `BotCheck` gate as `submitBooking`, first. Validates (payload shape, length caps, and enums derived from the same `lib/constants.ts` lists the form renders), checks the per-IP rate limit (`allowPublicSubmission("quote")`), inserts into `commercial_quotes`, and returns `COM-{quote_number}`. Never returns success unless the row was stored. |
-| `assignEmployees` | `app/admin/actions.ts` | `requireAdmin` | session-bound | Deletes then re-inserts `booking_employees`; logs activity; revalidates admin paths. |
-| `confirmBooking` | `app/admin/actions.ts` | `requireAdmin` | session-bound | Moves a booking pending → confirmed. The update filters on `status = 'pending'`, so a booking cancelled or completed in the meantime matches 0 rows and is refused rather than brought back; logs activity; revalidates. Called by the "Confirm Booking" button in `BookingActions` and the per-row "Confirm" button in `dashboard/JobRowActions` (both shown only while pending). |
-| `updateBookingStatus` | `app/admin/actions.ts` | `requireAdmin` | session-bound | Updates status with `.select()` to detect 0-row (missing/RLS-blocked) as failure; logs activity; revalidates. |
+| `assignEmployees` | `app/admin/actions.ts` | `requireAdmin` | session-bound | Calls the `assign_booking_employees` RPC with the new crew and the crew the admin saw (`expectedEmployeeIds`), so the whole change is one transaction. Maps its result: `not_found`, `closed` (done/cancelled), `stale` (someone else changed the crew), `conflicts` (overlapping jobs, returned as readable lines until the admin picks "Assign anyway" → `allowOverlap`), `saved` (logs "Assigned … / unassigned …" to the activity log; revalidates admin paths). |
+| `updateBookingStatus` | `app/admin/actions.ts` | `requireAdmin` | session-bound | Rejects any target not in `STATUS_ACTIVITY_LABEL`, then calls the `set_booking_status` RPC, which applies the status flow and writes the activity entry in one transaction. Maps `not_found` / `refused` (explains why from the booking's real status and revalidates so the admin sees it) / `changed`. |
+| `confirmBooking` | `app/admin/actions.ts` | `requireAdmin` | session-bound | `updateBookingStatus(id, "confirmed")`. Called by the "Confirm Booking" button in `BookingActions` and the per-row "Confirm" button in `dashboard/JobRowActions` (both shown only while pending). |
 | `signIn` / `signOut` | `app/admin/auth-actions.ts` | — | session-bound | `signIn` rejects non-admin accounts and signs them back out; redirects to dashboard / `/admin`. |
 | `requestPasswordReset` | `app/admin/auth-actions.ts` | none (public) | session-bound | Validates the email, calls `auth.resetPasswordForEmail` with `redirectTo` = `{origin}/admin/reset-password/confirm`. Never reveals whether the account exists; maps Supabase's email rate limit to a readable message; logs only the error code. |
 | `updatePassword` | `app/admin/auth-actions.ts` | `requireAdmin` | session-bound | Length check (`PASSWORD_MIN_LENGTH` 8 from `lib/constants.ts`, ≤ 72 bytes for bcrypt), `auth.updateUser({ password })`, readable messages for `same_password` / `weak_password`, then redirects to the dashboard. |
@@ -166,22 +178,26 @@ Rows are mapped to the UI `Job`/`Employee`/`ActivityEntry` shapes from `lib/admi
 - **`server.ts` `createClient()`** — `@supabase/ssr` server client bound to the request cookies; acts as the logged-in admin; RLS applies. Used by all query helpers, admin actions, auth actions, and `requireAdmin`.
 - **`service.ts` `createServiceRoleClient()`** — service-role client that **bypasses RLS**. Only imported by the two public submit actions (`submitBooking.ts`, `submitCommercialQuote.ts` — the sole insert paths for their tables) and `lib/rate-limit.ts`. Key is server-only.
 - **`lib/rate-limit.ts` `allowPublicSubmission(kind)`** — `kind` is `"booking"` or `"quote"`, each with its own allowance. Reads the caller's IP from `x-forwarded-for` (first entry) or `x-real-ip`, HMACs it with the service-role key, and calls the `check_rate_limit` RPC with `SUBMISSION_RATE_LIMIT` (5 per hour) on bucket `{kind}:{hash}`. Fails open (logs `{code, correlationId}`, allows the submission) if the RPC errors or throws; skipped when `NODE_ENV === "development"`.
-- **`middleware.ts` `updateSession()`** — refreshes the session cookie and returns `{ supabaseResponse, user }`.
-- **`require-admin.ts` `requireAdmin()`** — calls `auth.getUser()` (validates token, doesn't trust cookie) and requires `app_metadata.role === "admin"`; returns a discriminated `AdminAuthResult`. Exports `NOT_SIGNED_IN_ERROR` / `NOT_AUTHORIZED_ERROR`.
+- **`middleware.ts` `updateSession()`** — refreshes the session cookie and returns `{ supabaseResponse, session }`, where `session` is `signed-in` (with the role claim), `signed-out` or `unavailable`.
+- **`require-admin.ts` `requireAdmin()`** — calls `auth.getUser()` (validates the token with Supabase Auth, doesn't trust the cookie, so it also catches a revoked session) under the same 4 s `withAuthTimeout`, and requires `app_metadata.role === "admin"`; returns a discriminated `AdminAuthResult`. Exports `NOT_SIGNED_IN_ERROR` / `NOT_AUTHORIZED_ERROR` / `AUTH_UNAVAILABLE_ERROR` (timeout or network failure: refused with a retry message, never granted).
+- **`auth-timeout.ts`** — `withAuthTimeout()` / `AUTH_TIMEOUT_MS` (4 s) and the retry-screen URL helpers `authRetryUrl()` / `isAuthRetryUrl()`. Exists because auth-js retries a failed token refresh for up to 30 s (`docs/PERFORMANCE_DIAGNOSIS.md`, cause 2).
 
 ---
 
 ## 5. Shared code
 
 - **`lib/constants.ts`** — single source of truth for labels and options: `SERVICE_LABELS`, `FREQUENCY_LABELS`, `TIME_SLOT_WINDOWS` (morning 08:00–12:00, afternoon 12:00–16:00; `TIME_LABELS` derived from it), `PRICE_MAP` (`$85/$149/$199`), `SERVICE_AREA_ZIPS`, and the commercial dictionaries/step labels.
-- **`lib/datetime.ts`** — all NY-zone date math via `Intl` (zone-independent, DST-correct): `nyWallClockToInstant`, `isValidDateStr`, `addDaysToDateStr`, `isNyWallClockInFuture`, `nyDateStr`/`nyTodayStr`, `nyWallClockISO` (offset-less ISO for FullCalendar's UTC-coercion mode), and formatters `formatNy`, `formatNyTime`, `formatNyTimeRange`, `formatNyDateTime`.
+- **`lib/datetime.ts`** — all NY-zone date math via `Intl` (zone-independent, DST-correct): `nyWallClockToInstant`, `isValidDateStr`, `addDaysToDateStr`, `isNyWallClockInFuture`, `nyDateStr`/`nyTodayStr`, `nyWallClockISO` (offset-less ISO for FullCalendar's UTC-coercion mode), and formatters `formatNy`, `formatNyTime`, `formatWallClockTime`, `formatNyTimeRange`, `formatNyDateTime`. Times are always shown with AM/PM (`lib/__tests__/time-format-usage.test.ts` guards against ad-hoc formatting).
 - **`store/bookingStore.ts`** — Zustand store persisted to `sessionStorage` (key `booking-store`); holds the full residential + commercial wizard state and `setStep*` / `setCommercial*` / `reset` actions.
 - **`lib/admin-types.ts`** — the admin UI shapes `Job`/`Employee`/`ActivityEntry`/`EmployeeStatus` that queries map rows into; `JobStatus` is an alias of the database's `BookingStatus`.
 - **`app/admin/status-config.ts`** — status label/color dictionaries (`STATUS_CONFIG`, `DASHBOARD_STATUS`, `EMPLOYEE_STATUS_CONFIG`). Replaces the old `app/admin/data/mock.ts`, which no longer holds any mock data.
 - **`lib/bot-check.ts`** — bot check for the two public submits (backlog B5, no third-party service): `looksLikeBot()` fails a non-empty honeypot (`website`), a fill time under `MIN_FILL_MS` (3 s), or any missing/malformed value. `components/booking/HoneypotField.tsx` is the hidden field on both contact steps (off-screen, `aria-hidden`, `tabIndex -1`). The store's `formStartedAt` is stamped by the first step of either flow (`setStep1` / `setCommercialStep1`, persisted); the review pages send `{ website, elapsedMs }` (measured on the client's clock) with the submit, and send the customer back to step 1 if `formStartedAt` is missing. A script written for this site can still send a valid pair, so the rate limit remains the bound on that.
+- **`lib/csp.ts`** — `buildCsp()` and `createNonce()` for the Content-Security-Policy described in §1 and §3 (public pages: static policy from `next.config.ts`; admin pages: per-request nonce from `middleware.ts`).
+- **`lib/calendar-links.ts`** — `googleCalendarUrl()` and `buildIcs()` for the residential confirmation page's "Add to Google Calendar" link and "Add to Apple Calendar" `.ics` download.
+- **`lib/use-is-client.ts`**, **`components/booking/WhenHydrated.tsx`** — step forms mount only after the persisted booking store has rehydrated, so a refresh keeps saved answers (`__tests__/wizard-guards.test.tsx`).
 - **`lib/utils.ts`** — `cn()` (clsx + tailwind-merge).
 - **`lib/legal.ts`** — `LEGAL_INFO` (owner-supplied business details and policies for `/privacy` and `/terms`, all `null` until provided), `missingLegalFields()`, `isLegalDraft()`.
-- **Booking components (`components/booking/`)** — `ResidentialShell`, `DesktopNavbar`, `DesktopStepper`, `CommercialNav`, `CommercialStepper`, `StepHeader`, `ProgressDots`, `BottomCTA`, `BookingSummary`. `BookingSummary` re-declares its own label maps rather than importing `lib/constants`.
+- **Booking components (`components/booking/`)** — `ResidentialShell`, `DesktopNavbar`, `DesktopStepper`, `CommercialNav`, `CommercialStepper`, `StepHeader`, `ProgressDots`, `BottomCTA`, `BookingSummary`, plus the shared failure and notice pieces `SubmitErrorAlert`, `ServiceUnavailable`, `DateExpiredNotice` and `ConfirmedWithoutDetails`. `BookingSummary` re-declares its own label maps rather than importing `lib/constants`.
 - **UI primitives (`components/ui/`)** — shadcn `button`, `card`, `input`, `label`, `textarea`.
 
 ---
@@ -194,7 +210,7 @@ Rows are mapped to the UI `Job`/`Employee`/`ActivityEntry` shapes from `lib/admi
 - **`app/actions/__tests__/submitCommercialQuote.test.ts`** — stored row shape and `COM-` reference, every option the form offers is accepted, validation matrix, length caps, malformed payloads, no success on a failed insert, PII-safe logging, rate limiting. ✅ passing.
 - **`app/admin/__tests__/auth-actions.test.ts`** — reset request (redirect target, no-origin fallback, invalid input, rate-limit message, PII-safe logging) and password update (admin session required, length limits incl. bcrypt's 72 bytes, Supabase error mapping, redirect). ✅ passing.
 - **`app/admin/reset-password/confirm/__tests__/route.test.ts`** — token-hash and code paths, expired/failed links, non-recovery tokens refused, `next` ignored. ✅ passing.
-- **`__tests__/middleware.test.ts`** — public admin routes reachable signed out (exact match only), everything else requires the admin role. ✅ passing.
+- **`__tests__/middleware.test.ts`** — public admin routes reachable signed out (exact match only), everything else requires the admin role; an unavailable Auth sends protected pages and `/admin` to the retry screen. ✅ passing.
 - **`components/booking/__tests__/ProgressDots.test.tsx`** — dot labels (completed / current / plain) and a single `aria-current="step"`. ✅ passing.
 - **`app/admin/__tests__/status-contrast.test.ts`** — every status chip and banner text/background pair in `status-config.ts` meets WCAG AA 4.5:1. ✅ passing.
 - **`app/admin/settings/__tests__/page.test.tsx`** — notifications are labeled "Coming soon" with an explanation, every toggle is disabled and off, and there is no Save button. ✅ passing.
@@ -202,16 +218,22 @@ Rows are mapped to the UI `Job`/`Employee`/`ActivityEntry` shapes from `lib/admi
 - **`__tests__/confirmation-privacy.test.tsx`** — both confirmation pages show the details, then clear them from the store and `sessionStorage`; reloads show only the reference; no reference redirects. ✅ passing.
 - **`lib/__tests__/rate-limit.test.ts`** — limit/window passed to the RPC, refusal, raw IP never sent, bucket stability, header precedence, fail-open on error and on throw, dev skip. ✅ passing.
 - **`app/actions/__tests__/submitBooking.test.ts`** — validation matrix (run against both `submitBooking` and `adminCreateBooking`), success insert, window→UTC storage, DST offsets, PII-safe logging, admin auth gating. ✅ passing.
-- **`app/admin/__tests__/actions.test.ts`** — `assignEmployees`/`confirmBooking`/`updateBookingStatus`: auth gating, 0-row-as-failure, pending-only confirm, activity logging. ✅ passing.
+- **`app/admin/__tests__/actions.test.ts`** — `assignEmployees`/`confirmBooking`/`updateBookingStatus`: auth gating, each RPC result (`saved`, `conflicts`, `stale`, `closed`, `refused`, `not_found`) mapped to the right message, an unknown status target refused before any query, activity logging, revalidation. ✅ passing.
 - **`lib/supabase/__tests__/queries.test.ts`** — asserts the calendar projection omits email/phone/notes; `getJobsByDateFilter` (client list) keeps email/phone for search but omits notes; `getJobs` keeps all contact fields; PII-safe error logging; every helper returns `{ ok: false }` on a database error and an empty/`null` result only when there genuinely is none. ✅ passing.
 - **`app/api/admin/jobs/__tests__/route.test.ts`** — 200 with jobs, 200 with an empty range, 503 on query failure, 401/403 without querying. ✅ passing.
 - **`lib/supabase/__tests__/require-admin.test.ts`** — signed-out, token error, no-role, `user_metadata` ignored, admin accepted. ✅ passing.
 - **`store/__tests__/bookingStore.test.ts`** — defaults, each setter, reset. ✅ passing.
+- **Admin status flow:** `app/admin/__tests__/status-flow.test.ts` (the allowed-transition list pair by pair; `STATUS_TRANSITIONS` equals the one in the migration), `status-buttons.test.tsx` and `app/admin/bookings/[id]/__tests__/BookingActions.test.tsx` (which buttons each status shows; unbuilt buttons say "Coming soon"). ✅ passing.
+- **Admin pages:** `app/admin/__tests__/page.test.tsx` (sign-in page makes no second auth call), `loading.test.tsx` (skeleton is a labelled status region), `app/admin/calendar/__tests__/unassigned.test.tsx` (unassigned tray and counts), `app/admin/employees/__tests__/page.test.tsx` (unbuilt buttons disabled and labelled). ✅ passing.
+- **Auth timeouts:** `lib/supabase/__tests__/auth-timeout.test.ts`, `middleware.test.ts` and `middleware-expired-session.test.ts` (the real Supabase client against an expired token: the call is bounded, never grants access). ✅ passing.
+- **Customer flow:** `__tests__/wizard-guards.test.tsx` (steps redirect when earlier answers are missing, and wait for the store to rehydrate), `__tests__/review-submit-errors.test.tsx` and `components/booking/__tests__/submit-failure.test.tsx` (failed or unreachable submits show the alert and stay put). ✅ passing.
+- **Shared libs:** `lib/__tests__/csp.test.ts`, `calendar-links.test.ts`, `time-format-usage.test.ts` (no ad-hoc time formatters outside `lib/datetime.ts`), and `lib/supabase/__tests__/types.test.ts` (type-level checks, enforced by `tsc --noEmit`). ✅ passing.
+- **Database files:** `supabase/__tests__/migrations.test.ts` (naming, unique versions, applied migrations pinned and first, no loose `.sql`), `supabase/__tests__/field-lengths.test.ts` (SQL length CHECKs equal `FIELD_MAX_LENGTHS`). The pgTAP file `supabase/tests/database/booking_status_flow.test.sql` is **not** part of `npm test` or CI; it needs the local Supabase stack (`npx supabase test db`).
 
 - **`lib/__tests__/bot-check.test.ts`**, **`__tests__/bot-check-flow.test.tsx`** and the bot-check cases in both action tests — filled honeypot, too fast, normal, malformed checks, identical generic error, nothing logged; the honeypot's accessibility (aria-hidden, tabIndex -1, off-screen not display:none); contact steps store it; review pages send it; the store's fill-time clock. ✅ passing.
 
-### Current test status: 481 passing (30 of 30 files green)
-Passes under both `TZ=UTC` and `TZ=America/Los_Angeles`; `tsc --noEmit` clean.
+### Current test status: 606 passing (39 of 39 files green)
+Passes under both `TZ=UTC` and `TZ=America/Los_Angeles`; `tsc --noEmit` clean. CI runs lint, `tsc`, tests and a build on every pull request (§1).
 
 **History — the B16 ZIP swap.** Commit `fe85cd2` meant to change Camillus from `13035` (actually Cazenovia) to `13031`, but edited the Cicero line instead (`13039` → `13031`), which rejected Cicero customers and turned 26 tests red. Corrected 2026-10-13: Cicero is `13039`, Camillus is `13031`, and `13035` is no longer served.
 
@@ -219,25 +241,28 @@ Passes under both `TZ=UTC` and `TZ=America/Los_Angeles`; `tsc --noEmit` clean.
 
 ## 7. Notable findings (report-only; no code changed)
 
-1. **No CI.** The suite is green now, but it sat red for three weeks after the mis-applied ZIP swap (§6) because nothing runs the tests automatically.
+1. **CI exists, but only a branch-protection rule makes it a gate.** `ci.yml` runs on every PR and every push to `v2` (§1). The suite once sat red for three weeks after the mis-applied ZIP swap (§6); a required `verify` check on `v2` (a GitHub setting, not a file) is what stops that from happening again.
 2. **Admin password reset email is in demo mode (deferred).** There is no domain yet (school project), so there is no custom SMTP: reset emails come from Supabase's built-in sender (a few per hour, best effort) with the default template, and the link only works in the browser that requested it. Revisit once a domain exists: custom SMTP, then the `token_hash` template described under backlog B31. No code change is needed.
-3. **Commercial quotes depend on migration 005.** The flow is wired end to end (backlog B3), but until `supabase/005_commercial_quotes.sql` is run every submission fails with "Something went wrong. Please try again." Admins see leads only on `/admin/quotes`; there is no email notification and no way to mark a lead as handled yet.
+3. **Commercial quotes need the `commercial_quotes` migration applied.** The flow is wired end to end (backlog B3); until `20261013230608_commercial_quotes.sql` is applied, every submission fails with "Something went wrong. Please try again." Admins see leads only on `/admin/quotes`; there is no email notification and no way to mark a lead as handled yet (the `updated_at` column is ready for one).
 4. **Conflicting prices.** `app/residential/page.tsx` advertises "From $120 / $200 / $250" while `PRICE_MAP` in constants is `$85 / $149 / $199`. (Backlog B28.)
-5. **The original backend plan was never built** — it described Prisma + Vercel/Neon Postgres + Auth.js/NextAuth + Zod + Resend/Twilio. The app actually uses Supabase (Postgres + Auth) with hand-written types and no ORM/email/SMS. The plan is archived locally at `docs/archive/BACKEND_PLAN.md` (untracked) with a banner saying so (backlog B51).
-6. **Fake availability & dead controls.** The datetime step hardcodes the 3rd offered day as "Full" (`isFull: i === 2`, a Figma placeholder). Several admin/customer buttons are non-functional placeholders: Reschedule, Send Client Message, Print/Export, Add Employee, View Schedule, calendar-export, Create Account.
+5. **The original backend plan was never built** — it described Prisma + Vercel/Neon Postgres + Auth.js/NextAuth + Zod + Resend/Twilio. The app actually uses Supabase (Postgres + Auth) with generated database types and no ORM/email/SMS. The plan is archived locally at `docs/archive/BACKEND_PLAN.md` (untracked) with a banner saying so (backlog B51).
+6. **Fake availability & dead controls.** The datetime step hardcodes the 3rd offered day as "Full" (`isFull: i === 2`, a Figma placeholder). Admin buttons that are not built are disabled and labelled "Coming soon" (Reschedule, Send Client Message, Print / Export, Add Employee, View Schedule). On the residential confirmation page the calendar buttons now work (Google Calendar link, `.ics` download); Create Account is still a non-functional placeholder.
 7. **Settings are a placeholder** — `/admin/settings` shows email/SMS notification toggles disabled and labeled "Coming soon" (backlog B49). Building them needs outbound email/SMS first.
-8. Backlog work is tracked as **B1–B52** in `docs/BACKLOG.md`; recent commits (B1/B2/B4/B8/B9/B11/B20) reference those IDs. Design rationale lives in `docs/DECISIONS.md`; Figma mapping in `docs/FIGMA_MAP.md`.
+8. Backlog work is tracked as **B1–B52** in `docs/BACKLOG.md`; recent commits (B5/B12/B14/B15/B30/B43/B47 and earlier) reference those IDs. Design rationale lives in `docs/DECISIONS.md`; Figma mapping in `docs/FIGMA_MAP.md`.
 
 ---
 
 ## Run / build / test
 
 ```bash
-npm run dev      # dev server on localhost:3000
-npm run build    # production build
-npm start        # serve production build
-npm run lint     # ESLint
-npm run test     # Vitest (run mode; TZ=UTC by default)
+npm ci               # install (CI and worktrees use this)
+npm run dev          # dev server on localhost:3000
+npm run build        # production build
+npm start            # serve production build
+npm run lint         # ESLint
+npx tsc --noEmit     # type-check
+npm test             # Vitest (run mode; TZ=UTC by default)
+npm run db:types     # regenerate lib/supabase/database.types.ts after a schema change
 ```
 
-Requires `.env.local` with the three Supabase keys (§1). The database must be initialized by running `supabase/001_initial_schema.sql` then `002_admin_role_rls.sql` in the Supabase SQL editor, and an admin account must be granted `app_metadata.role = 'admin'` (see the `002` header) before the admin panel is usable.
+Requires `.env.local` with the three Supabase keys (§1). The database comes from the migrations in `supabase/migrations/`, applied by the owner with `npx supabase db push` (never from a coding session), followed by `npm run db:types`. An admin account must be granted `app_metadata.role = 'admin'` (SQL in the README and in the header of `20260918194509_admin_role_rls.sql`) before the admin panel is usable. See the README for the full Supabase CLI, CI and worktree workflow.
