@@ -1,8 +1,9 @@
 // Row types for the app, built from the generated lib/supabase/database.types.ts
 // (npm run db:types — never hand-edit that file). The generator types text
 // columns as plain `string` and jsonb as `Json`, so this file narrows the
-// columns that have a CHECK constraint, and assign_booking_employees' result,
-// back to the exact values the database allows.
+// columns that have a CHECK constraint, and the jsonb results of
+// assign_booking_employees and set_booking_status, back to the exact values
+// the database allows.
 
 import type { Database as GeneratedDatabase } from "./database.types";
 
@@ -68,6 +69,23 @@ export type AssignBookingEmployeesResult =
   | { status: "closed"; booking_status: BookingStatus }
   | { status: "not_found" };
 
+// jsonb returned by set_booking_status
+// (supabase/migrations/20261019032629_booking_status_flow.sql).
+export type SetBookingStatusResult =
+  | { status: "changed"; from: BookingStatus; to: BookingStatus }
+  | { status: "refused"; booking_status: BookingStatus }
+  | { status: "not_found" };
+
+// set_booking_status isn't in database.types.ts until the owner applies its
+// migration and runs npm run db:types. Its Args are written out here until
+// then; afterwards, take them from GeneratedPublic["Functions"] like
+// assign_booking_employees does.
+type SetBookingStatusArgs = {
+  p_booking_id: string;
+  p_status: BookingStatus;
+  p_description: string;
+};
+
 // The generated Database with the narrowed tables and function result swapped
 // in. Passed to createServerClient / createClient so queries return these types.
 export type Database = Omit<GeneratedDatabase, "public"> & {
@@ -76,10 +94,14 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
       bookings: BookingsTable;
       commercial_quotes: CommercialQuotesTable;
     };
-    Functions: Omit<GeneratedPublic["Functions"], "assign_booking_employees"> & {
+    Functions: Omit<GeneratedPublic["Functions"], "assign_booking_employees" | "set_booking_status"> & {
       assign_booking_employees: {
         Args: GeneratedPublic["Functions"]["assign_booking_employees"]["Args"];
         Returns: AssignBookingEmployeesResult;
+      };
+      set_booking_status: {
+        Args: SetBookingStatusArgs;
+        Returns: SetBookingStatusResult;
       };
     };
   };

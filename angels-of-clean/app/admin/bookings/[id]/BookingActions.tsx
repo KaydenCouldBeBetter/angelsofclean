@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { assignEmployees, confirmBooking, updateBookingStatus } from "../../actions";
+import { assignEmployees, updateBookingStatus } from "../../actions";
+import { canChangeStatus, type StatusChangeTarget } from "../../status-config";
 import type { Employee, Job } from "@/lib/admin-types";
 
 interface BookingActionsProps {
@@ -19,9 +20,13 @@ export default function BookingActions({ job, employees }: BookingActionsProps) 
   // Overlapping jobs for newly ticked cleaners, shown before "Assign Anyway".
   const [conflicts, setConflicts] = useState<string[] | null>(null);
 
-  const isUnconfirmed = job.status === "pending";
-  const isCancelled = job.status === "cancelled";
-  const isDone = job.status === "done";
+  // Which buttons work follows the status flow in status-config.ts; the
+  // database refuses anything else anyway.
+  const canConfirm = canChangeStatus(job.status, "confirmed");
+  const canStart = canChangeStatus(job.status, "active");
+  const canComplete = canChangeStatus(job.status, "done");
+  const canCancel = canChangeStatus(job.status, "cancelled");
+  const isClosed = job.status === "cancelled" || job.status === "done";
 
   function toggleEmployee(id: string) {
     // The warning only describes the selection it was shown for.
@@ -63,46 +68,42 @@ export default function BookingActions({ job, employees }: BookingActionsProps) 
     });
   }
 
-  function handleConfirm() {
+  function changeStatus(status: StatusChangeTarget) {
     setError(null);
     startTransition(async () => {
-      const result = await confirmBooking(job.id);
+      const result = await updateBookingStatus(job.id, status);
       if (!result.success) setError(result.error ?? "Something went wrong.");
       // Refresh either way: a refusal means the status changed under us.
       router.refresh();
     });
   }
 
-  function handleMarkComplete() {
-    setError(null);
-    startTransition(async () => {
-      const result = await updateBookingStatus(job.id, "done");
-      if (!result.success) setError(result.error ?? "Something went wrong.");
-      else router.refresh();
-    });
-  }
-
   function handleCancel() {
     if (!confirm("Cancel this booking? This cannot be undone.")) return;
-    setError(null);
-    startTransition(async () => {
-      const result = await updateBookingStatus(job.id, "cancelled");
-      if (!result.success) setError(result.error ?? "Something went wrong.");
-      else router.refresh();
-    });
+    changeStatus("cancelled");
   }
 
   return (
     <div className="flex flex-col gap-2.5">
       {error && <p role="alert" className="text-xs text-red-600">{error}</p>}
 
-      {isUnconfirmed && (
+      {canConfirm && (
         <button
-          onClick={handleConfirm}
+          onClick={() => changeStatus("confirmed")}
           disabled={isPending}
           className="h-9 w-full rounded-lg bg-[#1d4ed8] text-white text-[13px] font-semibold hover:bg-[#1e40af] transition-colors disabled:opacity-50"
         >
           Confirm Booking
+        </button>
+      )}
+
+      {canStart && (
+        <button
+          onClick={() => changeStatus("active")}
+          disabled={isPending}
+          className="h-9 w-full rounded-lg bg-[#b45309] text-white text-[13px] font-semibold hover:bg-[#92400e] transition-colors disabled:opacity-50"
+        >
+          Mark In Progress
         </button>
       )}
 
@@ -156,7 +157,7 @@ export default function BookingActions({ job, employees }: BookingActionsProps) 
       ) : (
         <button
           onClick={openPicker}
-          disabled={isCancelled || isDone}
+          disabled={isClosed}
           className="h-9 w-full rounded-lg bg-[#1a6b5a] text-white text-[13px] font-semibold hover:bg-[#155a4b] transition-colors disabled:opacity-50"
         >
           Assign Employee
@@ -168,8 +169,8 @@ export default function BookingActions({ job, employees }: BookingActionsProps) 
       </button>
 
       <button
-        onClick={handleMarkComplete}
-        disabled={isPending || isCancelled || isDone}
+        onClick={() => changeStatus("done")}
+        disabled={isPending || !canComplete}
         className="h-9 w-full rounded-lg bg-[#15803d] text-white text-[13px] font-semibold hover:bg-[#116b33] transition-colors disabled:opacity-50"
       >
         Mark Complete
@@ -177,7 +178,7 @@ export default function BookingActions({ job, employees }: BookingActionsProps) 
 
       <button
         onClick={handleCancel}
-        disabled={isPending || isCancelled}
+        disabled={isPending || !canCancel}
         className="h-9 w-full rounded-lg border border-[#e2e8e6] bg-[#feefee] text-[#c0392b] text-[13px] font-semibold hover:bg-[#fde2e0] transition-colors disabled:opacity-50"
       >
         Cancel Booking

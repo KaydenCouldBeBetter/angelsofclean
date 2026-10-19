@@ -5,19 +5,16 @@ import { requireAdmin, type AdminContext } from "@/lib/supabase/require-admin";
 import type { JobStatus } from "@/lib/admin-types";
 import type { AssignmentConflictRow } from "@/lib/supabase/types";
 import { formatNy, formatNyTimeRange } from "@/lib/datetime";
+import {
+  DASHBOARD_STATUS,
+  STATUS_ACTIVITY_LABEL,
+  type StatusChangeTarget,
+} from "./status-config";
 
 interface ActionResult {
   success: boolean;
   error?: string;
 }
-
-const STATUS_ACTIVITY_LABEL: Record<JobStatus, string> = {
-  pending: "Marked pending",
-  confirmed: "Confirmed",
-  active: "Marked in progress",
-  done: "Marked complete",
-  cancelled: "Booking cancelled",
-};
 
 // Log only the Postgres error code plus a correlation id — full Supabase
 // error objects can echo row data (customer PII) into server logs.
@@ -144,46 +141,30 @@ export async function assignEmployees(
   }
 }
 
-export async function confirmBooking(bookingId: string): Promise<ActionResult> {
-  const auth = await requireAdmin();
-  if (!auth.ok) {
-    return { success: false, error: auth.error };
-  }
-  const { supabase } = auth;
-
-  // The status filter makes pending → confirmed atomic: a booking that was
-  // cancelled or completed since the page loaded matches zero rows instead of
-  // being silently brought back.
-  const { data: updated, error } = await supabase
-    .from("bookings")
-    .update({ status: "confirmed", updated_at: new Date().toISOString() })
-    .eq("id", bookingId)
-    .eq("status", "pending")
-    .select("id");
-
-  if (error) {
-    logDbError("confirmBooking", error);
-    return { success: false, error: "Something went wrong. Please try again." };
-  }
-
-  if (!updated || updated.length === 0) {
-    // Refresh the admin pages so the admin sees what the booking is now.
-    revalidateBookingPaths(bookingId);
-    return {
-      success: false,
-      error: "This booking is no longer pending, so it can't be confirmed.",
-    };
-  }
-
-  await logActivity(auth, bookingId, STATUS_ACTIVITY_LABEL.confirmed);
-
-  revalidateBookingPaths(bookingId);
-  return { success: true };
+function statusName(status: JobStatus): string {
+  return DASHBOARD_STATUS[status].label.toLowerCase();
 }
 
+// Why set_booking_status refused, given the status the booking really has.
+function refusalMessage(current: JobStatus, target: StatusChangeTarget): string {
+  if (current === "done" || current === "cancelled") {
+    return `This booking is ${current === "done" ? "completed" : "cancelled"}, so its status can't be changed.`;
+  }
+  if (current === target) return `This booking is already ${statusName(current)}.`;
+  if (target === "confirmed") return "This booking is no longer pending, so it can't be confirmed.";
+  return `This booking is ${statusName(current)}, so it can't be marked ${statusName(target)}.`;
+}
+
+/**
+ * Changes a booking's status and writes its activity entry in one database
+ * transaction and one round trip
+ * (supabase/migrations/20261019032629_booking_status_flow.sql).
+ * Postgres decides whether the move is allowed (see STATUS_TRANSITIONS) and
+ * records the admin's email from their session token.
+ */
 export async function updateBookingStatus(
   bookingId: string,
-  status: JobStatus,
+  status: StatusChangeTarget,
 ): Promise<ActionResult> {
   const auth = await requireAdmin();
   if (!auth.ok) {
@@ -191,25 +172,38 @@ export async function updateBookingStatus(
   }
   const { supabase } = auth;
 
-  const { data: updated, error } = await supabase
-    .from("bookings")
-    .update({ status, updated_at: new Date().toISOString() })
-    .eq("id", bookingId)
-    .select("id");
+  // Server actions take whatever the client sends; only real targets reach
+  // the database.
+  if (!Object.hasOwn(STATUS_ACTIVITY_LABEL, status)) {
+    return { success: false, error: "That status change isn't allowed." };
+  }
 
-  if (error) {
+  const { data: result, error } = await supabase.rpc("set_booking_status", {
+    p_booking_id: bookingId,
+    p_status: status,
+    p_description: STATUS_ACTIVITY_LABEL[status],
+  });
+
+  if (error || !result) {
     logDbError("updateBookingStatus", error);
     return { success: false, error: "Something went wrong. Please try again." };
   }
 
-  // Zero affected rows means the booking doesn't exist (or RLS blocked the
-  // write) — without .select() Supabase reports that as a silent success.
-  if (!updated || updated.length === 0) {
-    return { success: false, error: "Booking not found." };
+  switch (result.status) {
+    case "not_found":
+      return { success: false, error: "Booking not found." };
+
+    case "refused":
+      // Refresh the admin pages so the admin sees what the booking is now.
+      revalidateBookingPaths(bookingId);
+      return { success: false, error: refusalMessage(result.booking_status, status) };
+
+    case "changed":
+      revalidateBookingPaths(bookingId);
+      return { success: true };
   }
+}
 
-  await logActivity(auth, bookingId, STATUS_ACTIVITY_LABEL[status]);
-
-  revalidateBookingPaths(bookingId);
-  return { success: true };
+export async function confirmBooking(bookingId: string): Promise<ActionResult> {
+  return updateBookingStatus(bookingId, "confirmed");
 }
