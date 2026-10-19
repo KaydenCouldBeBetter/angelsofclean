@@ -26,6 +26,7 @@ export default function ReviewPage() {
     bedrooms, bathrooms, notes,
     date, timeSlot,
     name, email, phone,
+    formStartedAt, honeypot,
     dateExpired,
     isSubmitting, setSubmitting,
   } = store;
@@ -36,8 +37,11 @@ export default function ReviewPage() {
     // A saved date that had passed was cleared on load: send the customer to
     // the date step (which explains why) instead of back to the start.
     if (dateExpired) router.replace("/residential/datetime?returnTo=review");
-    else if (!service || !address || !date || !name) router.replace("/residential");
-  }, [hydrated, service, address, date, name, dateExpired, router]);
+    // No start time means the wizard state predates the bot check: start over.
+    else if (!service || !address || !date || !name || formStartedAt === null) {
+      router.replace("/residential");
+    }
+  }, [hydrated, service, address, date, name, formStartedAt, dateExpired, router]);
 
   const formattedDate = date
     ? new Date(date + "T12:00:00").toLocaleDateString("en-US", {
@@ -61,6 +65,9 @@ export default function ReviewPage() {
         date,
         timeSlot: timeSlot ?? "",
         name, email, phone,
+      }, {
+        website: honeypot,
+        elapsedMs: Date.now() - (formStartedAt ?? Date.now()),
       });
     } catch {
       // The request never reached the server (offline, timeout).

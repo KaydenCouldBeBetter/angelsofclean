@@ -7,6 +7,7 @@ import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
 import { PrivacyNote } from "@/components/booking/PolicyNotes";
+import HoneypotField from "@/components/booking/HoneypotField";
 import WhenHydrated from "@/components/booking/WhenHydrated";
 import { useBookingStore } from "@/store/bookingStore";
 import { FIELD_MAX_LENGTHS } from "@/lib/constants";
@@ -21,7 +22,7 @@ function ContactPageContent() {
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo");
   const store = useBookingStore();
-  const { setStep5 } = store;
+  const { setStep5, setHoneypot } = store;
 
   useEffect(() => {
     if (!store.date) router.replace("/residential");
@@ -30,6 +31,7 @@ function ContactPageContent() {
   const [name, setName] = useState(store.name || "");
   const [email, setEmail] = useState(store.email || "");
   const [phone, setPhone] = useState(store.phone || "");
+  const [website, setWebsite] = useState("");
   const [touched, setTouched] = useState({ name: false, email: false, phone: false });
 
   const emailValid = EMAIL_REGEX.test(email.trim());
@@ -38,6 +40,7 @@ function ContactPageContent() {
 
   function handleNext() {
     setStep5(name, email, phone);
+    setHoneypot(website);
     router.push("/residential/review");
   }
 
@@ -123,6 +126,8 @@ function ContactPageContent() {
               )}
             </div>
           </div>
+
+          <HoneypotField value={website} onChange={setWebsite} />
 
           <PrivacyNote />
         </div>

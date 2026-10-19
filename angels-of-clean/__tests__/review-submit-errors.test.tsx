@@ -44,6 +44,9 @@ const RESIDENTIAL = {
   name: "Jane Doe",
   email: "jane@example.com",
   phone: "(315) 555-0100",
+  // A complete saved booking has the bot check's start time; the review step
+  // sends a visitor without one back to step 1.
+  formStartedAt: Date.now() - 60_000,
 };
 
 const COMMERCIAL = {
@@ -61,6 +64,7 @@ const COMMERCIAL = {
   phone: "(315) 555-0199",
   commercialFrequency: "weekly" as const,
   schedulePreference: "after" as const,
+  formStartedAt: Date.now() - 60_000,
 };
 
 let container: HTMLDivElement;
