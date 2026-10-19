@@ -1,6 +1,7 @@
 import { getJobsByDateFilter, getEmployees } from "@/lib/supabase/queries";
 import { NewBookingButton } from "../NewBookingModal";
 import { formatNy } from "@/lib/datetime";
+import { toStaffMap } from "@/lib/admin-types";
 import BookingsList, { type FilterTab } from "./BookingsList";
 import LoadError from "../LoadError";
 
@@ -37,7 +38,7 @@ export default async function AdminBookingsPage({
       {jobs.ok && employees.ok ? (
         <BookingsList
           jobs={jobs.data}
-          employeeMap={Object.fromEntries(employees.data.map((e) => [e.id, e]))}
+          employeeMap={toStaffMap(employees.data)}
           activeTab={activeTab}
         />
       ) : (

@@ -4,7 +4,7 @@ import { FIELD_MAX_LENGTHS, SERVICE_AREA_ZIPS, TIME_SLOT_WINDOWS } from "@/lib/c
 import { looksLikeBot, type BotCheck } from "@/lib/bot-check";
 import { allowPublicSubmission } from "@/lib/rate-limit";
 import { createServiceRoleClient } from "@/lib/supabase/service";
-import { requireAdmin } from "@/lib/supabase/require-admin";
+import { requireAdmin, type AdminContext } from "@/lib/supabase/require-admin";
 import { isNyWallClockInFuture, isValidDateStr, nyWallClockToInstant } from "@/lib/datetime";
 
 export interface BookingData {
@@ -21,9 +21,9 @@ export interface BookingData {
   name: string;
   email: string;
   phone: string;
-  // Entry instructions (door code, gate, pets). Optional so callers without
-  // the field (the admin New Booking form) still match. Stored in
-  // booking_access, never in notes, and never logged.
+  // Entry instructions (door code, gate, pets). Public form only: the admin
+  // New Booking form has no such field, and adminCreateBooking refuses them.
+  // Stored in booking_access, never in notes, and never logged.
   accessInstructions?: string;
 }
 
@@ -80,14 +80,31 @@ function logDbError(source: string, error: { code?: string } | null | undefined)
   });
 }
 
+// The service-role client (public path) and an admin's session client (admin
+// path) share this shape; only the privileges behind them differ.
+type BookingClient = AdminContext["supabase"];
+
+interface BookingPath {
+  logLabel: string;
+  activityDescription: string;
+  // Public path only: the per-IP allowance. Admins are never rate-limited.
+  rateLimited: boolean;
+  // Public path only. If the booking_access insert fails the booking is
+  // deleted again, and an admin session has no DELETE on bookings, so the
+  // admin path couldn't roll back. Admins add entry instructions on the
+  // booking's page instead (set_booking_access).
+  acceptsAccessInstructions: boolean;
+  // Called once validation has passed. Public: the service role, the only
+  // insert path for signed-out customers. Admin: the admin's own session, so
+  // RLS applies.
+  client: () => BookingClient;
+}
+
 // Shared by submitBooking and adminCreateBooking so validation and insert
 // logic can't drift between the client and admin paths.
-async function createBooking(
-  data: BookingData,
-  logLabel: string,
-  activityDescription: string,
-  rateLimited: boolean,
-): Promise<BookingResult> {
+async function createBooking(data: BookingData, path: BookingPath): Promise<BookingResult> {
+  const { logLabel, activityDescription } = path;
+
   // Server-side validation
   if (!hasBookingShape(data)) {
     return { success: false, error: "Invalid booking details." };
@@ -98,6 +115,10 @@ async function createBooking(
     if ((data[field] ?? "").length > max) {
       return { success: false, error: `${label} must be ${max} characters or fewer.` };
     }
+  }
+
+  if (!path.acceptsAccessInstructions && data.accessInstructions?.trim()) {
+    return { success: false, error: "Add entry instructions from the booking's page." };
   }
 
   if (!VALID_SERVICES.includes(data.service)) {
@@ -159,7 +180,7 @@ async function createBooking(
 
   // Counted after validation, so only requests that would insert a row use up
   // the caller's allowance.
-  if (rateLimited && !(await allowPublicSubmission("booking"))) {
+  if (path.rateLimited && !(await allowPublicSubmission("booking"))) {
     return {
       success: false,
       error:
@@ -173,7 +194,7 @@ async function createBooking(
   const startAt = nyWallClockToInstant(data.date, window.start);
   const endAt = nyWallClockToInstant(data.date, window.end);
 
-  const supabase = createServiceRoleClient();
+  const supabase = path.client();
 
   const { data: booking, error: insertError } = await supabase
     .from("bookings")
@@ -246,22 +267,31 @@ export async function submitBooking(data: BookingData, botCheck: BotCheck): Prom
   if (looksLikeBot(botCheck)) {
     return { success: false, error: "Something went wrong. Please try again.", unavailable: true };
   }
-  return createBooking(data, "submitBooking", "Booking submitted by client", true);
+  return createBooking(data, {
+    logLabel: "submitBooking",
+    activityDescription: "Booking submitted by client",
+    rateLimited: true,
+    acceptsAccessInstructions: true,
+    client: createServiceRoleClient,
+  });
 }
 
 /**
  * Admin-initiated booking — same validation, different activity log message.
- * The actor's email comes from the verified session, never from the caller.
+ * Writes through the admin's own session (admin-only insert policies), never
+ * the service role. The actor's email comes from the verified session, never
+ * from the caller.
  */
 export async function adminCreateBooking(data: BookingData): Promise<BookingResult> {
   const auth = await requireAdmin();
   if (!auth.ok) {
     return { success: false, error: auth.error };
   }
-  return createBooking(
-    data,
-    "adminCreateBooking",
-    `Booking created by ${auth.user.email ?? "admin"}`,
-    false,
-  );
+  return createBooking(data, {
+    logLabel: "adminCreateBooking",
+    activityDescription: `Booking created by ${auth.user.email ?? "admin"}`,
+    rateLimited: false,
+    acceptsAccessInstructions: false,
+    client: () => auth.supabase,
+  });
 }
