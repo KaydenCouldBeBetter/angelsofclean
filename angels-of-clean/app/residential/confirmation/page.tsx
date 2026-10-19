@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { buildIcs, googleCalendarUrl, type CalendarEvent } from "@/lib/calendar-links";
 import { isValidDateStr } from "@/lib/datetime";
 import ConfirmedWithoutDetails from "@/components/booking/ConfirmedWithoutDetails";
-import { SERVICE_LABELS, FREQUENCY_LABELS, TIME_LABELS } from "@/lib/constants";
+import { SERVICE_LABELS, FREQUENCY_LABELS, TIME_LABELS, formatBathroomCount } from "@/lib/constants";
 import { useIsClient } from "@/lib/use-is-client";
 
 function downloadIcs(event: CalendarEvent) {
@@ -198,7 +198,9 @@ export default function ConfirmationPage() {
           <p className="font-semibold text-zinc-900">{serviceLabel}</p>
           <p className="text-sm text-zinc-500">{formattedDate} · {timeLabel}</p>
           <p className="text-sm text-zinc-500">{address}, {city}, NY {zip}</p>
-          <p className="text-sm text-zinc-500">{bedrooms} Bedrooms · {bathrooms} Bathroom</p>
+          <p className="text-sm text-zinc-500">
+            {bedrooms} {bedrooms === 1 ? "Bedroom" : "Bedrooms"} · {formatBathroomCount(bathrooms)}
+          </p>
         </div>
 
         {/* Calendar buttons — side by side */}

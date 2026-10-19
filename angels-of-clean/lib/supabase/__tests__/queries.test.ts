@@ -391,3 +391,21 @@ describe("getBookingAccess (booking detail page only)", () => {
     consoleSpy.mockRestore();
   });
 });
+
+// B42: bookings.bathrooms is numeric(2,1), so a booking can have 2.5 bathrooms.
+describe("bathroom count on the admin booking detail and lists", () => {
+  it.each([
+    [1, "2 Bedrooms · 1 Bathroom"],
+    [1.5, "2 Bedrooms · 1.5 Bathrooms"],
+    [2.5, "2 Bedrooms · 2.5 Bathrooms"],
+    [5, "2 Bedrooms · 5 Bathrooms"],
+  ])("shows %s bathrooms as %j", async (bathrooms, property) => {
+    const row = { ...BOOKING_ROW, bathrooms };
+
+    createClientMock.mockResolvedValue(makeSupabaseStub({ data: row, error: null }).client);
+    expect(await getJobById("b-1")).toMatchObject({ ok: true, data: { property } });
+
+    createClientMock.mockResolvedValue(makeSupabaseStub({ data: [row], error: null }).client);
+    expect(await getJobs()).toMatchObject({ ok: true, data: [{ property }] });
+  });
+});

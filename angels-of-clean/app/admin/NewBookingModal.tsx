@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { adminCreateBooking } from "@/app/actions/submitBooking";
-import { FIELD_MAX_LENGTHS, TIME_LABELS } from "@/lib/constants";
+import { BATHROOM_OPTIONS, FIELD_MAX_LENGTHS, TIME_LABELS } from "@/lib/constants";
 
 const SERVICES = [
   { value: "standard", label: "Standard Clean" },
@@ -223,7 +223,7 @@ export default function NewBookingModal({ open, onClose }: NewBookingModalProps)
                     onChange={(e) => setBathrooms(Number(e.target.value))}
                     className="h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
                   >
-                    {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}
+                    {BATHROOM_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
                   </select>
                 </div>
               </div>

@@ -136,6 +136,34 @@ describe.each(ACTIONS)("%s validation", (_name, action) => {
     expect(bookingsInsertMock).not.toHaveBeenCalled();
   });
 
+  // B42: half-bathrooms. bookings.bathrooms is numeric(2,1) with a half-step CHECK.
+  it.each([1, 1.5, 2.5, 4.5, 5])("accepts and stores %s bathrooms", async (bathrooms) => {
+    singleMock.mockResolvedValue({ data: { id: "abc-123", booking_number: 1042 }, error: null });
+    const result = await action({ ...VALID_INPUT, bathrooms });
+    expect(result.success).toBe(true);
+    expect(bookingsInsertMock).toHaveBeenCalledWith(expect.objectContaining({ bathrooms }));
+  });
+
+  it.each([0, 0.5, 5.5, 6])("rejects %s bathrooms as out of range", async (bathrooms) => {
+    const result = await action({ ...VALID_INPUT, bathrooms });
+    expect(result).toEqual({
+      success: false,
+      error: "Bedroom and bathroom count must be between 1 and 5.",
+    });
+    expect(bookingsInsertMock).not.toHaveBeenCalled();
+  });
+
+  // The database would round 1.49 to 1.5 and 2.25 to 2.3, so the action must
+  // refuse them rather than store a different count.
+  it.each([1.25, 1.49, 2.3, 3.75])("rejects %s bathrooms as not a half step", async (bathrooms) => {
+    const result = await action({ ...VALID_INPUT, bathrooms });
+    expect(result).toEqual({
+      success: false,
+      error: "Bathrooms must be a whole or half number, like 2 or 2.5.",
+    });
+    expect(bookingsInsertMock).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["name", "Name"],
     ["email", "Email address"],
@@ -164,8 +192,10 @@ describe.each(ACTIONS)("%s validation", (_name, action) => {
     ["a non-string field", { ...VALID_INPUT, notes: { length: 0 } }],
     ["non-string entry instructions", { ...VALID_INPUT, accessInstructions: { length: 0 } }],
     ["a missing field", { ...VALID_INPUT, email: undefined }],
-    ["a fractional room count", { ...VALID_INPUT, bedrooms: 2.5 }],
+    ["a fractional bedroom count", { ...VALID_INPUT, bedrooms: 2.5 }],
     ["a string room count", { ...VALID_INPUT, bathrooms: "2" }],
+    ["a NaN bathroom count", { ...VALID_INPUT, bathrooms: NaN }],
+    ["an infinite bathroom count", { ...VALID_INPUT, bathrooms: Infinity }],
     ["no payload at all", null],
   ])("rejects %s instead of throwing", async (_case, payload) => {
     // Server Action arguments are not type-checked at runtime.
