@@ -55,8 +55,8 @@ export async function allowPublicSubmission(kind: SubmissionKind): Promise<boole
     // Handled below, the same as an error result.
   }
 
-  // Fail open: a broken limiter (e.g. supabase/004_rate_limits.sql not yet
-  // run) must not stop real customers from booking.
+  // Fail open: a broken limiter (e.g. the rate_limits migration not yet
+  // applied) must not stop real customers from booking.
   console.error("allowPublicSubmission failed", { code, correlationId: crypto.randomUUID() });
   return true;
 }
