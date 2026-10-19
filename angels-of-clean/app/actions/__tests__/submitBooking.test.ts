@@ -30,6 +30,10 @@ vi.mock("@/lib/rate-limit", () => ({
 import { submitBooking, adminCreateBooking, type BookingData } from "../submitBooking";
 import { requireAdmin } from "@/lib/supabase/require-admin";
 import { FIELD_MAX_LENGTHS } from "@/lib/constants";
+import { MIN_FILL_MS, type BotCheck } from "@/lib/bot-check";
+
+// What a person's browser sends: empty honeypot, well past the minimum fill time.
+const HUMAN: BotCheck = { website: "", elapsedMs: 60_000 };
 
 const VALID_INPUT: BookingData = {
   service: "standard",
@@ -72,7 +76,7 @@ afterEach(() => {
 // Both actions share createBooking; running every validation case against both
 // guards against the client and admin paths drifting apart again (code M4).
 const ACTIONS = [
-  ["submitBooking", (input: BookingData) => submitBooking(input)],
+  ["submitBooking", (input: BookingData) => submitBooking(input, HUMAN)],
   ["adminCreateBooking", (input: BookingData) => adminCreateBooking(input)],
 ] as const;
 
@@ -218,7 +222,7 @@ describe("submitBooking", () => {
       error: null,
     });
 
-    const result = await submitBooking(VALID_INPUT);
+    const result = await submitBooking(VALID_INPUT, HUMAN);
 
     expect(result).toEqual({
       success: true,
@@ -248,11 +252,10 @@ describe("submitBooking", () => {
     });
 
     // Today (2026-07-15) afternoon (starts 12 PM) at 10 AM NY — still bookable.
-    const result = await submitBooking({
-      ...VALID_INPUT,
-      date: "2026-07-15",
-      timeSlot: "afternoon",
-    });
+    const result = await submitBooking(
+      { ...VALID_INPUT, date: "2026-07-15", timeSlot: "afternoon" },
+      HUMAN,
+    );
 
     expect(result.success).toBe(true);
     expect(bookingsInsertMock).toHaveBeenCalled();
@@ -267,7 +270,7 @@ describe("submitBooking", () => {
       error: null,
     });
 
-    await submitBooking(VALID_INPUT);
+    await submitBooking(VALID_INPUT, HUMAN);
 
     expect(bookingsInsertMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -283,7 +286,7 @@ describe("submitBooking", () => {
       error: null,
     });
 
-    await submitBooking({ ...VALID_INPUT, timeSlot: "afternoon" });
+    await submitBooking({ ...VALID_INPUT, timeSlot: "afternoon" }, HUMAN);
 
     expect(bookingsInsertMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -300,13 +303,13 @@ describe("submitBooking", () => {
     });
 
     // Oct 31 is still EDT (UTC-4): 8 AM NY = 12:00 UTC.
-    await submitBooking({ ...VALID_INPUT, date: "2026-10-31" });
+    await submitBooking({ ...VALID_INPUT, date: "2026-10-31" }, HUMAN);
     expect(bookingsInsertMock).toHaveBeenCalledWith(
       expect.objectContaining({ start_at: "2026-10-31T12:00:00.000Z" }),
     );
 
     // Nov 1 has fallen back to EST (UTC-5): 8 AM NY = 13:00 UTC.
-    await submitBooking({ ...VALID_INPUT, date: "2026-11-01" });
+    await submitBooking({ ...VALID_INPUT, date: "2026-11-01" }, HUMAN);
     expect(bookingsInsertMock).toHaveBeenCalledWith(
       expect.objectContaining({ start_at: "2026-11-01T13:00:00.000Z" }),
     );
@@ -319,13 +322,13 @@ describe("submitBooking", () => {
     });
 
     // Mar 13 is still EST (UTC-5): 8 AM NY = 13:00 UTC.
-    await submitBooking({ ...VALID_INPUT, date: "2027-03-13" });
+    await submitBooking({ ...VALID_INPUT, date: "2027-03-13" }, HUMAN);
     expect(bookingsInsertMock).toHaveBeenCalledWith(
       expect.objectContaining({ start_at: "2027-03-13T13:00:00.000Z" }),
     );
 
     // Mar 14 has sprung forward to EDT (UTC-4): 8 AM NY = 12:00 UTC.
-    await submitBooking({ ...VALID_INPUT, date: "2027-03-14" });
+    await submitBooking({ ...VALID_INPUT, date: "2027-03-14" }, HUMAN);
     expect(bookingsInsertMock).toHaveBeenCalledWith(
       expect.objectContaining({ start_at: "2027-03-14T12:00:00.000Z" }),
     );
@@ -336,7 +339,7 @@ describe("submitBooking rate limiting", () => {
   it("refuses a caller who is over the limit, without touching the database", async () => {
     allowPublicBookingMock.mockResolvedValue(false);
 
-    const result = await submitBooking(VALID_INPUT);
+    const result = await submitBooking(VALID_INPUT, HUMAN);
 
     expect(result).toEqual({
       success: false,
@@ -348,7 +351,7 @@ describe("submitBooking rate limiting", () => {
   });
 
   it("does not spend the caller's allowance on a request that fails validation", async () => {
-    await submitBooking({ ...VALID_INPUT, email: "not-an-email" });
+    await submitBooking({ ...VALID_INPUT, email: "not-an-email" }, HUMAN);
 
     expect(allowPublicBookingMock).not.toHaveBeenCalled();
   });
@@ -356,7 +359,7 @@ describe("submitBooking rate limiting", () => {
   it("counts each valid public submission once", async () => {
     singleMock.mockResolvedValue({ data: { id: "abc-123", booking_number: 1042 }, error: null });
 
-    await submitBooking(VALID_INPUT);
+    await submitBooking(VALID_INPUT, HUMAN);
 
     expect(allowPublicBookingMock).toHaveBeenCalledTimes(1);
     expect(allowPublicBookingMock).toHaveBeenCalledWith("booking");
@@ -370,6 +373,110 @@ describe("submitBooking rate limiting", () => {
 
     expect(result.success).toBe(true);
     expect(allowPublicBookingMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("submitBooking bot check", () => {
+  // A bot must get exactly what a real failure gets.
+  const GENERIC_FAILURE = { success: false, error: "Something went wrong. Please try again." };
+
+  function spyOnConsole() {
+    return (["error", "warn", "log", "info"] as const).map((level) =>
+      vi.spyOn(console, level).mockImplementation(() => {}),
+    );
+  }
+
+  it("accepts a normal submit: empty honeypot, well past the minimum fill time", async () => {
+    singleMock.mockResolvedValue({ data: { id: "abc-123", booking_number: 1042 }, error: null });
+
+    const result = await submitBooking(VALID_INPUT, { website: "", elapsedMs: 45_000 });
+
+    expect(result).toEqual({ success: true, bookingRef: "AOC-1042", bookingId: "abc-123" });
+    expect(bookingsInsertMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects a submit whose honeypot is filled, with the generic error and no trace", async () => {
+    const spies = spyOnConsole();
+
+    const result = await submitBooking(VALID_INPUT, {
+      website: "http://spam.example",
+      elapsedMs: 60_000,
+    });
+
+    expect(result).toEqual(GENERIC_FAILURE);
+    expect(bookingsInsertMock).not.toHaveBeenCalled();
+    expect(activityLogInsertMock).not.toHaveBeenCalled();
+    expect(allowPublicBookingMock).not.toHaveBeenCalled();
+    for (const spy of spies) expect(spy).not.toHaveBeenCalled();
+    spies.forEach((spy) => spy.mockRestore());
+  });
+
+  it("rejects a submit that is too fast, with the generic error and no trace", async () => {
+    const spies = spyOnConsole();
+
+    const result = await submitBooking(VALID_INPUT, { website: "", elapsedMs: 400 });
+
+    expect(result).toEqual(GENERIC_FAILURE);
+    expect(bookingsInsertMock).not.toHaveBeenCalled();
+    expect(activityLogInsertMock).not.toHaveBeenCalled();
+    expect(allowPublicBookingMock).not.toHaveBeenCalled();
+    for (const spy of spies) expect(spy).not.toHaveBeenCalled();
+    spies.forEach((spy) => spy.mockRestore());
+  });
+
+  it("gives a bot the same answer as a failed insert", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    singleMock.mockResolvedValue({ data: null, error: { code: "23514" } });
+
+    const failedInsert = await submitBooking(VALID_INPUT, HUMAN);
+    const bot = await submitBooking(VALID_INPUT, { website: "x", elapsedMs: 60_000 });
+
+    expect(bot).toEqual(failedInsert);
+    consoleSpy.mockRestore();
+  });
+
+  it("rejects a bot even when its payload is otherwise invalid, without revealing why", async () => {
+    const result = await submitBooking(
+      { ...VALID_INPUT, email: "not-an-email" },
+      { website: "x", elapsedMs: 0 },
+    );
+
+    expect(result).toEqual(GENERIC_FAILURE);
+  });
+
+  it("draws the line at the minimum fill time", async () => {
+    singleMock.mockResolvedValue({ data: { id: "abc-123", booking_number: 1042 }, error: null });
+
+    expect(
+      await submitBooking(VALID_INPUT, { website: "", elapsedMs: MIN_FILL_MS - 1 }),
+    ).toEqual(GENERIC_FAILURE);
+    expect(bookingsInsertMock).not.toHaveBeenCalled();
+
+    const result = await submitBooking(VALID_INPUT, { website: "", elapsedMs: MIN_FILL_MS });
+    expect(result.success).toBe(true);
+  });
+
+  it.each([
+    ["no bot check at all", undefined],
+    ["a null bot check", null],
+    ["a missing fill time", { website: "" }],
+    ["a missing honeypot", { elapsedMs: 60_000 }],
+    ["a string fill time", { website: "", elapsedMs: "60000" }],
+    ["a NaN fill time", { website: "", elapsedMs: NaN }],
+    ["a non-string honeypot", { website: null, elapsedMs: 60_000 }],
+  ])("treats %s as a bot", async (_case, botCheck) => {
+    const result = await submitBooking(VALID_INPUT, botCheck as unknown as BotCheck);
+
+    expect(result).toEqual(GENERIC_FAILURE);
+    expect(bookingsInsertMock).not.toHaveBeenCalled();
+  });
+
+  it("does not apply to admin-created bookings, which carry no bot check", async () => {
+    singleMock.mockResolvedValue({ data: { id: "def-456", booking_number: 1043 }, error: null });
+
+    const result = await adminCreateBooking(VALID_INPUT);
+
+    expect(result.success).toBe(true);
   });
 });
 

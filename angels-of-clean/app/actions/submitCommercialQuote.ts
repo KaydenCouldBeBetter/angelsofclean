@@ -10,6 +10,7 @@ import {
   SCHEDULE_PREFERENCES,
   SERVICE_AREA_ZIPS,
 } from "@/lib/constants";
+import { looksLikeBot, type BotCheck } from "@/lib/bot-check";
 import { allowPublicSubmission } from "@/lib/rate-limit";
 import { createServiceRoleClient } from "@/lib/supabase/service";
 import type { CommercialQuoteRow } from "@/lib/supabase/types";
@@ -85,7 +86,16 @@ function hasQuoteShape(data: unknown): data is QuoteData {
   );
 }
 
-export async function submitCommercialQuote(data: QuoteData): Promise<QuoteResult> {
+export async function submitCommercialQuote(
+  data: QuoteData,
+  botCheck: BotCheck,
+): Promise<QuoteResult> {
+  // First, and answered like any other failure so a bot learns nothing. Nothing
+  // is logged: the payload is the bot's, not ours to keep.
+  if (looksLikeBot(botCheck)) {
+    return { success: false, error: "Something went wrong. Please try again." };
+  }
+
   if (!hasQuoteShape(data)) {
     return { success: false, error: "Invalid quote details." };
   }
