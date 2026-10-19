@@ -5,14 +5,7 @@ import DesktopNavbar from "@/components/booking/DesktopNavbar";
 import DesktopStepper from "@/components/booking/DesktopStepper";
 import BookingSummary from "@/components/booking/BookingSummary";
 
-const RESIDENTIAL_STEPS = [
-  { label: "Service" },
-  { label: "Address" },
-  { label: "Property" },
-  { label: "Date & Time" },
-  { label: "Contact" },
-  { label: "Review" },
-];
+const RESIDENTIAL_STEPS = ["Service", "Address", "Property", "Date & Time", "Contact", "Review"];
 
 const PATH_TO_STEP: Record<string, number> = {
   "/residential": 1,

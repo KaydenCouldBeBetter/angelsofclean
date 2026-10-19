@@ -196,7 +196,9 @@ const PREFILLED_STEPS = [
 function formState(el: HTMLElement): string {
   const values = [...el.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("input, textarea")]
     .map((field) => field.value);
-  const checked = [...el.querySelectorAll('[aria-checked="true"]')].map((o) => o.textContent);
+  const checked = [...el.querySelectorAll<HTMLInputElement>("input:checked")].map(
+    (o) => o.closest("label")?.textContent,
+  );
   return JSON.stringify({ text: el.textContent, values, checked });
 }
 

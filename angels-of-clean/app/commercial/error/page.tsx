@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import CommercialNav from "@/components/booking/CommercialNav";
+import DesktopNavbar, { COMMERCIAL_NAV_TAGLINE } from "@/components/booking/DesktopNavbar";
 import { Button } from "@/components/ui/button";
 import { useBookingStore } from "@/store/bookingStore";
 
@@ -12,7 +12,7 @@ export default function CommercialError() {
 
   return (
     <>
-      <CommercialNav />
+      <DesktopNavbar tagline={COMMERCIAL_NAV_TAGLINE} />
 
       <div className="max-w-sm mx-auto md:max-w-3xl px-4 pt-8 pb-12 md:pt-14 md:px-8">
         {/* Error header */}

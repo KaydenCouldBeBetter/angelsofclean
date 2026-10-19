@@ -6,14 +6,20 @@ import Link from "next/link";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
-import CommercialNav from "@/components/booking/CommercialNav";
-import CommercialStepper from "@/components/booking/CommercialStepper";
+import DesktopNavbar, { COMMERCIAL_NAV_TAGLINE } from "@/components/booking/DesktopNavbar";
+import DesktopStepper from "@/components/booking/DesktopStepper";
+import Selectable, { SelectableGroup } from "@/components/booking/Selectable";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import WhenHydrated from "@/components/booking/WhenHydrated";
 import { useBookingStore } from "@/store/bookingStore";
-import { COMMERCIAL_MAX_FLOORS, COMMERCIAL_SERVICE_AREAS, FIELD_MAX_LENGTHS } from "@/lib/constants";
+import {
+  COMMERCIAL_MAX_FLOORS,
+  COMMERCIAL_SERVICE_AREAS,
+  COMMERCIAL_STEP_LABELS,
+  FIELD_MAX_LENGTHS,
+} from "@/lib/constants";
 
 function CommercialStep2Content() {
   const router = useRouter();
@@ -46,8 +52,8 @@ function CommercialStep2Content() {
   return (
     <>
       {/* Desktop */}
-      <CommercialNav />
-      <CommercialStepper currentStep={2} />
+      <DesktopNavbar tagline={COMMERCIAL_NAV_TAGLINE} />
+      <DesktopStepper steps={COMMERCIAL_STEP_LABELS} currentStep={2} />
 
       {/* Mobile header */}
       <div className="md:hidden">
@@ -105,67 +111,23 @@ function CommercialStep2Content() {
           <p className="text-xs text-zinc-500 mb-3">
             Select all areas that need regular cleaning.
           </p>
-          <div
-            role="group"
+          <SelectableGroup
+            type="checkbox"
             aria-label="Areas requiring attention"
             className="grid grid-cols-1 md:grid-cols-2 gap-3"
           >
-            {COMMERCIAL_SERVICE_AREAS.map((area) => {
-              const isChecked = selectedAreas.includes(area.id);
-              return (
-                <label
-                  key={area.id}
-                  className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${
-                    isChecked
-                      ? "border-primary bg-primary/5"
-                      : "border-zinc-200 bg-white hover:border-zinc-300"
-                  }`}
-                >
-                  {/* The real checkbox is visually hidden; the box after it is
-                      its picture, so it's hidden from screen readers. The
-                      focus ring goes on this label (see globals.css). */}
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={() => toggleArea(area.id)}
-                    className="sr-only"
-                  />
-                  <div
-                    aria-hidden="true"
-                    className={`w-5 h-5 rounded flex-shrink-0 border-2 flex items-center justify-center transition-colors ${
-                      isChecked
-                        ? "bg-primary border-primary"
-                        : "border-zinc-300 bg-white"
-                    }`}
-                  >
-                    {isChecked && (
-                      <svg
-                        className="w-3 h-3 text-white"
-                        viewBox="0 0 12 10"
-                        fill="none"
-                        aria-hidden="true"
-                      >
-                        <path
-                          d="M1 5l3.5 3.5L11 1"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    )}
-                  </div>
-                  <span
-                    className={`text-sm font-medium ${
-                      isChecked ? "text-primary" : "text-zinc-700"
-                    }`}
-                  >
-                    {area.label}
-                  </span>
-                </label>
-              );
-            })}
-          </div>
+            {COMMERCIAL_SERVICE_AREAS.map((area) => (
+              <Selectable
+                key={area.id}
+                value={area.id}
+                selected={selectedAreas.includes(area.id)}
+                onSelect={() => toggleArea(area.id)}
+                className="flex items-center p-4 pr-8"
+              >
+                {area.label}
+              </Selectable>
+            ))}
+          </SelectableGroup>
           {selectedAreas.length === 0 && (
             <p className="text-xs text-zinc-500 mt-2">
               Select at least one area to continue.
