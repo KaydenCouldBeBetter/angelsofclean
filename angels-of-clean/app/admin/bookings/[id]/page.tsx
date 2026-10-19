@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getJobById, getActivityLog, getEmployees } from "@/lib/supabase/queries";
 import { DASHBOARD_STATUS } from "../../status-config";
-import { formatNy, formatNyTime } from "@/lib/datetime";
+import { formatNy, formatNyTime, formatNyTimeRange } from "@/lib/datetime";
 import BookingActions from "./BookingActions";
 import LoadError from "../../LoadError";
 
@@ -85,7 +85,7 @@ export default async function BookingDetailPage({
     { label: "Service", value: job.frequency ? `${job.service} · ${job.frequency}` : job.service },
     { label: "Address", value: job.address },
     { label: "Date", value: formatDetailDate(job.start) },
-    { label: "Time Slot", value: `${formatNyTime(job.start)} – ${formatNyTime(job.end)}` },
+    { label: "Time Slot", value: formatNyTimeRange(job.start, job.end) },
     { label: "Property", value: job.property },
     { label: "Notes", value: job.notes },
     { label: "Submitted", value: job.submittedAt ? formatSubmitted(job.submittedAt) : undefined },
