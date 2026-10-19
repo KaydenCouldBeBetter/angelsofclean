@@ -27,6 +27,10 @@ export interface BookingResult {
   bookingRef?: string;
   bookingId?: string;
   error?: string;
+  // Set only when the booking could not be stored (the database was unreachable
+  // or refused the insert), so the form can show the "service unavailable"
+  // screen instead of a message about the customer's input.
+  unavailable?: boolean;
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -188,7 +192,7 @@ async function createBooking(
 
   if (insertError || !booking) {
     logDbError(`${logLabel}: insert`, insertError);
-    return { success: false, error: "Something went wrong. Please try again." };
+    return { success: false, error: "Something went wrong. Please try again.", unavailable: true };
   }
 
   const { error: activityError } = await supabase.from("activity_log").insert({
