@@ -1,5 +1,5 @@
 -- Angels of Clean — one booking status flow, enforced in Postgres (backlog B12)
--- Apply after 20261018142718_assign_booking_employees.sql.
+-- Apply after 20261019033138_db_defense_in_depth.sql.
 --
 -- updateBookingStatus used to write any status over any other, so a cancelled
 -- or completed booking could be brought back by accident, and the status
@@ -83,9 +83,9 @@ comment on column activity_log.actor  is 'Email of the signed-in user who made t
 comment on column activity_log.action is 'Machine-readable kind of change, e.g. status_confirmed. Null for rows written before B12 and for entries that have no code yet.';
 
 -- Append-only: replaces 20260918194509's "for all" policy. With RLS on and no
--- update/delete policy, those statements match no rows; the revoke makes them
--- fail outright. The insert check stops an admin writing someone else's email
--- as the actor.
+-- update/delete policy, those statements match no rows; the privileges below
+-- make them fail outright. The insert check stops an admin writing someone
+-- else's email as the actor.
 drop policy "admin_all_activity_log" on activity_log;
 
 create policy "admin_select_activity_log" on activity_log
@@ -99,7 +99,12 @@ create policy "admin_insert_activity_log" on activity_log
     and actor is not distinct from (auth.jwt() ->> 'email')
   );
 
-revoke update, delete, truncate on activity_log from anon, authenticated;
+-- Same trim as 20261019033138 did for the other tables, which left
+-- activity_log to this change. anon gets nothing: customer submissions log
+-- through the service role. authenticated may read (booking detail page) and
+-- append (set_booking_status and crew changes, both security invoker).
+revoke all on table activity_log from anon, authenticated;
+grant select, insert on table activity_log to authenticated;
 
 -- set_booking_status ------------------------------------------------------------
 --

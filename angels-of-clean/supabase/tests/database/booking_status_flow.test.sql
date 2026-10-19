@@ -1,5 +1,5 @@
 -- Booking status flow (backlog B12,
--- supabase/migrations/20261019032629_booking_status_flow.sql): every status
+-- supabase/migrations/20261019035418_booking_status_flow.sql): every status
 -- change through set_booking_status and through a direct update, who may call
 -- it, and the append-only activity log.
 --
@@ -9,7 +9,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(62);
+select plan(63);
 
 -- Every (from, to) pair of statuses, and whether the flow allows it. This list
 -- is written out on purpose instead of calling
@@ -175,6 +175,12 @@ select throws_ok(
                   where from_status = 'pending' and to_status = 'pending')),
          '42501', null,
          'anon may not call set_booking_status'
+       );
+
+select throws_ok(
+         $$ select count(*) from activity_log $$,
+         '42501', null,
+         'anon has no access to the activity log'
        );
 
 -- The activity log is append-only ------------------------------------------------------

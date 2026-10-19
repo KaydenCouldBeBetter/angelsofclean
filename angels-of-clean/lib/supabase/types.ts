@@ -70,7 +70,7 @@ export type AssignBookingEmployeesResult =
   | { status: "not_found" };
 
 // jsonb returned by set_booking_status
-// (supabase/migrations/20261019032629_booking_status_flow.sql).
+// (supabase/migrations/20261019035418_booking_status_flow.sql).
 export type SetBookingStatusResult =
   | { status: "changed"; from: BookingStatus; to: BookingStatus }
   | { status: "refused"; booking_status: BookingStatus }

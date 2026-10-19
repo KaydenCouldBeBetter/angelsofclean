@@ -46,7 +46,7 @@ describe("booking status flow", () => {
 
   it("matches the list Postgres enforces", () => {
     const sql = readFileSync(
-      path.resolve(__dirname, "../../../supabase/migrations/20261019032629_booking_status_flow.sql"),
+      path.resolve(__dirname, "../../../supabase/migrations/20261019035418_booking_status_flow.sql"),
       "utf8",
     );
     const body = sql.match(

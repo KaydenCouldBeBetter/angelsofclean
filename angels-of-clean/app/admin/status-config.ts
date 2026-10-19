@@ -7,7 +7,7 @@ import type { JobStatus, EmployeeStatus } from "@/lib/admin-types";
 //   pending → confirmed → active → done, and any non-final status → cancelled.
 // done and cancelled are final. Postgres enforces the same list
 // (booking_status_transition_allowed in
-// supabase/migrations/20261019032629_booking_status_flow.sql); this copy only
+// supabase/migrations/20261019035418_booking_status_flow.sql); this copy only
 // decides which buttons the admin sees. __tests__/status-flow.test.ts keeps
 // the two equal.
 export const STATUS_TRANSITIONS: Record<JobStatus, readonly JobStatus[]> = {

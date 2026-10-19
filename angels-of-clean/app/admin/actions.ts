@@ -158,7 +158,7 @@ function refusalMessage(current: JobStatus, target: StatusChangeTarget): string 
 /**
  * Changes a booking's status and writes its activity entry in one database
  * transaction and one round trip
- * (supabase/migrations/20261019032629_booking_status_flow.sql).
+ * (supabase/migrations/20261019035418_booking_status_flow.sql).
  * Postgres decides whether the move is allowed (see STATUS_TRANSITIONS) and
  * records the admin's email from their session token.
  */
