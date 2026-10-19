@@ -1,6 +1,6 @@
 "use server";
 
-import { FIELD_MAX_LENGTHS, SERVICE_AREA_ZIPS, TIME_SLOT_WINDOWS } from "@/lib/constants";
+import { BATHROOM_LIMITS, FIELD_MAX_LENGTHS, SERVICE_AREA_ZIPS, TIME_SLOT_WINDOWS } from "@/lib/constants";
 import { looksLikeBot, type BotCheck } from "@/lib/bot-check";
 import { allowPublicSubmission } from "@/lib/rate-limit";
 import { createServiceRoleClient } from "@/lib/supabase/service";
@@ -67,7 +67,9 @@ function hasBookingShape(data: unknown): data is BookingData {
     STRING_FIELDS.every((field) => typeof record[field] === "string") &&
     (record.accessInstructions === undefined || typeof record.accessInstructions === "string") &&
     Number.isInteger(record.bedrooms) &&
-    Number.isInteger(record.bathrooms)
+    // Half-bathrooms are allowed (2.5); the step is checked in createBooking.
+    typeof record.bathrooms === "number" &&
+    Number.isFinite(record.bathrooms)
   );
 }
 
@@ -141,8 +143,17 @@ async function createBooking(data: BookingData, path: BookingPath): Promise<Book
     return { success: false, error: "We don't currently serve this area." };
   }
 
-  if (data.bedrooms < 1 || data.bedrooms > 5 || data.bathrooms < 1 || data.bathrooms > 5) {
+  if (
+    data.bedrooms < 1 || data.bedrooms > 5 ||
+    data.bathrooms < BATHROOM_LIMITS.min || data.bathrooms > BATHROOM_LIMITS.max
+  ) {
     return { success: false, error: "Bedroom and bathroom count must be between 1 and 5." };
+  }
+
+  // numeric(2,1) would quietly round 1.49 to 1.5, so anything that isn't an
+  // exact half step is refused here rather than stored as something else.
+  if (!Number.isInteger(data.bathrooms / BATHROOM_LIMITS.step)) {
+    return { success: false, error: "Bathrooms must be a whole or half number, like 2 or 2.5." };
   }
 
   // Reject empty/malformed/impossible dates before they reach the date math

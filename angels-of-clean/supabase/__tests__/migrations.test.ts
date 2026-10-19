@@ -20,6 +20,7 @@ const APPLIED = [
   "20261019033138_db_defense_in_depth.sql",
   "20261019035418_booking_status_flow.sql",
   "20261019152751_booking_access.sql",
+  "20261019162530_verification_cleanup.sql",
 ];
 
 const migrations = readdirSync(MIGRATIONS_DIR).sort();

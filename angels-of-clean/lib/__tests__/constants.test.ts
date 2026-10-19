@@ -6,6 +6,9 @@ import {
   TIME_SLOT_WINDOWS,
   PRICE_NOTE,
   SERVICE_AREA_ZIPS,
+  BATHROOM_LIMITS,
+  BATHROOM_OPTIONS,
+  formatBathroomCount,
 } from "@/lib/constants";
 
 describe("SERVICE_LABELS", () => {
@@ -107,5 +110,28 @@ describe("SERVICE_AREA_ZIPS", () => {
   it("lists no ZIP outside the known towns, and none twice", () => {
     const expected = ZIPS_BY_TOWN.flatMap(([, zips]) => zips);
     expect([...SERVICE_AREA_ZIPS].sort()).toEqual([...expected].sort());
+  });
+});
+
+// B42: half-bathrooms, matching bookings_bathrooms_check (numeric(2,1)).
+describe("BATHROOM_LIMITS", () => {
+  it("allows 1 to 5 in half steps", () => {
+    expect(BATHROOM_LIMITS).toEqual({ min: 1, max: 5, step: 0.5 });
+  });
+
+  it("lists every allowed count as an option", () => {
+    expect(BATHROOM_OPTIONS).toEqual([1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5]);
+  });
+});
+
+describe("formatBathroomCount", () => {
+  it.each([
+    [1, "1 Bathroom"],
+    [1.5, "1.5 Bathrooms"],
+    [2, "2 Bathrooms"],
+    [2.5, "2.5 Bathrooms"],
+    [5, "5 Bathrooms"],
+  ])("shows %s as %j", (count, text) => {
+    expect(formatBathroomCount(count)).toBe(text);
   });
 });
