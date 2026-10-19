@@ -3,10 +3,50 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useBookingStore } from "@/store/bookingStore";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { buildIcs, googleCalendarUrl, type CalendarEvent } from "@/lib/calendar-links";
+import { isValidDateStr } from "@/lib/datetime";
 import ConfirmedWithoutDetails from "@/components/booking/ConfirmedWithoutDetails";
 import { SERVICE_LABELS, FREQUENCY_LABELS, TIME_LABELS } from "@/lib/constants";
 import { useIsClient } from "@/lib/use-is-client";
+
+function downloadIcs(event: CalendarEvent) {
+  const url = URL.createObjectURL(new Blob([buildIcs(event)], { type: "text/calendar;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "angels-of-clean-booking.ics";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function CalendarButtons({
+  event,
+  className,
+  buttonClassName,
+}: {
+  event: CalendarEvent;
+  className: string;
+  buttonClassName: string;
+}) {
+  return (
+    <div className={className}>
+      <a
+        href={googleCalendarUrl(event)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={cn(buttonVariants({ variant: "outline" }), buttonClassName)}
+      >
+        Add to Google Calendar<span className="sr-only"> (opens in a new tab)</span>
+      </a>
+      <Button variant="outline" className={buttonClassName} onClick={() => downloadIcs(event)}>
+        Add to Apple Calendar
+      </Button>
+    </div>
+  );
+}
 
 export default function ConfirmationPage() {
   const router = useRouter();
@@ -58,6 +98,18 @@ export default function ConfirmationPage() {
   const serviceLabel = `${SERVICE_LABELS[service ?? "standard"]} · ${FREQUENCY_LABELS[frequency ?? "one-time"]}`;
   const timeLabel = timeSlot ? TIME_LABELS[timeSlot] : "";
 
+  const calendarEvent: CalendarEvent | null =
+    timeSlot && isValidDateStr(date)
+      ? {
+          title: `Angels of Clean: ${SERVICE_LABELS[service ?? "standard"]}`,
+          date,
+          timeSlot,
+          location: `${address}, ${city}, NY ${zip}`,
+          description: `${serviceLabel}${bookingRef ? `\nConfirmation #${bookingRef}` : ""}`,
+          uid: `${bookingRef ?? `${date}-${timeSlot}`}@angelsofclean`,
+        }
+      : null;
+
   return (
     <>
       {/* ── Mobile ── */}
@@ -93,14 +145,13 @@ export default function ConfirmationPage() {
           </div>
 
           {/* Calendar buttons */}
-          <div className="w-full flex flex-col gap-3">
-            <Button variant="outline" className="w-full h-14">
-              Add to Google Calendar
-            </Button>
-            <Button variant="outline" className="w-full h-14">
-              Add to Apple Calendar
-            </Button>
-          </div>
+          {calendarEvent && (
+            <CalendarButtons
+              event={calendarEvent}
+              className="w-full flex flex-col gap-3"
+              buttonClassName="w-full h-14"
+            />
+          )}
 
           <div className="w-full border-t border-zinc-100 pt-4">
             <div className="rounded-xl border border-zinc-200 p-4 flex flex-col gap-3">
@@ -148,14 +199,13 @@ export default function ConfirmationPage() {
         </div>
 
         {/* Calendar buttons — side by side */}
-        <div className="w-[640px] mt-4 flex gap-4">
-          <Button variant="outline" className="flex-1 h-12">
-            Add to Google Calendar
-          </Button>
-          <Button variant="outline" className="flex-1 h-12">
-            Add to Apple Calendar
-          </Button>
-        </div>
+        {calendarEvent && (
+          <CalendarButtons
+            event={calendarEvent}
+            className="w-[640px] mt-4 flex gap-4"
+            buttonClassName="flex-1 h-12"
+          />
+        )}
 
         {/* Upsell card */}
         <div className="w-[640px] mt-4 rounded-xl bg-teal-50 border border-teal-100 p-5">
