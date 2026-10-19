@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useBookingStore } from "@/store/bookingStore";
 import { useIsClient } from "@/lib/use-is-client";
 import {
+  BUSINESS_PHONE,
   FACILITY_TYPE_LABELS,
   SQFT_DISPLAY,
   COMMERCIAL_SERVICE_AREAS,
@@ -219,10 +220,11 @@ export default function CommercialConfirmation() {
             <p className="text-sm text-zinc-500 mt-0.5">
               Call us at{" "}
               <a
-                href="tel:+13155550100"
+                href={BUSINESS_PHONE.tel}
+                aria-label="Call Angels of Clean"
                 className="text-primary font-medium hover:text-primary-pressed"
               >
-                (315) 555-0100
+                {BUSINESS_PHONE.display}
               </a>
             </p>
           </div>

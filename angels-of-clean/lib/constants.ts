@@ -10,12 +10,10 @@ import type {
 
 // ── Business ─────────────────────────────────────────────────────────────────
 
-// The number customers are told to call when a submission fails. Placeholder
-// until the real line exists: backlog B32 replaces it (and the other 555
-// numbers) with the business's actual phone.
+// The number customers are told to call when a submission fails.
 export const BUSINESS_PHONE = {
-  display: "(315) 555-0100",
-  tel: "tel:+13155550100",
+  display: "(315) 516-1266",
+  tel: "tel:+13155161266",
 } as const;
 
 // ── Residential ──────────────────────────────────────────────────────────────
@@ -141,18 +139,18 @@ export const COMMERCIAL_FREQUENCIES: {
   id: NonNullable<CommercialFrequency>;
   label: string;
 }[] = [
-  { id: "one-time",  label: "One-Time" },
+  { id: "one-time",  label: "One-time" },
   { id: "monthly",   label: "Monthly" },
-  { id: "bi-weekly", label: "Bi-Weekly" },
+  { id: "bi-weekly", label: "Bi-weekly" },
   { id: "weekly",    label: "Weekly" },
   { id: "2-3x",      label: "2–3x / Week" },
   { id: "daily",     label: "Daily" },
 ];
 
 export const COMMERCIAL_FREQUENCY_LABELS: Record<NonNullable<CommercialFrequency>, string> = {
-  "one-time": "One-Time",
+  "one-time": "One-time",
   monthly:    "Monthly",
-  "bi-weekly":"Bi-Weekly",
+  "bi-weekly":"Bi-weekly",
   weekly:     "Weekly",
   "2-3x":     "2–3x / Week",
   daily:      "Daily",

@@ -5,6 +5,7 @@ import Link from "next/link";
 import DesktopNavbar, { COMMERCIAL_NAV_TAGLINE } from "@/components/booking/DesktopNavbar";
 import { Button } from "@/components/ui/button";
 import { useBookingStore } from "@/store/bookingStore";
+import { BUSINESS_PHONE } from "@/lib/constants";
 
 export default function CommercialError() {
   const router = useRouter();
@@ -82,10 +83,11 @@ export default function CommercialError() {
             </p>
             <p className="text-sm text-zinc-700 mt-2">
               <a
-                href="tel:+13155550100"
+                href={BUSINESS_PHONE.tel}
+                aria-label="Call Angels of Clean"
                 className="text-primary font-medium hover:text-primary-pressed transition-colors"
               >
-                (315) 555-0100
+                {BUSINESS_PHONE.display}
               </a>
             </p>
           </div>
