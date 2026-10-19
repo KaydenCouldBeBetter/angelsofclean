@@ -334,6 +334,26 @@ export async function getJobById(id: string): Promise<QueryResult<Job | null>> {
   };
 }
 
+// Entry instructions (door code, gate, pets) for one booking — the booking
+// detail page is the only reader. They live in booking_access, apart from
+// bookings, so none of the list, calendar or dashboard projections above can
+// include them. `data: null` means none were given.
+export async function getBookingAccess(bookingId: string): Promise<QueryResult<string | null>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("booking_access")
+    .select("instructions")
+    .eq("booking_id", bookingId)
+    .maybeSingle();
+
+  if (error) {
+    logQueryError("getBookingAccess", error);
+    return FAILED;
+  }
+
+  return { ok: true, data: data?.instructions ?? null };
+}
+
 export async function getActivityLog(bookingId: string): Promise<QueryResult<ActivityEntry[]>> {
   const supabase = await createClient();
   const { data, error } = await supabase

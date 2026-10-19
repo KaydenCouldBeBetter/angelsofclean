@@ -69,6 +69,9 @@ Table `rate_limits` (`bucket`, `window_start`, `hits`; PK on the first two; RLS 
 ### `005_commercial_quotes.sql` (commercial quote requests — run by hand, after 002)
 Table `commercial_quotes`: `id`, `quote_number int identity` (starts at 1000, shown as `COM-{n}`), `business_name`, `contact_name`, `email`, `phone`, `facility_type`, `sqft_range`, `address`, `city`, `zip`, `floors smallint` (1–20), `service_areas text[]` (≥1), `frequency`, `schedule_preference` (nullable), `notes`, `submitted_at`; CHECK constraints mirror the option lists in `lib/constants.ts`. RLS: admins (`app_metadata.role = 'admin'`) may SELECT; there is no insert/update/delete policy for any role, so rows are written only by the service-role client and are read-only in the admin UI.
 
+### `migrations/20261019152751_booking_access.sql` (entry instructions — backlog B38)
+Table `booking_access` (`booking_id uuid pk` FK → bookings **ON DELETE CASCADE**, `instructions text` ≤ 500 chars and never blank, `updated_at`): door codes, gate and pet notes, kept apart from `bookings` so no list, calendar or dashboard query can select them. RLS: admins only, for select/insert/update/delete; anon has no privileges; the service role inserts on the public booking path. Function `set_booking_access(p_booking_id, p_instructions)` (security invoker, checks the admin claim) saves, replaces or, when blank, removes them and appends an activity entry ("Entry instructions added/updated/removed by {email}") that never repeats the text; returns `saved | removed | unchanged | not_found`. Until applied, bookings with entry instructions fail and the detail page shows "couldn't be loaded". Employee visibility waits for the owner's decision on the employee app.
+
 ### `003_fix_booking_times_tz.sql` (data backfill — **not** an auto-run migration)
 A DIAGNOSTIC `SELECT` + a commented-out `UPDATE`. Fixes rows created before the B8 timezone fix, where `new Date(\`${date}T08:00:00\`)` parsed the slot window in the *server's* local zone (a UTC server stored NY 8 AM as 08:00Z, 4–5 h too early). The correction rebuilds `start_at`/`end_at` from `scheduled_date + time_slot` interpreted `AT TIME ZONE 'America/New_York'`. Idempotent; meant to be reviewed and run by hand only if the diagnostic returns rows.
 
@@ -90,7 +93,7 @@ Wrapped by `layout.tsx` → `ResidentialShell` (desktop navbar + stepper + live 
 |-------|------|---------|
 | `/residential` | 1 | Service type (standard/deep/moveinout) + frequency. |
 | `/residential/address` | 2 | Address/city/ZIP. Validates 5-digit ZIP; on submit, if ZIP ∉ `SERVICE_AREA_ZIPS` → `/residential/error`. |
-| `/residential/property` | 3 | Bedrooms/bathrooms steppers (1–5) + notes. |
+| `/residential/property` | 3 | Bedrooms/bathrooms steppers (1–5) + notes + optional entry instructions (door code, gate, pets; sent to `booking_access`, shown on Review). |
 | `/residential/datetime` | 4 | Date chips (next ~6 NY days) + morning/afternoon slots. Enforces same-day cutoff via `isNyWallClockInFuture`. Evening slot always disabled; 3rd day hardcoded "Full" (Figma placeholder). |
 | `/residential/contact` | 5 | Name/email/phone with regex validation. |
 | `/residential/review` | 6 | Summary cards + **calls `submitBooking`** server action; on success → confirmation. Shows "Quote provided after confirmation" (no price). |
@@ -121,7 +124,7 @@ Wrapped by `layout.tsx` (Suspense). Each step uses `CommercialNav` + `Commercial
 | `/admin/dashboard` | server | Stat cards (today's bookings, pending, active employees, completed this week) + today's jobs table; each row ends in the client `JobRowActions` (View link, plus one-click Confirm on pending rows). Data from `getDashboardStats` + `getEmployees`. |
 | `/admin/calendar` | server → client | `getJobsInRange()` (±2 months) + employees → `CalendarView` (FullCalendar). |
 | `/admin/bookings` | server | Filter tabs (today/upcoming/past/all via `?filter=`); `getJobsByDateFilter` → `BookingsList`. |
-| `/admin/bookings/[id]` | server | Booking detail: details card, status banner, `BookingActions`, activity log. `getJobById` + `getActivityLog` + `getEmployees`. |
+| `/admin/bookings/[id]` | server | Booking detail: details card, status banner, `EntryInstructions` (view/add/edit/remove), `BookingActions`, activity log. `getJobById` + `getActivityLog` + `getEmployees` + `getBookingAccess` (a failed access lookup affects only its own card). |
 | `/admin/employees` | server | Employee cards with derived today-status. `getEmployees` + `getTodayJobs`. |
 | `/admin/quotes` | server | Commercial quote requests, newest first, one card each: business, contact (mailto/tel links), reference, received time, facility, address, areas, frequency, preference, notes. Read-only. Data from `getCommercialQuotes`. |
 | `/admin/settings` | server | Placeholder: Notifications card marked "Coming soon" with both toggles disabled and no Save button, since the app can't send email or SMS yet. |
@@ -139,9 +142,10 @@ Runs `updateSession` (refreshes the Supabase cookie), then for any `/admin/*` ro
 ### Server actions
 | Action | File | Auth | Client | Notes |
 |--------|------|------|--------|-------|
-| `submitBooking` | `app/actions/submitBooking.ts` | none (public) | service-role | Takes a second `BotCheck` argument (`lib/bot-check.ts`); a filled honeypot, a fill time under 3 s, or a missing/malformed check returns the generic "Something went wrong" error before anything else, with nothing logged. Then validates, then checks the per-IP rate limit (`allowPublicSubmission("booking")`, 5 per hour), then inserts a booking; logs "Booking submitted by client". |
+| `submitBooking` | `app/actions/submitBooking.ts` | none (public) | service-role | Takes a second `BotCheck` argument (`lib/bot-check.ts`); a filled honeypot, a fill time under 3 s, or a missing/malformed check returns the generic "Something went wrong" error before anything else, with nothing logged. Then validates, then checks the per-IP rate limit (`allowPublicSubmission("booking")`, 5 per hour), then inserts a booking, then any entry instructions into `booking_access` (if that insert fails the booking is deleted again and the customer sees the generic error); logs "Booking submitted by client". |
 | `adminCreateBooking` | same file | `requireAdmin` | service-role | Same shared `createBooking` (never rate-limited); actor email from verified session; logs "Booking created by {email}". |
 | `submitCommercialQuote` | `app/actions/submitCommercialQuote.ts` | none (public) | service-role | Same `BotCheck` gate as `submitBooking`, first. Validates (payload shape, length caps, and enums derived from the same `lib/constants.ts` lists the form renders), checks the per-IP rate limit (`allowPublicSubmission("quote")`), inserts into `commercial_quotes`, and returns `COM-{quote_number}`. Never returns success unless the row was stored. |
+| `updateEntryInstructions` | `app/admin/bookings/[id]/actions.ts` | `requireAdmin` | session-bound | Length check, then `set_booking_access` RPC (write + activity entry in one transaction); revalidates only the detail page. Logs only `{code, correlationId}`. |
 | `assignEmployees` | `app/admin/actions.ts` | `requireAdmin` | session-bound | Deletes then re-inserts `booking_employees`; logs activity; revalidates admin paths. |
 | `confirmBooking` | `app/admin/actions.ts` | `requireAdmin` | session-bound | Moves a booking pending → confirmed. The update filters on `status = 'pending'`, so a booking cancelled or completed in the meantime matches 0 rows and is refused rather than brought back; logs activity; revalidates. Called by the "Confirm Booking" button in `BookingActions` and the per-row "Confirm" button in `dashboard/JobRowActions` (both shown only while pending). |
 | `updateBookingStatus` | `app/admin/actions.ts` | `requireAdmin` | session-bound | Updates status with `.select()` to detect 0-row (missing/RLS-blocked) as failure; logs activity; revalidates. |
@@ -159,6 +163,7 @@ Runs `updateSession` (refreshes the Supabase cookie), then for any `/admin/*` ro
 - `getJobsInRange(from?, to?)` — calendar; defaults to ±2 months; **slim projection** (`CALENDAR_BOOKING_COLUMNS`) that omits email/phone/notes so contact PII never reaches the calendar surface / API response.
 - `getDashboardStats()` — parallel queries: today's jobs, all-pending count, completed-this-week count (Mon–Sun anchored on NY today), employee count.
 - `getJobById(id)` / `getActivityLog(bookingId)`.
+- `getBookingAccess(bookingId)` — the booking's entry instructions from `booking_access` (`data: null` if none). Called only by the booking detail page; no other helper touches that table.
 
 Rows are mapped to the UI `Job`/`Employee`/`ActivityEntry` shapes from `lib/admin-types.ts`. Every helper returns `QueryResult<T>` — `{ ok: true, data }` or `{ ok: false }` — so a failed query is never reported as an empty result (`getJobById` uses `data: null` for "not found"; `getDashboardStats` fails as a whole if any of its four queries fails). Query errors log only `{code, correlationId}`. Each admin page renders `app/admin/LoadError.tsx` (alert banner + "Try again", which calls `router.refresh()`) in place of its content when any query it depends on fails; `CalendarView` shows its own retry banner when an in-page range fetch fails.
 
@@ -203,14 +208,16 @@ Rows are mapped to the UI `Job`/`Employee`/`ActivityEntry` shapes from `lib/admi
 - **`lib/__tests__/rate-limit.test.ts`** — limit/window passed to the RPC, refusal, raw IP never sent, bucket stability, header precedence, fail-open on error and on throw, dev skip. ✅ passing.
 - **`app/actions/__tests__/submitBooking.test.ts`** — validation matrix (run against both `submitBooking` and `adminCreateBooking`), success insert, window→UTC storage, DST offsets, PII-safe logging, admin auth gating. ✅ passing.
 - **`app/admin/__tests__/actions.test.ts`** — `assignEmployees`/`confirmBooking`/`updateBookingStatus`: auth gating, 0-row-as-failure, pending-only confirm, activity logging. ✅ passing.
-- **`lib/supabase/__tests__/queries.test.ts`** — asserts the calendar projection omits email/phone/notes; `getJobsByDateFilter` (client list) keeps email/phone for search but omits notes; `getJobs` keeps all contact fields; PII-safe error logging; every helper returns `{ ok: false }` on a database error and an empty/`null` result only when there genuinely is none. ✅ passing.
+- **`lib/supabase/__tests__/queries.test.ts`** — asserts the calendar projection omits email/phone/notes; `getJobsByDateFilter` (client list) keeps email/phone for search but omits notes; `getJobs` keeps all contact fields; PII-safe error logging; every helper returns `{ ok: false }` on a database error and an empty/`null` result only when there genuinely is none; no list, calendar, dashboard or `getJobById` query reads or embeds `booking_access`, and `getBookingAccess` reads only `instructions` for one booking. ✅ passing.
+- **`__tests__/entry-instructions-flow.test.tsx`**, **`app/admin/bookings/[id]/__tests__/actions.test.ts`**, **`EntryInstructions.test.tsx`** and the entry-instruction cases in `submitBooking.test.ts` — B38: the property-step field (label, hint, limit, no autocomplete/spell-check), stored apart from notes, shown on Review and sent with the booking but never in a URL; stored only in `booking_access`, rolled back with the booking on failure, never logged; admin edit auth, trim, length, RPC results. ✅ passing.
+- **`supabase/tests/database/booking_access.test.sql`** (pgTAP, `npx supabase test db` on the local stack) — admin read/add/change/remove, activity entries without the text, non-admin/`user_metadata`/anon refused, service-role insert, cascade on delete.
 - **`app/api/admin/jobs/__tests__/route.test.ts`** — 200 with jobs, 200 with an empty range, 503 on query failure, 401/403 without querying. ✅ passing.
 - **`lib/supabase/__tests__/require-admin.test.ts`** — signed-out, token error, no-role, `user_metadata` ignored, admin accepted. ✅ passing.
 - **`store/__tests__/bookingStore.test.ts`** — defaults, each setter, reset. ✅ passing.
 
 - **`lib/__tests__/bot-check.test.ts`**, **`__tests__/bot-check-flow.test.tsx`** and the bot-check cases in both action tests — filled honeypot, too fast, normal, malformed checks, identical generic error, nothing logged; the honeypot's accessibility (aria-hidden, tabIndex -1, off-screen not display:none); contact steps store it; review pages send it; the store's fill-time clock. ✅ passing.
 
-### Current test status: 481 passing (30 of 30 files green)
+### Current test status: 654 passing (42 of 42 files green)
 Passes under both `TZ=UTC` and `TZ=America/Los_Angeles`; `tsc --noEmit` clean.
 
 **History — the B16 ZIP swap.** Commit `fe85cd2` meant to change Camillus from `13035` (actually Cazenovia) to `13031`, but edited the Cicero line instead (`13039` → `13031`), which rejected Cicero customers and turned 26 tests red. Corrected 2026-10-13: Cicero is `13039`, Camillus is `13031`, and `13035` is no longer served.

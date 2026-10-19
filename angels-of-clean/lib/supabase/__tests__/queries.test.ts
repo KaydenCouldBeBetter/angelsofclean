@@ -7,17 +7,28 @@ type QueryResult = { data: unknown; error: unknown; count?: number | null };
 // Pass several results to answer successive from() calls in order (the last
 // one repeats) — getDashboardStats runs four queries.
 function makeSupabaseStub(...results: QueryResult[]) {
-  const recorded: { table?: string; columns?: string } = {};
+  // table/columns hold the last query; `queries` keeps every one, in order.
+  const recorded: {
+    table?: string;
+    columns?: string;
+    queries: { table: string; columns?: string; eq: [string, unknown][] }[];
+  } = { queries: [] };
   let call = 0;
 
   function makeBuilder(result: QueryResult) {
+    const query = recorded.queries[recorded.queries.length - 1];
     /* eslint-disable @typescript-eslint/no-explicit-any */
     const builder: any = {};
-    for (const method of ["order", "eq", "neq", "gt", "lt", "gte", "lte"]) {
+    for (const method of ["order", "neq", "gt", "lt", "gte", "lte"]) {
       builder[method] = vi.fn(() => builder);
     }
+    builder.eq = vi.fn((column: string, value: unknown) => {
+      query.eq.push([column, value]);
+      return builder;
+    });
     builder.select = vi.fn((columns: string) => {
       recorded.columns = columns;
+      query.columns = columns;
       return builder;
     });
     builder.maybeSingle = vi.fn(() => Promise.resolve(result));
@@ -30,6 +41,7 @@ function makeSupabaseStub(...results: QueryResult[]) {
   const client = {
     from: vi.fn((table: string) => {
       recorded.table = table;
+      recorded.queries.push({ table, eq: [] });
       const result = results[Math.min(call, results.length - 1)];
       call += 1;
       return makeBuilder(result);
@@ -67,6 +79,7 @@ vi.mock("../server", () => ({
 
 import {
   getActivityLog,
+  getBookingAccess,
   getCommercialQuotes,
   getDashboardStats,
   getEmployees,
@@ -301,5 +314,80 @@ describe("getCommercialQuotes", () => {
     const submittedAt = result.ok ? result.data[0].submittedAt : "";
     expect(submittedAt).toContain("10:30");
     expect(submittedAt).toContain("AM");
+  });
+});
+
+// B38: entry instructions (door codes) live in booking_access, which only the
+// booking detail page reads.
+describe("entry instructions stay out of every list, calendar and dashboard query", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it.each([
+    ["getJobs", () => getJobs()],
+    ["getJobsByDateFilter today", () => getJobsByDateFilter("today")],
+    ["getJobsByDateFilter upcoming", () => getJobsByDateFilter("upcoming")],
+    ["getJobsByDateFilter past", () => getJobsByDateFilter("past")],
+    ["getJobsByDateFilter all", () => getJobsByDateFilter("all")],
+    ["getTodayJobs", () => getTodayJobs()],
+    ["getJobsInRange (calendar)", () => getJobsInRange("2026-09-01", "2026-09-30")],
+    ["getDashboardStats", () => getDashboardStats()],
+    ["getJobById", () => getJobById("b-1"), BOOKING_ROW],
+  ] as [string, () => Promise<unknown>, unknown?][])("%s never reads booking_access", async (_name, run, row = [BOOKING_ROW]) => {
+    const { recorded, client } = makeSupabaseStub({ data: row, error: null, count: 0 });
+    createClientMock.mockResolvedValue(client);
+
+    await run();
+
+    expect(recorded.queries.length).toBeGreaterThan(0);
+    for (const query of recorded.queries) {
+      expect(query.table).not.toBe("booking_access");
+      // Not embedded either (bookings → booking_access is one-to-one).
+      expect(query.columns ?? "").not.toMatch(/booking_access|instructions/);
+    }
+  });
+});
+
+describe("getBookingAccess (booking detail page only)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("reads only the instructions column for the one booking", async () => {
+    const { recorded, client } = makeSupabaseStub({
+      data: { instructions: "Side gate code 4412" },
+      error: null,
+    });
+    createClientMock.mockResolvedValue(client);
+
+    const result = await getBookingAccess("b-1");
+
+    expect(result).toEqual({ ok: true, data: "Side gate code 4412" });
+    expect(recorded.queries).toEqual([
+      { table: "booking_access", columns: "instructions", eq: [["booking_id", "b-1"]] },
+    ]);
+  });
+
+  it("returns null when none were given", async () => {
+    const { client } = makeSupabaseStub({ data: null, error: null });
+    createClientMock.mockResolvedValue(client);
+
+    expect(await getBookingAccess("b-1")).toEqual({ ok: true, data: null });
+  });
+
+  it("fails without logging anything but the code when the lookup fails", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { client } = makeSupabaseStub({
+      data: null,
+      error: { code: "42501", message: "row echo: Side gate code 4412" },
+    });
+    createClientMock.mockResolvedValue(client);
+
+    expect(await getBookingAccess("b-1")).toEqual({ ok: false });
+    const logged = JSON.stringify(consoleSpy.mock.calls);
+    expect(logged).toContain("42501");
+    expect(logged).not.toContain("4412");
+    consoleSpy.mockRestore();
   });
 });
