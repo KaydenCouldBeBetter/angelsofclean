@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import WhenHydrated from "@/components/booking/WhenHydrated";
 import { useBookingStore } from "@/store/bookingStore";
 import {
+  BUSINESS_PHONE,
   COMMERCIAL_FACILITY_TYPES,
   COMMERCIAL_SQFT_RANGES,
   COMMERCIAL_STEP_LABELS,
@@ -176,9 +177,15 @@ function CommercialStep1Content() {
           </div>
 
           <p className="text-xs text-zinc-500">
-            We serve the greater Syracuse, NY area. Call{" "}
-            <span className="font-medium">(315) 555-0100</span>{" "}if you&apos;re
-            unsure about your location.
+            We serve the greater Syracuse, NY area.{" "}
+            <a
+              href={BUSINESS_PHONE.tel}
+              aria-label="Call Angels of Clean"
+              className="text-zinc-700 font-medium hover:text-primary transition-colors"
+            >
+              Call us
+            </a>
+            {" "}if you&apos;re unsure about your location.
           </p>
         </div>
 
