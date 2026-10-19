@@ -16,6 +16,9 @@ const COLUMN_LIMITS: Record<string, Record<string, keyof typeof FIELD_MAX_LENGTH
     city: "city",
     notes: "notes",
   },
+  booking_access: {
+    instructions: "accessInstructions",
+  },
   commercial_quotes: {
     business_name: "businessName",
     contact_name: "name",

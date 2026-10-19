@@ -4,12 +4,22 @@ const singleMock = vi.fn();
 const selectMock = vi.fn(() => ({ single: singleMock }));
 const bookingsInsertMock = vi.fn(() => ({ select: selectMock }));
 const activityLogInsertMock = vi.fn(() => Promise.resolve({ error: null }));
+type DbError = { code: string; message?: string } | null;
+const accessInsertMock = vi.fn<(row: unknown) => Promise<{ error: DbError }>>(() =>
+  Promise.resolve({ error: null }),
+);
+// Taking a booking back out when its entry instructions couldn't be stored.
+const bookingsDeleteEqMock = vi.fn<(column: string, value: string) => Promise<{ error: DbError }>>(
+  () => Promise.resolve({ error: null }),
+);
+const bookingsDeleteMock = vi.fn(() => ({ eq: bookingsDeleteEqMock }));
 
 vi.mock("@/lib/supabase/service", () => ({
   createServiceRoleClient: () => ({
     from: (table: string) => {
-      if (table === "bookings") return { insert: bookingsInsertMock };
+      if (table === "bookings") return { insert: bookingsInsertMock, delete: bookingsDeleteMock };
       if (table === "activity_log") return { insert: activityLogInsertMock };
+      if (table === "booking_access") return { insert: accessInsertMock };
       throw new Error(`Unexpected table in test: ${table}`);
     },
   }),
@@ -65,6 +75,8 @@ beforeEach(() => {
   bookingsInsertMock.mockImplementation(() => ({ select: selectMock }));
   selectMock.mockImplementation(() => ({ single: singleMock }));
   activityLogInsertMock.mockImplementation(() => Promise.resolve({ error: null }));
+  accessInsertMock.mockImplementation(() => Promise.resolve({ error: null }));
+  bookingsDeleteEqMock.mockImplementation(() => Promise.resolve({ error: null }));
   singleMock.mockResolvedValue({ data: null, error: null });
   allowPublicBookingMock.mockResolvedValue(true);
 });
@@ -121,6 +133,7 @@ describe.each(ACTIONS)("%s validation", (_name, action) => {
     ["address", "Address"],
     ["city", "City"],
     ["notes", "Special instructions"],
+    ["accessInstructions", "Entry instructions"],
   ] as const)("rejects an over-long %s without touching the database", async (field, label) => {
     const max = FIELD_MAX_LENGTHS[field];
     const result = await action({ ...VALID_INPUT, [field]: "x".repeat(max + 1) });
@@ -139,6 +152,7 @@ describe.each(ACTIONS)("%s validation", (_name, action) => {
 
   it.each([
     ["a non-string field", { ...VALID_INPUT, notes: { length: 0 } }],
+    ["non-string entry instructions", { ...VALID_INPUT, accessInstructions: { length: 0 } }],
     ["a missing field", { ...VALID_INPUT, email: undefined }],
     ["a fractional room count", { ...VALID_INPUT, bedrooms: 2.5 }],
     ["a string room count", { ...VALID_INPUT, bathrooms: "2" }],
@@ -334,6 +348,86 @@ describe("submitBooking", () => {
     expect(bookingsInsertMock).toHaveBeenCalledWith(
       expect.objectContaining({ start_at: "2027-03-14T12:00:00.000Z" }),
     );
+  });
+});
+
+// B38: door codes live in booking_access, never in bookings.notes, the
+// activity log or the server logs.
+describe.each(ACTIONS)("%s entry instructions", (_name, action) => {
+  const SECRET = "Side gate code 4412, the cat stays inside";
+
+  beforeEach(() => {
+    singleMock.mockResolvedValue({ data: { id: "abc-123", booking_number: 1042 }, error: null });
+  });
+
+  it("stores them, trimmed, in booking_access and nowhere in the booking row", async () => {
+    const result = await action({ ...VALID_INPUT, notes: "Skip the basement", accessInstructions: `  ${SECRET}\n` });
+
+    expect(result.success).toBe(true);
+    expect(accessInsertMock).toHaveBeenCalledWith({ booking_id: "abc-123", instructions: SECRET });
+    expect(JSON.stringify(bookingsInsertMock.mock.calls)).not.toContain("4412");
+    expect(bookingsInsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({ notes: "Skip the basement" }),
+    );
+    // The activity entry says nothing about them.
+    expect(JSON.stringify(activityLogInsertMock.mock.calls)).not.toContain("4412");
+  });
+
+  it.each([
+    ["left out", undefined],
+    ["empty", ""],
+    ["only whitespace", "  \n "],
+  ])("writes no booking_access row when they are %s", async (_case, accessInstructions) => {
+    const result = await action({ ...VALID_INPUT, accessInstructions });
+
+    expect(result.success).toBe(true);
+    expect(accessInsertMock).not.toHaveBeenCalled();
+  });
+
+  it("accepts them exactly at the limit", async () => {
+    const result = await action({
+      ...VALID_INPUT,
+      accessInstructions: "x".repeat(FIELD_MAX_LENGTHS.accessInstructions),
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("takes the booking back out, without logging them, when they can't be stored", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    accessInsertMock.mockResolvedValue({
+      // Supabase errors can echo the rejected row.
+      error: { code: "42P01", message: `row: ${SECRET}` },
+    });
+
+    const result = await action({ ...VALID_INPUT, accessInstructions: SECRET });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Something went wrong. Please try again.",
+      unavailable: true,
+    });
+    expect(bookingsDeleteMock).toHaveBeenCalled();
+    expect(bookingsDeleteEqMock).toHaveBeenCalledWith("id", "abc-123");
+    expect(activityLogInsertMock).not.toHaveBeenCalled();
+
+    const logged = JSON.stringify(consoleSpy.mock.calls);
+    expect(logged).toContain("42P01");
+    expect(logged).not.toContain("4412");
+    consoleSpy.mockRestore();
+  });
+
+  it("still reports the failure if taking the booking back out fails too", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    accessInsertMock.mockResolvedValue({ error: { code: "42P01" } });
+    bookingsDeleteEqMock.mockResolvedValue({ error: { code: "57P03" } });
+
+    const result = await action({ ...VALID_INPUT, accessInstructions: SECRET });
+
+    expect(result.success).toBe(false);
+    const logged = JSON.stringify(consoleSpy.mock.calls);
+    expect(logged).toContain("57P03");
+    expect(logged).not.toContain("4412");
+    consoleSpy.mockRestore();
   });
 });
 
