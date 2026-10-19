@@ -6,6 +6,7 @@ import Link from "next/link";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
+import WhenHydrated from "@/components/booking/WhenHydrated";
 import { useBookingStore } from "@/store/bookingStore";
 import { TIME_SLOT_WINDOWS } from "@/lib/constants";
 import { addDaysToDateStr, isNyWallClockInFuture, nyTodayStr } from "@/lib/datetime";
@@ -57,7 +58,7 @@ function getWeekDays() {
   return days;
 }
 
-export default function DateTimePage() {
+function DateTimePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo");
@@ -221,5 +222,13 @@ export default function DateTimePage() {
         <BottomCTA label={returnTo === "review" ? "Save & Return to Review" : "Next"} onClick={handleNext} />
       </div>
     </>
+  );
+}
+
+export default function DateTimePage() {
+  return (
+    <WhenHydrated>
+      <DateTimePageContent />
+    </WhenHydrated>
   );
 }

@@ -6,6 +6,7 @@ import Link from "next/link";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
+import WhenHydrated from "@/components/booking/WhenHydrated";
 import { useBookingStore } from "@/store/bookingStore";
 
 const SERVICES = [
@@ -39,7 +40,7 @@ const FREQUENCIES = [
   { id: "monthly" as const, label: "Monthly" },
 ];
 
-export default function ResidentialPage() {
+function ResidentialPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo");
@@ -157,5 +158,13 @@ export default function ResidentialPage() {
         <BottomCTA label={returnTo === "review" ? "Save & Return to Review" : "Next"} onClick={handleNext} />
       </div>
     </>
+  );
+}
+
+export default function ResidentialPage() {
+  return (
+    <WhenHydrated>
+      <ResidentialPageContent />
+    </WhenHydrated>
   );
 }

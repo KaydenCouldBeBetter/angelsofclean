@@ -6,6 +6,7 @@ import Link from "next/link";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
+import WhenHydrated from "@/components/booking/WhenHydrated";
 import { useBookingStore } from "@/store/bookingStore";
 import { FIELD_MAX_LENGTHS } from "@/lib/constants";
 import { Textarea } from "@/components/ui/textarea";
@@ -48,7 +49,7 @@ function Stepper({ label, value, min, max, onChange }: StepperProps) {
   );
 }
 
-export default function PropertyPage() {
+function PropertyPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo");
@@ -136,5 +137,13 @@ export default function PropertyPage() {
         <BottomCTA label={returnTo === "review" ? "Save & Return to Review" : "Next"} onClick={handleNext} />
       </div>
     </>
+  );
+}
+
+export default function PropertyPage() {
+  return (
+    <WhenHydrated>
+      <PropertyPageContent />
+    </WhenHydrated>
   );
 }
