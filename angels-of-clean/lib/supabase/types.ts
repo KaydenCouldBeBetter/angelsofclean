@@ -2,8 +2,8 @@
 // (npm run db:types — never hand-edit that file). The generator types text
 // columns as plain `string` and jsonb as `Json`, so this file narrows the
 // columns that have a CHECK constraint, and the jsonb results of
-// assign_booking_employees and set_booking_status, back to the exact values
-// the database allows.
+// assign_booking_employees, set_booking_status and set_booking_access, back to
+// the exact values the database allows.
 
 import type { Database as GeneratedDatabase } from "./database.types";
 
@@ -84,30 +84,6 @@ export type SetBookingAccessResult =
   | { status: "unchanged" }
   | { status: "not_found" };
 
-// booking_access and set_booking_access aren't in database.types.ts until the
-// owner applies 20261019152751_booking_access.sql and runs npm run db:types.
-// They are written out here until then; afterwards, take them from
-// GeneratedTables / GeneratedPublic["Functions"] like the others.
-type BookingAccessTable = {
-  Row: { booking_id: string; instructions: string; updated_at: string };
-  Insert: { booking_id: string; instructions: string; updated_at?: string };
-  Update: { booking_id?: string; instructions?: string; updated_at?: string };
-  Relationships: [
-    {
-      foreignKeyName: "booking_access_booking_id_fkey";
-      columns: ["booking_id"];
-      isOneToOne: true;
-      referencedRelation: "bookings";
-      referencedColumns: ["id"];
-    },
-  ];
-};
-
-type SetBookingAccessArgs = {
-  p_booking_id: string;
-  p_instructions: string;
-};
-
 // The generated Database with the narrowed tables and function result swapped
 // in. Passed to createServerClient / createClient so queries return these types.
 export type Database = Omit<GeneratedDatabase, "public"> & {
@@ -115,9 +91,11 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
     Tables: Omit<GeneratedTables, "bookings" | "commercial_quotes"> & {
       bookings: BookingsTable;
       commercial_quotes: CommercialQuotesTable;
-      booking_access: BookingAccessTable;
     };
-    Functions: Omit<GeneratedPublic["Functions"], "assign_booking_employees" | "set_booking_status"> & {
+    Functions: Omit<
+      GeneratedPublic["Functions"],
+      "assign_booking_employees" | "set_booking_status" | "set_booking_access"
+    > & {
       assign_booking_employees: {
         Args: GeneratedPublic["Functions"]["assign_booking_employees"]["Args"];
         Returns: AssignBookingEmployeesResult;
@@ -127,7 +105,7 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
         Returns: SetBookingStatusResult;
       };
       set_booking_access: {
-        Args: SetBookingAccessArgs;
+        Args: GeneratedPublic["Functions"]["set_booking_access"]["Args"];
         Returns: SetBookingAccessResult;
       };
     };

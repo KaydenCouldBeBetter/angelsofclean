@@ -74,6 +74,32 @@ export type Database = {
           },
         ]
       }
+      booking_access: {
+        Row: {
+          booking_id: string
+          instructions: string
+          updated_at: string
+        }
+        Insert: {
+          booking_id: string
+          instructions: string
+          updated_at?: string
+        }
+        Update: {
+          booking_id?: string
+          instructions?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_access_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_employees: {
         Row: {
           assigned_at: string
@@ -311,6 +337,10 @@ export type Database = {
       check_rate_limit: {
         Args: { p_bucket: string; p_limit: number; p_window_seconds: number }
         Returns: boolean
+      }
+      set_booking_access: {
+        Args: { p_booking_id: string; p_instructions: string }
+        Returns: Json
       }
       set_booking_status: {
         Args: {
