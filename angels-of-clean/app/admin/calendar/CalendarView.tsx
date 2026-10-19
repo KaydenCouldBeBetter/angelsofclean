@@ -26,6 +26,17 @@ function toDateStr(d: Date): string {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 }
 
+// The range the server already sent: ±2 months from New York's today, to match
+// getJobsInRange's server-side default.
+function initialLoadedRange(): { from: string; to: string } {
+  const anchor = new Date(`${nyTodayStr()}T00:00:00Z`);
+  const start = new Date(anchor);
+  start.setUTCMonth(start.getUTCMonth() - 2);
+  const end = new Date(anchor);
+  end.setUTCMonth(end.getUTCMonth() + 2);
+  return { from: toDateStr(start), to: toDateStr(end) };
+}
+
 function JobCard({ info }: { info: EventContentArg }) {
   const { service, status, employee } = info.event.extendedProps;
   const cfg = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG];
@@ -81,19 +92,9 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
   const [loadFailed, setLoadFailed] = useState(false);
   const lastDatesSet = useRef<DatesSetArg | null>(null);
 
-  // Track the date range we've already loaded so we don't re-fetch.
-  const loadedRange = useRef({ from: "", to: "" });
-
-  // Seed the initial loaded range (±2 months from New York's today) to match
-  // getJobsInRange's server-side default.
-  if (!loadedRange.current.from) {
-    const anchor = new Date(`${nyTodayStr()}T00:00:00Z`);
-    const start = new Date(anchor);
-    start.setUTCMonth(start.getUTCMonth() - 2);
-    const end = new Date(anchor);
-    end.setUTCMonth(end.getUTCMonth() + 2);
-    loadedRange.current = { from: toDateStr(start), to: toDateStr(end) };
-  }
+  // Track the date range we've already loaded so we don't re-fetch. Only the
+  // first render's value is kept; later renders recompute it and discard it.
+  const loadedRange = useRef(initialLoadedRange());
 
   // Called whenever FullCalendar changes its visible date range (navigation).
   const handleDatesSet = useCallback(async (arg: DatesSetArg) => {
