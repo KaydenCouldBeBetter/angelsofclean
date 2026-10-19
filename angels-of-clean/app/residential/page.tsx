@@ -9,7 +9,7 @@ import BottomCTA from "@/components/booking/BottomCTA";
 import Selectable, { SelectableGroup } from "@/components/booking/Selectable";
 import WhenHydrated from "@/components/booking/WhenHydrated";
 import { useBookingStore } from "@/store/bookingStore";
-import { FREQUENCY_OPTIONS } from "@/lib/constants";
+import { FREQUENCY_OPTIONS, PRICE_NOTE } from "@/lib/constants";
 
 const SERVICES = [
   {
@@ -17,21 +17,18 @@ const SERVICES = [
     name: "Standard Clean",
     description: "Regular maintenance cleaning for your home. Includes dusting, vacuuming, mopping, and surface sanitizing.",
     shortDesc: "Regular maintenance cleaning",
-    price: "From $120",
   },
   {
     id: "deep" as const,
     name: "Deep Clean",
     description: "Thorough top-to-bottom cleaning. Includes baseboards, inside appliances, and detailed scrubbing.",
     shortDesc: "Thorough top-to-bottom cleaning",
-    price: "From $200",
   },
   {
     id: "moveinout" as const,
     name: "Move-In / Move-Out",
     description: "Complete property turnover clean. Every surface, every room, move-in ready.",
     shortDesc: "Full property reset",
-    price: "From $250",
   },
 ];
 
@@ -82,9 +79,6 @@ function ResidentialPageContent() {
                   <span className="text-base font-semibold text-zinc-900 group-data-selected:text-white">
                     {service.name}
                   </span>
-                  <span className="text-sm font-semibold text-zinc-500 group-data-selected:text-white lg:hidden">
-                    {service.price}
-                  </span>
                 </span>
                 {/* Mobile: short description */}
                 <span className="block text-sm font-normal text-zinc-500 group-data-selected:text-white mt-1 lg:hidden">
@@ -95,13 +89,11 @@ function ResidentialPageContent() {
                   {service.description}
                 </span>
               </span>
-              {/* Desktop: price at bottom */}
-              <span className="hidden lg:block text-sm font-semibold text-zinc-500 group-data-selected:text-white mt-4">
-                {service.price}
-              </span>
             </Selectable>
           ))}
         </SelectableGroup>
+
+        <p className="text-sm text-zinc-500">{PRICE_NOTE}</p>
 
         {/* Frequency */}
         <div className="flex flex-col gap-3">

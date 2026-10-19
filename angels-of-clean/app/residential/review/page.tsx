@@ -1,5 +1,6 @@
 "use client";
 
+import WhatHappensNext from "@/components/booking/WhatHappensNext";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -10,7 +11,7 @@ import { AgreementNote } from "@/components/booking/PolicyNotes";
 import SubmitErrorAlert from "@/components/booking/SubmitErrorAlert";
 import ServiceUnavailable from "@/components/booking/ServiceUnavailable";
 import { useBookingStore, useBookingHydrated } from "@/store/bookingStore";
-import { SERVICE_LABELS, FREQUENCY_LABELS, TIME_LABELS, formatBathroomCount } from "@/lib/constants";
+import { SERVICE_LABELS, FREQUENCY_LABELS, TIME_LABELS, PRICE_NOTE, formatBathroomCount } from "@/lib/constants";
 import { submitBooking, type BookingResult } from "@/app/actions/submitBooking";
 
 export default function ReviewPage() {
@@ -171,10 +172,9 @@ export default function ReviewPage() {
             </div>
           ))}
 
-          {/* Price card — mobile */}
+          {/* Price note — mobile */}
           <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-            <p className="text-xs text-zinc-500">Estimated Price</p>
-            <p className="font-semibold text-primary mt-1">Quote provided after confirmation</p>
+            <p className="text-sm font-medium text-primary">{PRICE_NOTE}</p>
           </div>
         </div>
 
@@ -194,12 +194,13 @@ export default function ReviewPage() {
             </div>
           ))}
 
-          {/* Price card — desktop (teal background) */}
+          {/* Price note — desktop (teal background) */}
           <div className="rounded-xl bg-primary/5 border border-primary/20 p-5">
-            <p className="text-xs text-zinc-500">Estimated Price</p>
-            <p className="font-semibold text-primary mt-2">Quote provided after confirmation</p>
+            <p className="text-sm font-medium text-primary">{PRICE_NOTE}</p>
           </div>
         </div>
+
+        <WhatHappensNext />
 
         {error && (
           <SubmitErrorAlert
