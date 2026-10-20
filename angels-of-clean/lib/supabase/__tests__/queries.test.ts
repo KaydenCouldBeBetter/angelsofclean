@@ -305,7 +305,7 @@ describe("getCommercialQuotes", () => {
           facility: "Medical · 2,000 – 5,000 sq ft · 1 floor",
           address: "100 Clinton Sq, Syracuse 13202",
           serviceAreas: ["Lobbies & Reception", "Restrooms"],
-          frequency: "2–3x / Week",
+          frequency: "2–3x / week",
           schedulePreference: undefined,
           notes: undefined,
         },

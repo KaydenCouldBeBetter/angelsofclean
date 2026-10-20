@@ -1,25 +1,11 @@
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import Section from "@/components/home/Section";
-import { COMMERCIAL_FACILITY_TYPES, SERVICE_LABELS } from "@/lib/constants";
+import { COMMERCIAL_FACILITY_TYPES, SERVICE_DESCRIPTIONS, SERVICE_LABELS } from "@/lib/constants";
 
-// Descriptions match the residential flow's first step. No prices: the office
-// confirms the price after reviewing each booking (backlog B28).
-const RESIDENTIAL_SERVICES = [
-  {
-    id: "standard" as const,
-    description:
-      "Regular maintenance cleaning for your home. Includes dusting, vacuuming, mopping, and surface sanitizing.",
-  },
-  {
-    id: "deep" as const,
-    description:
-      "Thorough top-to-bottom cleaning. Includes baseboards, inside appliances, and detailed scrubbing.",
-  },
-  {
-    id: "moveinout" as const,
-    description: "Complete property turnover clean. Every surface, every room, move-in ready.",
-  },
-];
+// Names and descriptions come from lib/constants.ts, the same ones the
+// residential flow's first step shows. No prices: the office confirms the price
+// after reviewing each booking (backlog B28).
+const RESIDENTIAL_SERVICE_IDS = ["standard", "deep", "moveinout"] as const;
 
 export default function Services() {
   const facilities = COMMERCIAL_FACILITY_TYPES.map((f) => f.label.toLowerCase()).join(", ");
@@ -30,11 +16,11 @@ export default function Services() {
       intro="Book a home cleaning online in a few minutes. For a business, send a quote request and we'll get back to you."
     >
       <div className="grid gap-4 md:grid-cols-3">
-        {RESIDENTIAL_SERVICES.map((service) => (
-          <Card key={service.id}>
+        {RESIDENTIAL_SERVICE_IDS.map((id) => (
+          <Card key={id}>
             <CardHeader>
-              <h3 className="text-lg font-semibold text-zinc-900">{SERVICE_LABELS[service.id]}</h3>
-              <CardDescription className="text-base text-zinc-600">{service.description}</CardDescription>
+              <h3 className="text-lg font-semibold text-zinc-900">{SERVICE_LABELS[id]}</h3>
+              <CardDescription className="text-base text-zinc-600">{SERVICE_DESCRIPTIONS[id]}</CardDescription>
             </CardHeader>
           </Card>
         ))}
