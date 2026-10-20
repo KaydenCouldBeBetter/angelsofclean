@@ -1,3 +1,5 @@
+import { BUSINESS_PHONE } from "@/lib/constants";
+
 // Business details and policies used by the Privacy Policy (/privacy) and
 // Terms of Service (/terms). The owner fills these in (backlog B6, decision 9).
 //
@@ -14,7 +16,7 @@ export interface LegalInfo {
   mailingAddress: string | null;
   /** Email address customers can write to about their data or these terms. */
   contactEmail: string | null;
-  /** Business phone number (one real number; see backlog B32). */
+  /** Business phone number: the one real number from BUSINESS_PHONE (backlog B32). */
   contactPhone: string | null;
   /** Date both documents take effect, in words, e.g. "November 1, 2026". */
   effectiveDate: string | null;
@@ -34,7 +36,7 @@ export const LEGAL_INFO: LegalInfo = {
   legalName: null,
   mailingAddress: null,
   contactEmail: null,
-  contactPhone: null,
+  contactPhone: BUSINESS_PHONE.display,
   effectiveDate: null,
   recordRetention: null,
   cancellationPolicy: null,

@@ -5,12 +5,14 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import DesktopNavbar, { COMMERCIAL_NAV_TAGLINE } from "@/components/booking/DesktopNavbar";
 import ConfirmedWithoutDetails from "@/components/booking/ConfirmedWithoutDetails";
+import { Clock, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBookingStore } from "@/store/bookingStore";
 import { useIsClient } from "@/lib/use-is-client";
 import {
   BUSINESS_PHONE,
   FACILITY_TYPE_LABELS,
+  parseQuoteRef,
   SQFT_DISPLAY,
   COMMERCIAL_SERVICE_AREAS,
   COMMERCIAL_FREQUENCY_LABELS,
@@ -20,7 +22,9 @@ import {
 export default function CommercialConfirmation() {
   const router = useRouter();
   // Issued by the server once the quote is stored (see submitCommercialQuote).
-  const quoteRef = useSearchParams().get("ref");
+  // Only a reference in the shape the server issues; anything else in the URL
+  // is treated as no reference.
+  const quoteRef = parseQuoteRef(useSearchParams().get("ref"));
   const isClient = useIsClient();
 
   // Keep a private copy of what this page shows, then clear the request from
@@ -53,11 +57,7 @@ export default function CommercialConfirmation() {
     return (
       <>
         <DesktopNavbar tagline={COMMERCIAL_NAV_TAGLINE} />
-        <ConfirmedWithoutDetails
-          title="Quote request submitted!"
-          referenceLabel="Reference:"
-          reference={quoteRef}
-        />
+        <ConfirmedWithoutDetails title="Quote request submitted!" reference={quoteRef} />
       </>
     );
   }
@@ -97,16 +97,14 @@ export default function CommercialConfirmation() {
             Quote request submitted!
           </h1>
           <p className="text-sm text-zinc-500 mt-1">
-            Reference:{" "}
+            Reference number:{" "}
             <span className="font-medium text-zinc-700">{quoteRef}</span>
           </p>
         </div>
 
         {/* Commitment card */}
         <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4 mb-6">
-          <span className="text-primary text-base mt-0.5" aria-hidden="true">
-            🕐
-          </span>
+          <Clock className="size-5 flex-shrink-0 text-primary mt-px" aria-hidden="true" />
           <p className="text-sm text-primary font-medium">
             We&apos;ll follow up within one business day with a custom quote.
           </p>
@@ -192,9 +190,7 @@ export default function CommercialConfirmation() {
 
         {/* Need help? — mobile only */}
         <div className="md:hidden flex items-start gap-3 rounded-xl border border-zinc-200 p-4 mb-6">
-          <span className="text-zinc-400 text-base mt-0.5" aria-hidden="true">
-            📞
-          </span>
+          <Phone className="size-5 flex-shrink-0 text-zinc-500 mt-px" aria-hidden="true" />
           <div>
             <p className="text-sm font-medium text-zinc-900">
               Need to talk to someone now?
@@ -203,7 +199,6 @@ export default function CommercialConfirmation() {
               Call us at{" "}
               <a
                 href={BUSINESS_PHONE.tel}
-                aria-label="Call Angels of Clean"
                 className="text-primary font-medium hover:text-primary-pressed"
               >
                 {BUSINESS_PHONE.display}
@@ -218,7 +213,7 @@ export default function CommercialConfirmation() {
           className="w-full md:w-auto md:px-8 h-14 text-base font-medium"
           onClick={() => router.push("/")}
         >
-          ← Return to Homepage
+          Return to Home
         </Button>
       </div>
     </>

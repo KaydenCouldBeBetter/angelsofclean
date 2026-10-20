@@ -9,27 +9,14 @@ import BottomCTA from "@/components/booking/BottomCTA";
 import Selectable, { SelectableGroup } from "@/components/booking/Selectable";
 import WhenHydrated from "@/components/booking/WhenHydrated";
 import { useBookingStore } from "@/store/bookingStore";
-import { FREQUENCY_OPTIONS, PRICE_NOTE } from "@/lib/constants";
+import { FREQUENCY_OPTIONS, PRICE_NOTE, SERVICE_DESCRIPTIONS, SERVICE_LABELS } from "@/lib/constants";
 
+// Names and descriptions come from lib/constants.ts; only the short mobile
+// blurb is specific to this card.
 const SERVICES = [
-  {
-    id: "standard" as const,
-    name: "Standard Clean",
-    description: "Regular maintenance cleaning for your home. Includes dusting, vacuuming, mopping, and surface sanitizing.",
-    shortDesc: "Regular maintenance cleaning",
-  },
-  {
-    id: "deep" as const,
-    name: "Deep Clean",
-    description: "Thorough top-to-bottom cleaning. Includes baseboards, inside appliances, and detailed scrubbing.",
-    shortDesc: "Thorough top-to-bottom cleaning",
-  },
-  {
-    id: "moveinout" as const,
-    name: "Move-In / Move-Out",
-    description: "Complete property turnover clean. Every surface, every room, move-in ready.",
-    shortDesc: "Full property reset",
-  },
+  { id: "standard" as const, shortDesc: "Regular maintenance cleaning" },
+  { id: "deep" as const, shortDesc: "Thorough top-to-bottom cleaning" },
+  { id: "moveinout" as const, shortDesc: "Full property reset" },
 ];
 
 function ResidentialPageContent() {
@@ -77,7 +64,7 @@ function ResidentialPageContent() {
               <span className="block">
                 <span className="flex items-center justify-between lg:block">
                   <span className="text-base font-semibold text-zinc-900 group-data-selected:text-white">
-                    {service.name}
+                    {SERVICE_LABELS[service.id]}
                   </span>
                 </span>
                 {/* Mobile: short description */}
@@ -86,7 +73,7 @@ function ResidentialPageContent() {
                 </span>
                 {/* Desktop: full description */}
                 <span className="hidden lg:block text-sm font-normal text-zinc-500 group-data-selected:text-white mt-2">
-                  {service.description}
+                  {SERVICE_DESCRIPTIONS[service.id]}
                 </span>
               </span>
             </Selectable>
@@ -109,7 +96,7 @@ function ResidentialPageContent() {
                 value={freq.id}
                 selected={selectedFrequency === freq.id}
                 onSelect={() => setSelectedFrequency(freq.id)}
-                className="flex items-center justify-center px-6 py-2 lg:py-2.5"
+                className="flex min-h-11 items-center justify-center px-6 py-2 lg:py-2.5"
               >
                 {freq.label}
               </Selectable>

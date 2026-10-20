@@ -5,6 +5,13 @@ import {
   TIME_LABELS,
   TIME_SLOT_WINDOWS,
   PRICE_NOTE,
+  QUOTE_NOTE,
+  SERVICE_DESCRIPTIONS,
+  COMMERCIAL_FREQUENCIES,
+  COMMERCIAL_FREQUENCY_LABELS,
+  FREQUENCY_OPTIONS,
+  parseBookingRef,
+  parseQuoteRef,
   SERVICE_AREA_ZIPS,
   BATHROOM_LIMITS,
   BATHROOM_OPTIONS,
@@ -134,4 +141,63 @@ describe("formatBathroomCount", () => {
   ])("shows %s as %j", (count, text) => {
     expect(formatBathroomCount(count)).toBe(text);
   });
+});
+
+describe("QUOTE_NOTE", () => {
+  it("is about a quote request, not a booking, and says nothing is charged online", () => {
+    expect(QUOTE_NOTE).toBe(
+      "We’ll send your quote after reviewing your request — you won’t be charged anything online.",
+    );
+    expect(QUOTE_NOTE).not.toMatch(/booking|\$/);
+  });
+});
+
+describe("SERVICE_DESCRIPTIONS", () => {
+  it("has a description for every service", () => {
+    expect(Object.keys(SERVICE_DESCRIPTIONS).sort()).toEqual(Object.keys(SERVICE_LABELS).sort());
+    for (const text of Object.values(SERVICE_DESCRIPTIONS)) expect(text.length).toBeGreaterThan(20);
+  });
+});
+
+describe("commercial frequencies (derived from the residential ones)", () => {
+  it("reuse every residential label and add the two commercial-only entries in sentence case", () => {
+    expect(COMMERCIAL_FREQUENCY_LABELS).toEqual({
+      ...FREQUENCY_LABELS,
+      "2-3x": "2–3x / week",
+      daily: "Daily",
+    });
+  });
+
+  it("list the residential options first, in the same order, then 2–3x and daily", () => {
+    expect(COMMERCIAL_FREQUENCIES.map((f) => f.id)).toEqual([
+      ...FREQUENCY_OPTIONS.map((f) => f.id),
+      "2-3x",
+      "daily",
+    ]);
+    for (const { id, label } of COMMERCIAL_FREQUENCIES) {
+      expect(label).toBe(COMMERCIAL_FREQUENCY_LABELS[id]);
+    }
+  });
+});
+
+describe("confirmation references", () => {
+  it("accepts the shapes the server issues", () => {
+    expect(parseBookingRef("AOC-1000")).toBe("AOC-1000");
+    expect(parseBookingRef("AOC-1043")).toBe("AOC-1043");
+    expect(parseQuoteRef("COM-1007")).toBe("COM-1007");
+  });
+
+  it.each([
+    null, "", "AOC-", "AOC", "aoc-1043", "AOC-1043 ", " AOC-1043", "AOC-1043\n", "AOC-10.5",
+    "AOC-１０", "<b>AOC-1043</b>", "COM-1007", "AOC-1043-x",
+  ])("turns %j into no booking reference", (value) => {
+    expect(parseBookingRef(value)).toBeNull();
+  });
+
+  it.each([null, "", "COM-", "com-1007", "COM-1007 ", "COM-1007\n", "AOC-1043", "COM-1; DROP TABLE"])(
+    "turns %j into no quote reference",
+    (value) => {
+      expect(parseQuoteRef(value)).toBeNull();
+    },
+  );
 });
