@@ -17,7 +17,7 @@
 //   - Then set `placeholder: false` on that entry. The "Placeholder" label goes
 //     away on its own. `hasPlaceholders` turns false once none are left.
 //
-// `hasPlaceholders` never blocks the build. __tests__/homepage-content.test.ts
+// `hasPlaceholders` never blocks the build. lib/__tests__/homepage-content.test.ts
 // prints which placeholders remain so you can see what is left to replace.
 
 export interface ReviewContent {

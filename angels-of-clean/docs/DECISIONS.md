@@ -16,7 +16,7 @@ Extracted from the Claude references directory (`ClaudeReferences/`), project me
 ## Design Decisions
 
 ### Dual-path homepage (HeroSplit)
-Residential and commercial have different decision-making structures. Residential is a household impulse buy with instant self-service booking. Commercial is a single SMB decision-maker who needs a quote, not a price. A single homepage presents exactly two CTAs — "Book Now" and "Get a Quote" — satisfying Hick's Law (minimize choices).
+Residential and commercial have different decision-making structures. Residential is a household impulse buy with instant self-service booking. Commercial is a single SMB decision-maker who needs a quote, not a price. A single homepage presents exactly two CTAs — "Book a cleaning" and "Get a commercial quote" (`components/home/Hero.tsx`) — satisfying Hick's Law (minimize choices). _(Corrected 2026-10-20: this said "Book Now" and "Get a Quote", which the code never used.)_
 
 ### No registration before booking
 26% of users abandon when forced to create an account before purchasing (Baymard Institute, 2023). Adopted the Square Appointments pattern: optional account creation *after* booking confirmation, never before.
@@ -25,7 +25,7 @@ Residential and commercial have different decision-making structures. Residentia
 Address was moved to Step 2 so ZIP service-area validation gates progress before property details. Multi-step forms convert 86% higher than single-page forms (13.85% vs 4.53%). Each step presents 1–3 fields max.
 
 ### Pricing is quote-based, not calculated
-Pricing depends on equipment and resources evaluated by a manager per job. The static "From $X" labels are intentional starting estimates, not computed totals. **Do not build automated price calculation features.**
+Pricing depends on equipment and resources evaluated by a manager per job. **Do not build automated price calculation features.** _(Corrected 2026-10-20: this entry used to call the static "From $X" labels intentional starting estimates. Backlog B28 removed every customer-facing price on 2026-10-19; see "Quote after booking" below.)_
 
 ### Mobile-first 390px frames
 60% of global web traffic is mobile (Statcounter, 2024). Primary residential client persona (Diane, 52, Cicero) is mobile-primary and books outside business hours.
@@ -33,14 +33,56 @@ Pricing depends on equipment and resources evaluated by a manager per job. The s
 ### Touch targets: 44px standard, 56px employee actions
 44px meets Apple HIG (exceeds WCAG 2.2 AA minimum of 24x24px). Employee primary action buttons are 56px because field conditions include gloves, outdoor light, wet hands, and time pressure.
 
-### Inter font throughout
-System-level in Figma, excellent mobile legibility, professional aesthetic. Scale: Display 32px / H1 24px / H2 20px / Body 16px / Caption 14px / Micro 12px.
+### Geist font throughout
+The Figma file was designed in Inter; the app uses Geist and Geist Mono (`next/font/google` in `app/layout.tsx`). _(Corrected 2026-10-20: this entry said "Inter font throughout".)_ Scale: Display 32px / H1 24px / H2 20px / Body 16px / Caption 14px / Micro 12px.
 
 ### Primary color: #1A6B5A (deep teal-green)
-5.8:1 contrast ratio on white — passes WCAG 2.2 AA. Earlier builds incorrectly used #1A6B6B; Agent 6 corrected the Figma paint style to the spec value.
+6.37:1 contrast ratio on white — passes WCAG 2.2 AA (corrected 2026-10-20 from 5.8:1; backlog B21 uses 6.37). Earlier builds incorrectly used #1A6B6B; Agent 6 corrected the Figma paint style to the spec value.
 
 ### Nielsen's 10 Heuristics as primary framework
 Chosen over Shneiderman's 8 Golden Rules — more granular for usability testing. Both are referenced in the academic papers.
+
+---
+
+## Owner Decisions, October 2026
+
+Recorded in `docs/BACKLOG.md` as they were made; copied here on 2026-10-20 so the design rationale lives in one place. Where one of these contradicts an older entry above, this section wins.
+
+### Quote after booking, no customer-facing prices (2026-10-19, B28)
+Customers see no prices anywhere in the booking or quote flows. The office reviews each booking and confirms the price with the customer; nothing is charged online. Every price label and `PRICE_MAP` were removed. `PRICE_NOTE` ("We'll confirm your price after reviewing your booking — you won't be charged anything online.") and, on the commercial review page, `QUOTE_NOTE` say so, and `WhatHappensNext` shows the steps on the review and confirmation pages. This replaces the earlier "static From $X labels" decision.
+
+### Time windows: admins may book custom ones (2026-10-19, B19)
+Admins may book a custom time window. Customers keep exactly two: Morning 8:00 AM – 12:00 PM and Afternoon 12:00 PM – 4:00 PM (`TIME_SLOT_WINDOWS` in `lib/constants.ts`). How many crews can work one slot is still open (B10).
+
+### Add-Ons cut from v1 (2026-10-19, B29)
+There is no Add-Ons step or field. Customers who want extras write them in the notes.
+
+### Half-bathrooms allowed (2026-10-19, B42)
+Bathrooms run from 1 to 5 in 0.5 steps (`BATHROOM_LIMITS`; the column is `numeric(2,1)`). Bedrooms stay whole numbers.
+
+### Business phone is (315) 516-1266 (2026-10-19, B32)
+One constant, `BUSINESS_PHONE` in `lib/constants.ts`, feeds every phone number customers see; `lib/__tests__/placeholder-phone-scan.test.ts` fails if a placeholder number comes back.
+
+### Employee app: planned, built only if time allows (2026-10-19, B26)
+No employee-facing screens ship in v1. Employee visibility of entry instructions (B38) waits on this.
+
+### Legal placeholders are a launch blocker only (2026-10-19, B6)
+`/privacy` and `/terms` may carry visible "[To be provided: …]" placeholders and a "Draft — not yet in effect" banner for the class demo. They must be real before a public launch.
+
+### No domain, so email stays blocked (B31 2026-10-13, B17 2026-10-19)
+There is no domain yet, so there is no custom SMTP and no outbound email. Booking confirmation emails (B17) and the custom password-reset template (B31) wait for one. Until then reset emails use Supabase's built-in sender, and no page may claim an email was sent.
+
+### Homepage ships with labelled placeholders (2026-10-19, B27)
+Reviews, trust facts and team photos on the homepage stay as obviously fake entries with a visible "Placeholder" label until the owner supplies real ones (`lib/homepage-content.ts`).
+
+### Public signups stay on (2026-10-15)
+Customer accounts are planned, so Supabase public signups remain enabled. Because any visitor can therefore hold a signed-in session, admin access never rests on "signed in" alone: it needs `app_metadata.role = 'admin'`, checked in the proxy, in `requireAdmin()` and in RLS.
+
+### ZIP list confirmed (2026-10-19, B16)
+`SERVICE_AREA_ZIPS` is the owner's confirmed list (Cicero is `13039`, Camillus `13031`, and `13035` is not served).
+
+### One focus ring (2026-10-19, B25)
+Every focusable control gets the same ring: 2px `#124D41` (`--primary-pressed`), 2px offset, from a single `:focus-visible` rule in `app/globals.css`. Components don't add their own `focus:ring-*` or `outline-none`.
 
 ---
 
@@ -85,7 +127,7 @@ The design spec calls for a weekly drag-and-drop calendar with employee lane col
 ### Adopted patterns
 - **ZenMaid:** Drag-and-drop weekly calendar with employee lane columns
 - **Housecall Pro:** Bidirectional real-time status flow (employee <-> admin)
-- **Handy:** Instant self-service booking, "from $X" pricing on cards, three-touch notification sequence
+- **Handy:** Instant self-service booking, three-touch notification sequence. (Its "from $X" pricing on cards was dropped on 2026-10-19 with B28.)
 - **Booksy:** Availability-first time slot display with visual states
 - **Square Appointments:** Post-booking optional account creation, Add to Calendar
 
@@ -102,7 +144,7 @@ The design spec calls for a weekly drag-and-drop calendar with employee lane col
 
 | Token | Hex | Contrast | Use |
 |-------|-----|----------|-----|
-| Primary | #1A6B5A | 5.8:1 | Main CTA, active states |
+| Primary | #1A6B5A | 6.37:1 | Main CTA, active states |
 | Primary Dark | #124D41 | 8.2:1 | Pressed states |
 | Secondary | #2C7873 | 4.9:1 | Trust badges, info tags |
 | Error | #C0392B | 4.9:1 | Form errors, unavailable |
