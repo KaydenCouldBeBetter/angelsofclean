@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Info } from "lucide-react";
 import DesktopNavbar, { COMMERCIAL_NAV_TAGLINE } from "@/components/booking/DesktopNavbar";
 import { Button } from "@/components/ui/button";
 import { useBookingStore } from "@/store/bookingStore";
@@ -70,12 +71,7 @@ export default function CommercialError() {
           role="alert"
           className="flex items-start gap-3 rounded-xl border border-zinc-200 bg-white p-4 mb-8"
         >
-          <span
-            className="text-zinc-400 mt-0.5 text-base flex-shrink-0"
-            aria-hidden="true"
-          >
-            ℹ️
-          </span>
+          <Info className="size-5 flex-shrink-0 text-zinc-500 mt-px" aria-hidden="true" />
           <div>
             <p className="text-sm text-zinc-700">
               We don&apos;t currently serve this ZIP code. For a custom commercial
@@ -84,7 +80,6 @@ export default function CommercialError() {
             <p className="text-sm text-zinc-700 mt-2">
               <a
                 href={BUSINESS_PHONE.tel}
-                aria-label="Call Angels of Clean"
                 className="text-primary font-medium hover:text-primary-pressed transition-colors"
               >
                 {BUSINESS_PHONE.display}

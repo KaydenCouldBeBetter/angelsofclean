@@ -38,3 +38,20 @@ describe("time formatting goes through lib/datetime.ts", () => {
     expect(offenders).toEqual([]);
   });
 });
+
+// Wave 10C: dates too. A date label built with the browser's own zone (or a
+// zone-less `new Date("…T12:00:00")`) can show the wrong day, so every date the
+// customer sees goes through formatNy / lib/booking-date.ts.
+describe("date formatting goes through lib/datetime.ts", () => {
+  it.each([
+    ["toLocaleDateString", /toLocaleDateString/],
+    ["toLocaleString", /toLocaleString/],
+    // `${date}T12:00:00` is read in the browser's zone; `…T12:00:00Z` is not.
+    ["a zone-less new Date(`…T12:00:00`)", /T12:00:00(?!Z)/],
+  ])("no file outside lib/datetime.ts uses %s", (_name, pattern) => {
+    const offenders = files
+      .filter((f) => pattern.test(readFileSync(f, "utf8")))
+      .map((f) => relative(ROOT, f));
+    expect(offenders).toEqual([]);
+  });
+});

@@ -1,29 +1,8 @@
 "use client";
 
 import { useBookingStore } from "@/store/bookingStore";
-import { TIME_LABELS } from "@/lib/constants";
-
-const SERVICE_LABELS: Record<string, string> = {
-  standard: "Standard Clean",
-  deep: "Deep Clean",
-  moveinout: "Move-In / Move-Out",
-};
-
-const FREQUENCY_LABELS: Record<string, string> = {
-  "one-time": "One-time",
-  weekly: "Weekly",
-  "bi-weekly": "Bi-weekly",
-  monthly: "Monthly",
-};
-
-function formatSummaryDate(iso: string): string {
-  const d = new Date(`${iso}T12:00:00`);
-  return d.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-}
+import { FREQUENCY_LABELS, SERVICE_LABELS, TIME_LABELS } from "@/lib/constants";
+import { formatBookingDate } from "@/lib/booking-date";
 
 interface SummaryRow {
   label: string;
@@ -64,7 +43,7 @@ export default function BookingSummary() {
   if (store.date && store.timeSlot) {
     rows.push({
       label: "Date & Time",
-      value: `${formatSummaryDate(store.date)} \u00B7 ${TIME_LABELS[store.timeSlot] ?? store.timeSlot}`,
+      value: `${formatBookingDate(store.date, "short")} \u00B7 ${TIME_LABELS[store.timeSlot] ?? store.timeSlot}`,
     });
   }
 

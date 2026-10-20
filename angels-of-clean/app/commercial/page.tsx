@@ -180,7 +180,6 @@ function CommercialStep1Content() {
             We serve the greater Syracuse, NY area.{" "}
             <a
               href={BUSINESS_PHONE.tel}
-              aria-label="Call Angels of Clean"
               className="text-zinc-700 font-medium hover:text-primary transition-colors"
             >
               Call us
@@ -199,10 +198,10 @@ function CommercialStep1Content() {
             Next →
           </Button>
           <Link
-            href="/commercial"
+            href="/"
             className="text-sm text-primary hover:text-primary-pressed transition-colors"
           >
-            ← Back to Commercial Services
+            ← Back to Home
           </Link>
         </div>
       </div>

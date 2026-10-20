@@ -6,6 +6,7 @@ import Link from "next/link";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
+import FieldError from "@/components/booking/FieldError";
 import WhenHydrated from "@/components/booking/WhenHydrated";
 import { useBookingStore } from "@/store/bookingStore";
 import { Input } from "@/components/ui/input";
@@ -29,6 +30,7 @@ function AddressPageContent() {
 
   const [touched, setTouched] = useState({ zip: false });
   const zipValid = /^\d{5}$/.test(zip.trim());
+  const showZipError = touched.zip && zip.trim() !== "" && !zipValid;
   const isValid = address.trim() !== "" && city.trim() !== "" && zipValid;
 
   function handleNext() {
@@ -62,7 +64,7 @@ function AddressPageContent() {
         <div className="flex flex-col gap-5">
           {/* Street Address — full width */}
           <div className="flex flex-col gap-2">
-            <Label htmlFor="address">Street Address</Label>
+            <Label htmlFor="address">Street address</Label>
             <Input
               id="address"
               placeholder="123 Main Street"
@@ -88,7 +90,7 @@ function AddressPageContent() {
             </div>
 
             <div className="flex flex-col gap-2 lg:flex-1">
-              <Label htmlFor="zip">ZIP Code</Label>
+              <Label htmlFor="zip">ZIP code</Label>
               <Input
                 id="zip"
                 placeholder="13039"
@@ -97,10 +99,14 @@ function AddressPageContent() {
                 onBlur={() => setTouched((t) => ({ ...t, zip: true }))}
                 inputMode="numeric"
                 maxLength={5}
+                aria-invalid={showZipError}
+                aria-describedby={showZipError ? "zip-error" : undefined}
                 className="h-12"
               />
-              {touched.zip && zip.trim() !== "" && !zipValid && (
-                <p className="text-xs text-[#c0392b]">Please enter a valid 5-digit ZIP code.</p>
+              {showZipError && (
+                <FieldError id="zip-error">
+                  Please enter a valid 5-digit ZIP code.
+                </FieldError>
               )}
             </div>
           </div>

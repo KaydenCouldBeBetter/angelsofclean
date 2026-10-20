@@ -7,9 +7,11 @@ import path from "path";
 // B28: no prices anywhere in the customer flow. The office confirms the price
 // after reviewing each booking, and every review/confirmation page says so.
 
+// The confirmation pages show only a reference in the shape the server issues.
+const params = vi.hoisted(() => ({ ref: "AOC-1" }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
-  useSearchParams: () => new URLSearchParams("ref=REF-1"),
+  useSearchParams: () => new URLSearchParams(`ref=${params.ref}`),
 }));
 vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => (
@@ -20,7 +22,7 @@ vi.mock("@/app/actions/submitBooking", () => ({ submitBooking: vi.fn() }));
 vi.mock("@/app/actions/submitCommercialQuote", () => ({ submitCommercialQuote: vi.fn() }));
 
 import { useBookingStore } from "@/store/bookingStore";
-import { BUSINESS_PHONE, PRICE_NOTE } from "@/lib/constants";
+import { BUSINESS_PHONE, PRICE_NOTE, QUOTE_NOTE } from "@/lib/constants";
 import ResidentialPage from "@/app/residential/page";
 import ResidentialReview from "@/app/residential/review/page";
 import ResidentialConfirmation from "@/app/residential/confirmation/page";
@@ -80,11 +82,12 @@ afterEach(() => {
 
 describe("What happens next block", () => {
   it.each([
-    ["residential review", ResidentialReview, RESIDENTIAL],
-    ["residential confirmation", ResidentialConfirmation, RESIDENTIAL],
-    ["commercial review", CommercialReview, COMMERCIAL],
-    ["commercial confirmation", CommercialConfirmation, COMMERCIAL],
-  ])("renders on %s", (_name, Page, state) => {
+    ["residential review", ResidentialReview, RESIDENTIAL, "AOC-1"],
+    ["residential confirmation", ResidentialConfirmation, RESIDENTIAL, "AOC-1"],
+    ["commercial review", CommercialReview, COMMERCIAL, "COM-1"],
+    ["commercial confirmation", CommercialConfirmation, COMMERCIAL, "COM-1"],
+  ])("renders on %s", (_name, Page, state, ref) => {
+    params.ref = ref;
     useBookingStore.setState(state);
     act(() => root.render(<Page />));
 
@@ -108,14 +111,21 @@ describe("customer pages show no prices", () => {
   });
 
   it.each([
-    ["residential review", ResidentialReview, RESIDENTIAL],
-    ["commercial review", CommercialReview, COMMERCIAL],
-  ])("%s shows the price note and no dollar amounts", (_name, Page, state) => {
+    ["residential review", ResidentialReview, RESIDENTIAL, PRICE_NOTE],
+    // A quote request is not a booking: the commercial page has its own note.
+    ["commercial review", CommercialReview, COMMERCIAL, QUOTE_NOTE],
+  ])("%s shows its note and no dollar amounts", (_name, Page, state, note) => {
     useBookingStore.setState(state);
     act(() => root.render(<Page />));
     const text = container.textContent ?? "";
-    expect(text).toContain(PRICE_NOTE);
+    expect(text).toContain(note);
     expect(text).not.toMatch(/\$\s?\d/);
+  });
+
+  it("the commercial review page never calls a quote request a booking", () => {
+    useBookingStore.setState(COMMERCIAL);
+    act(() => root.render(<CommercialReview />));
+    expect(container.textContent).not.toContain(PRICE_NOTE);
   });
 });
 
