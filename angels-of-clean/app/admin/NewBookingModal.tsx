@@ -1,26 +1,25 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Dialog } from "@base-ui/react/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { adminCreateBooking } from "@/app/actions/submitBooking";
-import { BATHROOM_OPTIONS, FIELD_MAX_LENGTHS, TIME_LABELS } from "@/lib/constants";
+import {
+  BATHROOM_OPTIONS,
+  FIELD_MAX_LENGTHS,
+  FREQUENCY_OPTIONS,
+  SERVICE_LABELS,
+  TIME_LABELS,
+} from "@/lib/constants";
 
-const SERVICES = [
-  { value: "standard", label: "Standard Clean" },
-  { value: "deep", label: "Deep Clean" },
-  { value: "moveinout", label: "Move-In / Move-Out" },
-] as const;
+// Same options, labels and order (least to most frequent) as the customer flows.
+const SERVICES = Object.entries(SERVICE_LABELS).map(([value, label]) => ({ value, label }));
 
-const FREQUENCIES = [
-  { value: "one-time", label: "One-time" },
-  { value: "weekly", label: "Weekly" },
-  { value: "bi-weekly", label: "Bi-weekly" },
-  { value: "monthly", label: "Monthly" },
-] as const;
+const FREQUENCIES = FREQUENCY_OPTIONS.map(({ id, label }) => ({ value: id, label }));
 
 const TIME_SLOTS = Object.entries(TIME_LABELS).map(([value, label]) => ({ value, label }));
 
@@ -48,26 +47,6 @@ export default function NewBookingModal({ open, onClose }: NewBookingModalProps)
   const [date, setDate] = useState("");
   const [timeSlot, setTimeSlot] = useState("morning");
   const [notes, setNotes] = useState("");
-
-  // Close on Escape
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [open, onClose]);
-
-  // Prevent body scroll when open
-  useEffect(() => {
-    if (open) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => { document.body.style.overflow = ""; };
-  }, [open]);
 
   function resetForm() {
     setName(""); setEmail(""); setPhone("");
@@ -103,27 +82,27 @@ export default function NewBookingModal({ open, onClose }: NewBookingModalProps)
     });
   }
 
-  if (!open) return null;
-
+  // Base UI's modal Dialog gives the popup role="dialog", names it by its
+  // title, moves focus in on open, keeps Tab inside, closes on Escape or an
+  // outside press, locks page scroll, and returns focus to whatever opened it.
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh]">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/40"
-        onClick={handleClose}
-      />
+    <Dialog.Root open={open} onOpenChange={(next) => { if (!next) handleClose(); }}>
+      <Dialog.Portal>
+        <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/40" />
 
-      {/* Modal */}
-      <div className="relative bg-white rounded-xl shadow-xl w-[600px] max-h-[84vh] flex flex-col">
+        <Dialog.Popup
+          aria-modal="true"
+          className="fixed left-1/2 top-[10vh] z-50 -translate-x-1/2 bg-white rounded-xl shadow-xl w-[600px] max-h-[84vh] flex flex-col"
+        >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#e2e8e6]">
-          <h2 className="text-lg font-semibold text-[#1c1c1e]">New Booking</h2>
-          <button
-            onClick={handleClose}
+          <Dialog.Title className="text-lg font-semibold text-[#1c1c1e]">New Booking</Dialog.Title>
+          <Dialog.Close
+            aria-label="Close"
             className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-[#f0f0f0] text-[#5c5c5e] transition-colors text-lg"
           >
-            &#10005;
-          </button>
+            <span aria-hidden="true">&#10005;</span>
+          </Dialog.Close>
         </div>
 
         {/* Scrollable body */}
@@ -293,8 +272,9 @@ export default function NewBookingModal({ open, onClose }: NewBookingModalProps)
             {isPending ? "Creating..." : "Create Booking"}
           </Button>
         </div>
-      </div>
-    </div>
+        </Dialog.Popup>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
 

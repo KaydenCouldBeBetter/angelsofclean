@@ -28,12 +28,19 @@ describe("brand teal comes from the --primary token", () => {
     expect(files.length).toBeGreaterThan(50);
   });
 
+  // The admin sidebar draws #3ebfb5 on its dark #1b3b36 background, where it
+  // reads at 5.4:1. On white it is 2.25:1 (the calendar's "today" header was
+  // one, pass #2 finding 5), so it stays out of everything else.
+  const DARK_SIDEBAR = [join("app", "admin", "AdminShell.tsx")];
+
   it.each([
-    ["the brand hex #1a6b5a (any case): use bg-/text-/border-primary", /#1a6b5a/i],
-    ["the pressed hex #124d41 or its old twin #155a4b: use primary-pressed", /#(?:124d41|155a4b)/i],
-    ["a Tailwind teal-* class: use the primary token", /\bteal-\d/],
-  ])("no file outside app/globals.css uses %s", (_name, pattern) => {
+    ["the brand hex #1a6b5a (any case): use bg-/text-/border-primary", /#1a6b5a/i, []],
+    ["the pressed hex #124d41 or its old twin #155a4b: use primary-pressed", /#(?:124d41|155a4b)/i, []],
+    ["a Tailwind teal-* class: use the primary token", /\bteal-\d/, []],
+    ["the light teal #3ebfb5, 2.25:1 on white: use text-primary", /#3ebfb5/i, DARK_SIDEBAR],
+  ])("no file outside app/globals.css uses %s", (_name, pattern, allowed) => {
     const offenders = files
+      .filter((f) => !allowed.includes(relative(ROOT, f)))
       .filter((f) => pattern.test(readFileSync(f, "utf8")))
       .map((f) => relative(ROOT, f));
     expect(offenders).toEqual([]);
