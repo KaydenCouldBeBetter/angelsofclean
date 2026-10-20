@@ -1,4 +1,9 @@
+// @vitest-environment node
+// Next.js 16 runs proxy.ts in the Node.js runtime (it can't be configured),
+// so test it there rather than in jsdom.
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 import type { SessionCheck } from "@/lib/supabase/middleware";
 
@@ -17,12 +22,12 @@ vi.mock("@/lib/supabase/middleware", () => ({
   updateSession: (request: NextRequest) => updateSession(request),
 }));
 
-import { middleware } from "../middleware";
+import { config, proxy } from "../proxy";
 
 const signedIn = (role: unknown): SessionCheck => ({ state: "signed-in", role });
 
 async function visit(path: string) {
-  const res = await middleware(new NextRequest(`https://angelsofclean.example${path}`));
+  const res = await proxy(new NextRequest(`https://angelsofclean.example${path}`));
   const location = res.headers.get("location");
   if (!location) return "allowed";
   const url = new URL(location);
@@ -36,7 +41,7 @@ beforeEach(() => {
   updateSession.mockClear();
 });
 
-describe("admin middleware", () => {
+describe("admin proxy", () => {
   it.each(["/admin", "/admin/forgot-password", "/admin/reset-password/confirm"])(
     "lets a signed-out visitor reach %s",
     async (path) => {
@@ -81,7 +86,7 @@ describe("admin middleware", () => {
   it("keeps refreshed session cookies on a redirect", async () => {
     currentSession = signedIn("admin");
     refreshedCookies = [{ name: "sb-projref-auth-token", value: "fresh" }];
-    const res = await middleware(new NextRequest("https://angelsofclean.example/admin"));
+    const res = await proxy(new NextRequest("https://angelsofclean.example/admin"));
     expect(res.cookies.get("sb-projref-auth-token")?.value).toBe("fresh");
   });
 
@@ -90,7 +95,7 @@ describe("admin middleware", () => {
   });
 });
 
-describe("admin middleware when Auth doesn't answer in time", () => {
+describe("admin proxy when Auth doesn't answer in time", () => {
   beforeEach(() => {
     currentSession = { state: "unavailable" };
   });
@@ -115,7 +120,7 @@ describe("admin middleware when Auth doesn't answer in time", () => {
   );
 
   it("serves the retry screen without waiting on Auth again", async () => {
-    const res = await middleware(
+    const res = await proxy(
       new NextRequest("https://angelsofclean.example/admin?auth=retry&next=/admin/dashboard"),
     );
     expect(res.headers.get("location")).toBeNull();
@@ -134,7 +139,7 @@ describe("admin Content-Security-Policy", () => {
 
   it("sends the page a nonce policy and puts the same policy on the response", async () => {
     currentSession = signedIn("admin");
-    const res = await middleware(new NextRequest("https://angelsofclean.example/admin/dashboard"));
+    const res = await proxy(new NextRequest("https://angelsofclean.example/admin/dashboard"));
 
     const sent = res.headers.get("content-security-policy");
     expect(nonceOf(sent)).toBeTruthy();
@@ -145,10 +150,23 @@ describe("admin Content-Security-Policy", () => {
   });
 
   it("uses a fresh nonce for every request", async () => {
-    const first = await middleware(new NextRequest("https://angelsofclean.example/admin"));
-    const second = await middleware(new NextRequest("https://angelsofclean.example/admin"));
+    const first = await proxy(new NextRequest("https://angelsofclean.example/admin"));
+    const second = await proxy(new NextRequest("https://angelsofclean.example/admin"));
     expect(nonceOf(first.headers.get("content-security-policy"))).not.toBe(
       nonceOf(second.headers.get("content-security-policy")),
     );
+  });
+});
+
+describe("proxy file convention", () => {
+  const appRoot = path.resolve(__dirname, "..");
+
+  it("lives in proxy.ts, with no deprecated middleware.ts beside it", () => {
+    expect(existsSync(path.join(appRoot, "proxy.ts"))).toBe(true);
+    expect(existsSync(path.join(appRoot, "middleware.ts"))).toBe(false);
+  });
+
+  it("guards every admin page and nothing else", () => {
+    expect(config).toEqual({ matcher: ["/admin/:path*"] });
   });
 });
