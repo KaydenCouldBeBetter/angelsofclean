@@ -201,8 +201,10 @@ describe("confirmation page", () => {
 });
 
 describe("admin New Booking form", () => {
+  // The modal is a dialog rendered in a portal on document.body, not inside
+  // the test's container.
   function bathroomsSelect() {
-    return container.querySelector<HTMLSelectElement>("#nb-bath")!;
+    return document.querySelector<HTMLSelectElement>("#nb-bath")!;
   }
 
   it("offers 1 to 5 bathrooms in half steps", () => {
@@ -224,7 +226,7 @@ describe("admin New Booking form", () => {
     // Submit the form directly: the test checks what is sent, not the
     // browser's required-field checks.
     await act(async () => {
-      container.querySelector("form")!.dispatchEvent(
+      document.querySelector("form")!.dispatchEvent(
         new Event("submit", { bubbles: true, cancelable: true }),
       );
     });
