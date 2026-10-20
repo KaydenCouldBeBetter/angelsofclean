@@ -7,13 +7,13 @@ Booking and operations app for Angels of Clean, a residential and commercial cle
 
 Built with Next.js 16 (App Router, React 19, React Compiler), TypeScript, Tailwind CSS v4, shadcn/ui, FullCalendar and Supabase (Postgres, Auth, RLS). Tests run on Vitest.
 
-The business timezone is **America/New_York**. All date and time logic goes through `lib/datetime.ts`.
+The business timezone is **America/New_York**. All date and time logic goes through `lib/datetime.ts`; `lib/__tests__/time-format-usage.test.ts` fails on `toLocaleDateString` or `toLocaleTimeString` anywhere else.
 
 For a tour of the code see [`docs/PROJECT_MAP.md`](docs/PROJECT_MAP.md); for design rationale see [`docs/DECISIONS.md`](docs/DECISIONS.md).
 
 ## Requirements
 
-- **Node.js 22** (what CI builds and tests with). Next.js 16 needs at least Node 20.9.
+- **Node.js 22**, pinned in `.nvmrc` and in `engines` in `package.json` (and what CI builds and tests with). Run `nvm use` (or your version manager's equivalent) in `angels-of-clean/`. Next.js 16 itself needs at least Node 20.9.
 - npm (comes with Node). The lockfile is `package-lock.json`; use `npm ci`.
 - A Supabase project, plus Docker only if you want the local Supabase stack or the database tests.
 
@@ -78,7 +78,7 @@ If a migration has not been applied yet, the app fails safely: the affected acti
 
 ### Granting the admin role
 
-Admin access requires `app_metadata.role = 'admin'` on the user. It is checked in middleware, in `requireAdmin()` for every server action, and in RLS. `app_metadata` can only be set server-side, so a user cannot grant it to themselves. Being signed in is never enough: public signups are on.
+Admin access requires `app_metadata.role = 'admin'` on the user. It is checked in the proxy (`proxy.ts`, Next.js 16's name for middleware), in `requireAdmin()` for every server action, and in RLS. `app_metadata` can only be set server-side, so a user cannot grant it to themselves. Being signed in is never enough: public signups are on.
 
 Create the user first (Supabase dashboard, Authentication, Users), then run this in the Supabase SQL Editor (SQL from `20260918194509_admin_role_rls.sql`):
 
