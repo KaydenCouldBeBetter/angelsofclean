@@ -183,13 +183,13 @@ html:has([data-bottom-cta]) {
 
 /* Grid chrome */
 .admin-calendar .fc-timegrid-slot { border-color: #e4e4e7; }
-.admin-calendar .fc-timegrid-slot-label { font-size: 11px; color: #a1a1aa; padding-right: 8px; }
+.admin-calendar .fc-timegrid-slot-label { font-size: 11px; color: #52525b; padding-right: 8px; }
 .admin-calendar .fc-col-header-cell { background: white; border-color: #e4e4e7; }
 .admin-calendar .fc-col-header-cell-cushion {
   font-size: 13px; font-weight: 500; color: #71717a;
   padding: 10px 0; text-decoration: none;
 }
-.admin-calendar .fc-col-header-cell.fc-day-today .fc-col-header-cell-cushion { color: #3ebfb5; font-weight: 600; }
+.admin-calendar .fc-col-header-cell.fc-day-today .fc-col-header-cell-cushion { color: var(--primary); font-weight: 600; }
 .admin-calendar .fc-timegrid-col.fc-day-today { background: #f0faf9; }
 .admin-calendar .fc-scrollgrid { border-color: #e4e4e7; }
 .admin-calendar .fc-scrollgrid-section > td { border-color: #e4e4e7; }
