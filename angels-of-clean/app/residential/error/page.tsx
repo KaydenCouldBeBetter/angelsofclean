@@ -5,6 +5,7 @@ import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
 import { useBookingStore } from "@/store/bookingStore";
+import { BUSINESS_PHONE } from "@/lib/constants";
 
 export default function ServiceAreaErrorPage() {
   const router = useRouter();
@@ -31,7 +32,7 @@ export default function ServiceAreaErrorPage() {
         {/* Pre-filled address */}
         <div className="flex flex-col gap-1">
           <span className="text-sm font-medium text-zinc-700">Street Address</span>
-          <div className="h-12 flex items-center px-3 rounded-lg border-2 border-red-400 bg-white">
+          <div className="h-12 flex items-center px-3 rounded-lg border-2 border-zinc-300 bg-white">
             <span className="text-zinc-900">{address}</span>
           </div>
         </div>
@@ -40,8 +41,11 @@ export default function ServiceAreaErrorPage() {
         <div role="alert" className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
           <span className="text-red-500 mt-0.5" role="img" aria-label="Warning">&#9888;</span>
           <p className="text-sm text-red-700">
-            We don&apos;t currently serve this area. Check our service zone or call{" "}
-            <span className="font-semibold">(315) 555-CLEAN</span> for a custom quote.
+            We don&apos;t currently serve this area. Check our service zone or{" "}
+            <a href={BUSINESS_PHONE.tel} className="font-semibold text-red-700 underline hover:text-red-800">
+              call us
+            </a>
+            {" "}for a custom quote.
           </p>
         </div>
 
@@ -56,8 +60,8 @@ export default function ServiceAreaErrorPage() {
 
           <div className="flex flex-col gap-1 lg:flex-1">
             <span className="text-sm font-medium text-zinc-700">ZIP Code</span>
-            <div className="h-12 flex items-center px-3 rounded-lg border border-zinc-200 bg-zinc-50">
-              <span className="text-zinc-500">{zip}</span>
+            <div className="h-12 flex items-center px-3 rounded-lg border-2 border-red-400 bg-white">
+              <span className="text-zinc-900">{zip}</span>
             </div>
           </div>
         </div>
@@ -66,7 +70,7 @@ export default function ServiceAreaErrorPage() {
         <div className="hidden lg:block mt-2">
           <button
             onClick={() => router.push("/residential/address")}
-            className="w-[360px] h-14 rounded-xl bg-[#1a6b5a] text-white text-base font-semibold hover:bg-[#155a4b] transition-colors"
+            className="w-[360px] h-14 rounded-xl bg-primary text-white text-base font-semibold hover:bg-primary-pressed transition-colors"
           >
             Try a Different Address
           </button>

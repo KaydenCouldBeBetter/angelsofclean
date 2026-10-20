@@ -8,6 +8,14 @@ import type {
   SchedulePreference,
 } from "@/store/bookingStore";
 
+// ── Business ─────────────────────────────────────────────────────────────────
+
+// The number customers are told to call when a submission fails.
+export const BUSINESS_PHONE = {
+  display: "(315) 516-1266",
+  tel: "tel:+13155161266",
+} as const;
+
 // ── Residential ──────────────────────────────────────────────────────────────
 
 export const SERVICE_LABELS: Record<NonNullable<ServiceType>, string> = {
@@ -16,27 +24,111 @@ export const SERVICE_LABELS: Record<NonNullable<ServiceType>, string> = {
   moveinout: "Move-In / Move-Out",
 };
 
+// What each cleaning includes. The homepage cards and the residential step 1
+// cards both show these, so the wording lives here once.
+export const SERVICE_DESCRIPTIONS: Record<NonNullable<ServiceType>, string> = {
+  standard:
+    "Regular maintenance cleaning for your home. Includes dusting, vacuuming, mopping, and surface sanitizing.",
+  deep: "Thorough top-to-bottom cleaning. Includes baseboards, inside appliances, and detailed scrubbing.",
+  moveinout: "Complete property turnover clean. Every surface, every room, move-in ready.",
+};
+
 export const FREQUENCY_LABELS: Record<NonNullable<Frequency>, string> = {
   "one-time": "One-time",
-  weekly: "Weekly",
-  "bi-weekly": "Bi-weekly",
   monthly: "Monthly",
+  "bi-weekly": "Bi-weekly",
+  weekly: "Weekly",
+};
+
+// Frequency choices, least to most frequent. Both flows show them in this
+// order; the commercial list continues it with its extra, more frequent options.
+export const FREQUENCY_OPTIONS: { id: NonNullable<Frequency>; label: string }[] = [
+  { id: "one-time",  label: FREQUENCY_LABELS["one-time"] },
+  { id: "monthly",   label: FREQUENCY_LABELS.monthly },
+  { id: "bi-weekly", label: FREQUENCY_LABELS["bi-weekly"] },
+  { id: "weekly",    label: FREQUENCY_LABELS.weekly },
+];
+
+// Single source of truth for slot windows: the customer picker, the admin
+// New Booking modal, and the stored start_at/end_at must all agree.
+export const TIME_SLOT_WINDOWS: Record<
+  NonNullable<TimeSlot>,
+  { label: string; display: string; start: string; end: string }
+> = {
+  morning:   { label: "Morning",   display: "8:00 AM – 12:00 PM", start: "08:00:00", end: "12:00:00" },
+  afternoon: { label: "Afternoon", display: "12:00 PM – 4:00 PM", start: "12:00:00", end: "16:00:00" },
 };
 
 export const TIME_LABELS: Record<NonNullable<TimeSlot>, string> = {
-  morning: "Morning (8am–12pm)",
-  afternoon: "Afternoon (12pm–4pm)",
+  morning: `Morning (${TIME_SLOT_WINDOWS.morning.display})`,
+  afternoon: `Afternoon (${TIME_SLOT_WINDOWS.afternoon.display})`,
 };
 
-export const PRICE_MAP: Record<NonNullable<ServiceType>, string> = {
-  standard: "$85",
-  deep: "$149",
-  moveinout: "$199",
-};
+// The one sentence customers see instead of a price (backlog B28): the office
+// confirms the price after reviewing each booking, and nothing is charged online.
+export const PRICE_NOTE =
+  "We\u2019ll confirm your price after reviewing your booking \u2014 you won\u2019t be charged anything online.";
+
+// The quote-request version of PRICE_NOTE, for the commercial review page: a
+// quote request is not a booking, and the office sends the quote afterwards.
+export const QUOTE_NOTE =
+  "We\u2019ll send your quote after reviewing your request \u2014 you won\u2019t be charged anything online.";
+
+// The references the server issues (`AOC-{booking_number}` in submitBooking.ts,
+// `COM-{quote_number}` in submitCommercialQuote.ts). The confirmation pages
+// print `?ref=` from the URL, so they accept only these shapes: anything else
+// is somebody's free text on our domain.
+export const BOOKING_REF_PATTERN = /^AOC-\d+$/;
+export const QUOTE_REF_PATTERN = /^COM-\d+$/;
+
+/** `value` if it looks like a booking reference the server issued, else null. */
+export function parseBookingRef(value: string | null): string | null {
+  return value !== null && BOOKING_REF_PATTERN.test(value) ? value : null;
+}
+
+/** `value` if it looks like a quote reference the server issued, else null. */
+export function parseQuoteRef(value: string | null): string | null {
+  return value !== null && QUOTE_REF_PATTERN.test(value) ? value : null;
+}
+
+// Longest accepted value for each free-text booking or quote field. Enforced on
+// the server (app/actions/) and mirrored as maxLength on the inputs.
+export const FIELD_MAX_LENGTHS = {
+  name: 100,
+  businessName: 100,
+  email: 254,
+  phone: 20,
+  address: 200,
+  city: 100,
+  notes: 1000,
+  // Entry instructions (door code, gate, pets), stored in booking_access.
+  accessInstructions: 500,
+} as const;
+
+// Bathrooms per booking: 1 to 5 in half steps (2.5 = two full baths and a
+// half-bath). Enforced in createBooking (app/actions/submitBooking.ts) and by
+// the bookings_bathrooms_check constraint (numeric(2,1)); the property step's
+// stepper moves by `step`.
+export const BATHROOM_LIMITS = { min: 1, max: 5, step: 0.5 } as const;
+
+// Every allowed count, for the admin New Booking select: 1, 1.5, 2 … 5.
+export const BATHROOM_OPTIONS: number[] = Array.from(
+  { length: (BATHROOM_LIMITS.max - BATHROOM_LIMITS.min) / BATHROOM_LIMITS.step + 1 },
+  (_, i) => BATHROOM_LIMITS.min + i * BATHROOM_LIMITS.step,
+);
+
+// "1 Bathroom", "1.5 Bathrooms", "2 Bathrooms": only exactly one is singular.
+export function formatBathroomCount(count: number): string {
+  return `${count} ${count === 1 ? "Bathroom" : "Bathrooms"}`;
+}
+
+// Shortest admin password the reset form accepts. Supabase's own project
+// setting may be stricter; its message is shown if so.
+export const PASSWORD_MIN_LENGTH = 8;
 
 export const SERVICE_AREA_ZIPS = [
   "13039", // Cicero
-  "13035", // Camillus
+  "13031", // Camillus
   "13201", "13202", "13203", "13204", "13205", "13206", "13207",
   "13208", "13210", "13214", "13215", "13219", "13224", // Syracuse
   "13088", "13090", // Liverpool
@@ -60,6 +152,8 @@ export const COMMERCIAL_FACILITY_TYPES: {
   { id: "school",     label: "School" },
   { id: "restaurant", label: "Restaurant" },
 ];
+
+export const COMMERCIAL_MAX_FLOORS = 20;
 
 export const COMMERCIAL_SQFT_RANGES: {
   id: NonNullable<CommercialSqftRange>;
@@ -88,26 +182,22 @@ export const COMMERCIAL_SERVICE_AREAS: { id: string; label: string }[] = [
   { id: "hallways",    label: "Stairwells & Hallways" },
 ];
 
+// The residential frequencies, then the two that only commercial customers
+// can pick. Labels come from FREQUENCY_LABELS so the casing can't drift.
+export const COMMERCIAL_FREQUENCY_LABELS: Record<NonNullable<CommercialFrequency>, string> = {
+  ...FREQUENCY_LABELS,
+  "2-3x": "2\u20133x / week",
+  daily: "Daily",
+};
+
 export const COMMERCIAL_FREQUENCIES: {
   id: NonNullable<CommercialFrequency>;
   label: string;
 }[] = [
-  { id: "daily",     label: "Daily" },
-  { id: "2-3x",      label: "2–3x / Week" },
-  { id: "weekly",    label: "Weekly" },
-  { id: "bi-weekly", label: "Bi-Weekly" },
-  { id: "monthly",   label: "Monthly" },
-  { id: "one-time",  label: "One-Time" },
+  ...FREQUENCY_OPTIONS,
+  { id: "2-3x", label: COMMERCIAL_FREQUENCY_LABELS["2-3x"] },
+  { id: "daily", label: COMMERCIAL_FREQUENCY_LABELS.daily },
 ];
-
-export const COMMERCIAL_FREQUENCY_LABELS: Record<NonNullable<CommercialFrequency>, string> = {
-  daily:      "Daily",
-  "2-3x":     "2–3x / Week",
-  weekly:     "Weekly",
-  "bi-weekly":"Bi-Weekly",
-  monthly:    "Monthly",
-  "one-time": "One-Time",
-};
 
 export const SCHEDULE_PREFERENCES: {
   id: NonNullable<SchedulePreference>;

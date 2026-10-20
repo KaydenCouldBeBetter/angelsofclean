@@ -1,38 +1,34 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Dialog } from "@base-ui/react/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { adminCreateBooking } from "@/app/actions/submitBooking";
+import {
+  BATHROOM_OPTIONS,
+  FIELD_MAX_LENGTHS,
+  FREQUENCY_OPTIONS,
+  SERVICE_LABELS,
+  TIME_LABELS,
+} from "@/lib/constants";
 
-const SERVICES = [
-  { value: "standard", label: "Standard Clean" },
-  { value: "deep", label: "Deep Clean" },
-  { value: "moveinout", label: "Move-In / Move-Out" },
-] as const;
+// Same options, labels and order (least to most frequent) as the customer flows.
+const SERVICES = Object.entries(SERVICE_LABELS).map(([value, label]) => ({ value, label }));
 
-const FREQUENCIES = [
-  { value: "one-time", label: "One-time" },
-  { value: "weekly", label: "Weekly" },
-  { value: "bi-weekly", label: "Bi-weekly" },
-  { value: "monthly", label: "Monthly" },
-] as const;
+const FREQUENCIES = FREQUENCY_OPTIONS.map(({ id, label }) => ({ value: id, label }));
 
-const TIME_SLOTS = [
-  { value: "morning", label: "Morning (9am–11am)" },
-  { value: "afternoon", label: "Afternoon (1pm–3pm)" },
-] as const;
+const TIME_SLOTS = Object.entries(TIME_LABELS).map(([value, label]) => ({ value, label }));
 
 interface NewBookingModalProps {
   open: boolean;
   onClose: () => void;
-  adminEmail: string;
 }
 
-export default function NewBookingModal({ open, onClose, adminEmail }: NewBookingModalProps) {
+export default function NewBookingModal({ open, onClose }: NewBookingModalProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -51,26 +47,6 @@ export default function NewBookingModal({ open, onClose, adminEmail }: NewBookin
   const [date, setDate] = useState("");
   const [timeSlot, setTimeSlot] = useState("morning");
   const [notes, setNotes] = useState("");
-
-  // Close on Escape
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [open, onClose]);
-
-  // Prevent body scroll when open
-  useEffect(() => {
-    if (open) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => { document.body.style.overflow = ""; };
-  }, [open]);
 
   function resetForm() {
     setName(""); setEmail(""); setPhone("");
@@ -93,7 +69,6 @@ export default function NewBookingModal({ open, onClose, adminEmail }: NewBookin
     startTransition(async () => {
       const result = await adminCreateBooking(
         { service, frequency, address, city, zip, bedrooms, bathrooms, notes, date, timeSlot, name, email, phone },
-        adminEmail,
       );
 
       if (!result.success) {
@@ -107,27 +82,27 @@ export default function NewBookingModal({ open, onClose, adminEmail }: NewBookin
     });
   }
 
-  if (!open) return null;
-
+  // Base UI's modal Dialog gives the popup role="dialog", names it by its
+  // title, moves focus in on open, keeps Tab inside, closes on Escape or an
+  // outside press, locks page scroll, and returns focus to whatever opened it.
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[8vh]">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/40"
-        onClick={handleClose}
-      />
+    <Dialog.Root open={open} onOpenChange={(next) => { if (!next) handleClose(); }}>
+      <Dialog.Portal>
+        <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/40" />
 
-      {/* Modal */}
-      <div className="relative bg-white rounded-xl shadow-xl w-[600px] max-h-[84vh] flex flex-col">
+        <Dialog.Popup
+          aria-modal="true"
+          className="fixed left-1/2 top-[10vh] z-50 -translate-x-1/2 bg-white rounded-xl shadow-xl w-[600px] max-h-[84vh] flex flex-col"
+        >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#e2e8e6]">
-          <h2 className="text-lg font-semibold text-[#1c1c1e]">New Booking</h2>
-          <button
-            onClick={handleClose}
+          <Dialog.Title className="text-lg font-semibold text-[#1c1c1e]">New Booking</Dialog.Title>
+          <Dialog.Close
+            aria-label="Close"
             className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-[#f0f0f0] text-[#5c5c5e] transition-colors text-lg"
           >
-            &#10005;
-          </button>
+            <span aria-hidden="true">&#10005;</span>
+          </Dialog.Close>
         </div>
 
         {/* Scrollable body */}
@@ -139,16 +114,16 @@ export default function NewBookingModal({ open, onClose, adminEmail }: NewBookin
               <div className="grid grid-cols-1 gap-3">
                 <div>
                   <Label htmlFor="nb-name" className="text-[13px] text-[#1c1c1e] mb-1">Full Name</Label>
-                  <Input id="nb-name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="John Doe" className="h-10" />
+                  <Input id="nb-name" required maxLength={FIELD_MAX_LENGTHS.name} value={name} onChange={(e) => setName(e.target.value)} placeholder="John Doe" className="h-10" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label htmlFor="nb-email" className="text-[13px] text-[#1c1c1e] mb-1">Email</Label>
-                    <Input id="nb-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="john@example.com" className="h-10" />
+                    <Input id="nb-email" type="email" required maxLength={FIELD_MAX_LENGTHS.email} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="john@example.com" className="h-10" />
                   </div>
                   <div>
                     <Label htmlFor="nb-phone" className="text-[13px] text-[#1c1c1e] mb-1">Phone</Label>
-                    <Input id="nb-phone" type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(315) 555-0100" className="h-10" />
+                    <Input id="nb-phone" type="tel" required maxLength={FIELD_MAX_LENGTHS.phone} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(315) 555-0123" className="h-10" />
                   </div>
                 </div>
               </div>
@@ -164,7 +139,7 @@ export default function NewBookingModal({ open, onClose, adminEmail }: NewBookin
                     id="nb-service"
                     value={service}
                     onChange={(e) => setService(e.target.value)}
-                    className="h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    className="h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
                   >
                     {SERVICES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                   </select>
@@ -175,7 +150,7 @@ export default function NewBookingModal({ open, onClose, adminEmail }: NewBookin
                     id="nb-frequency"
                     value={frequency}
                     onChange={(e) => setFrequency(e.target.value)}
-                    className="h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    className="h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
                   >
                     {FREQUENCIES.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
                   </select>
@@ -189,12 +164,12 @@ export default function NewBookingModal({ open, onClose, adminEmail }: NewBookin
               <div className="grid grid-cols-1 gap-3">
                 <div>
                   <Label htmlFor="nb-address" className="text-[13px] text-[#1c1c1e] mb-1">Street Address</Label>
-                  <Input id="nb-address" required value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main St" className="h-10" />
+                  <Input id="nb-address" required maxLength={FIELD_MAX_LENGTHS.address} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="123 Main St" className="h-10" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label htmlFor="nb-city" className="text-[13px] text-[#1c1c1e] mb-1">City</Label>
-                    <Input id="nb-city" required value={city} onChange={(e) => setCity(e.target.value)} placeholder="Syracuse" className="h-10" />
+                    <Input id="nb-city" required maxLength={FIELD_MAX_LENGTHS.city} value={city} onChange={(e) => setCity(e.target.value)} placeholder="Syracuse" className="h-10" />
                   </div>
                   <div>
                     <Label htmlFor="nb-zip" className="text-[13px] text-[#1c1c1e] mb-1">ZIP Code</Label>
@@ -214,7 +189,7 @@ export default function NewBookingModal({ open, onClose, adminEmail }: NewBookin
                     id="nb-bed"
                     value={bedrooms}
                     onChange={(e) => setBedrooms(Number(e.target.value))}
-                    className="h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    className="h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
                   >
                     {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}
                   </select>
@@ -225,9 +200,9 @@ export default function NewBookingModal({ open, onClose, adminEmail }: NewBookin
                     id="nb-bath"
                     value={bathrooms}
                     onChange={(e) => setBathrooms(Number(e.target.value))}
-                    className="h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    className="h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
                   >
-                    {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}
+                    {BATHROOM_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
                   </select>
                 </div>
               </div>
@@ -247,7 +222,7 @@ export default function NewBookingModal({ open, onClose, adminEmail }: NewBookin
                     id="nb-time"
                     value={timeSlot}
                     onChange={(e) => setTimeSlot(e.target.value)}
-                    className="h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    className="h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
                   >
                     {TIME_SLOTS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                   </select>
@@ -260,6 +235,7 @@ export default function NewBookingModal({ open, onClose, adminEmail }: NewBookin
               <Label htmlFor="nb-notes" className="text-[13px] text-[#1c1c1e] mb-1">Notes (optional)</Label>
               <Textarea
                 id="nb-notes"
+                maxLength={FIELD_MAX_LENGTHS.notes}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Any special instructions..."
@@ -291,29 +267,30 @@ export default function NewBookingModal({ open, onClose, adminEmail }: NewBookin
             type="submit"
             disabled={isPending}
             onClick={handleSubmit}
-            className="h-9 px-5 text-sm bg-[#1a6b5a] hover:bg-[#155a4b]"
+            className="h-9 px-5 text-sm"
           >
             {isPending ? "Creating..." : "Create Booking"}
           </Button>
         </div>
-      </div>
-    </div>
+        </Dialog.Popup>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
 
 /** Small client wrapper — drop into any server component page. */
-export function NewBookingButton({ adminEmail }: { adminEmail: string }) {
+export function NewBookingButton() {
   const [open, setOpen] = useState(false);
 
   return (
     <>
       <button
         onClick={() => setOpen(true)}
-        className="bg-[#1a6b5a] hover:bg-[#155a4b] text-white text-xs font-semibold px-5 py-2 rounded-lg transition-colors"
+        className="bg-primary hover:bg-primary-pressed text-white text-xs font-semibold px-5 py-2 rounded-lg transition-colors"
       >
         + New Booking
       </button>
-      <NewBookingModal open={open} onClose={() => setOpen(false)} adminEmail={adminEmail} />
+      <NewBookingModal open={open} onClose={() => setOpen(false)} />
     </>
   );
 }

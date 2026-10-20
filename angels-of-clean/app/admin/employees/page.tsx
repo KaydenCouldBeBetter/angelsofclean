@@ -1,5 +1,16 @@
-import { getEmployees, getJobs } from "@/lib/supabase/queries";
-import { EMPLOYEE_STATUS_CONFIG, type Employee, type EmployeeStatus, type Job } from "../data/mock";
+import { getEmployees, getTodayJobs } from "@/lib/supabase/queries";
+import { EMPLOYEE_STATUS_CONFIG } from "../status-config";
+import type { Employee, EmployeeStatus, Job } from "@/lib/admin-types";
+import { formatNy } from "@/lib/datetime";
+import LoadError from "../LoadError";
+
+function ComingSoonBadge() {
+  return (
+    <span className="rounded-full bg-[#fef3c7] px-2 py-0.5 text-[11px] font-semibold text-[#92400e]">
+      Coming soon
+    </span>
+  );
+}
 
 function getEmployeeStatus(employeeId: string, todayJobs: Job[]): EmployeeStatus {
   const empJobs = todayJobs.filter((job) => job.employeeIds.includes(employeeId));
@@ -25,7 +36,7 @@ function EmployeeCard({ employee, todayJobs }: { employee: Employee; todayJobs: 
           <div className="flex items-center gap-3">
             {/* Avatar with status dot */}
             <div className="relative">
-              <div className="w-10 h-10 rounded-full bg-[#1a6b5a] flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
                 <span className="text-white font-bold text-sm">{employee.initials}</span>
               </div>
               <span
@@ -52,17 +63,17 @@ function EmployeeCard({ employee, todayJobs }: { employee: Employee; todayJobs: 
       <div className="px-5 pt-3 pb-4">
         <div className="grid grid-cols-2 gap-y-3">
           <div>
-            <p className="text-[11px] font-semibold text-[#9c9c9d] uppercase">Phone</p>
+            <p className="text-[11px] font-semibold text-[#5c5c5e] uppercase">Phone</p>
             <p className="text-[13px] text-[#1c1c1e] mt-0.5">{employee.phone}</p>
           </div>
           <div>
-            <p className="text-[11px] font-semibold text-[#9c9c9d] uppercase">Today</p>
+            <p className="text-[11px] font-semibold text-[#5c5c5e] uppercase">Today</p>
             <p className="text-[13px] text-[#1c1c1e] mt-0.5">
               {todayCount} job{todayCount !== 1 ? "s" : ""} today
             </p>
           </div>
           <div>
-            <p className="text-[11px] font-semibold text-[#9c9c9d] uppercase">Hired</p>
+            <p className="text-[11px] font-semibold text-[#5c5c5e] uppercase">Hired</p>
             <p className="text-[13px] text-[#1c1c1e] mt-0.5">{employee.hiredDate}</p>
           </div>
         </div>
@@ -70,8 +81,13 @@ function EmployeeCard({ employee, todayJobs }: { employee: Employee; todayJobs: 
 
       {/* View Schedule button */}
       <div className="px-5 pb-5">
-        <button className="w-full h-9 rounded-lg border border-[#e2e8e6] bg-[#f7f9f8] text-[13px] font-medium text-[#1c1c1e] hover:bg-[#eef1ef] transition-colors">
-          View Schedule
+        <button
+          type="button"
+          disabled
+          className="w-full h-9 rounded-lg border border-[#e2e8e6] bg-[#f7f9f8] px-3 text-[13px] font-medium text-[#5c5c5e] cursor-not-allowed flex items-center justify-between gap-2"
+        >
+          <span>View Schedule</span>
+          <ComingSoonBadge />
         </button>
       </div>
     </div>
@@ -79,15 +95,11 @@ function EmployeeCard({ employee, todayJobs }: { employee: Employee; todayJobs: 
 }
 
 export default async function AdminEmployeesPage() {
-  const [employees, jobs] = await Promise.all([getEmployees(), getJobs()]);
+  const [employees, todayJobs] = await Promise.all([getEmployees(), getTodayJobs()]);
 
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const todayJobs = jobs.filter((job) => job.start.startsWith(todayStr) && job.status !== "cancelled");
-
-  const displayDate = new Date().toLocaleDateString(
-    "en-US",
-    { weekday: "short", month: "long", day: "numeric", year: "numeric" },
-  );
+  const displayDate = formatNy(new Date(), {
+    weekday: "short", month: "long", day: "numeric", year: "numeric",
+  });
 
   return (
     <>
@@ -103,6 +115,9 @@ export default async function AdminEmployeesPage() {
       </header>
 
       {/* Content */}
+      {!employees.ok || !todayJobs.ok ? (
+        <LoadError what="your team" />
+      ) : (
       <div className="flex-1 overflow-auto bg-[#f7f9f8]">
         <div className="p-8">
           {/* Section header */}
@@ -110,25 +125,31 @@ export default async function AdminEmployeesPage() {
             <h2 className="font-semibold text-[17px] text-[#1c1c1e]">
               Team Members
             </h2>
-            <button className="bg-[#1a6b5a] hover:bg-[#155a4b] text-white text-xs font-semibold px-5 py-2 rounded-lg transition-colors">
-              + Add Employee
+            <button
+              type="button"
+              disabled
+              className="flex items-center gap-2 border border-[#e2e8e6] bg-[#f7f9f8] text-[#5c5c5e] text-xs font-semibold px-5 py-2 rounded-lg cursor-not-allowed"
+            >
+              <span>+ Add Employee</span>
+              <ComingSoonBadge />
             </button>
           </div>
 
           {/* Employee cards grid */}
-          {employees.length === 0 ? (
+          {employees.data.length === 0 ? (
             <div className="py-16 text-center text-sm text-[#5c5c5e]">
               No employees yet.
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-5">
-              {employees.map((employee) => (
-                <EmployeeCard key={employee.id} employee={employee} todayJobs={todayJobs} />
+              {employees.data.map((employee) => (
+                <EmployeeCard key={employee.id} employee={employee} todayJobs={todayJobs.data} />
               ))}
             </div>
           )}
         </div>
       </div>
+      )}
     </>
   );
 }

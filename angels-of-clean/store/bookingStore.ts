@@ -1,5 +1,8 @@
+import { useSyncExternalStore } from "react";
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { TIME_SLOT_WINDOWS } from "@/lib/constants";
+import { isNyWallClockInFuture, isValidDateStr, nyDateStr } from "@/lib/datetime";
 
 // Residential types
 export type ServiceType = "standard" | "deep" | "moveinout" | null;
@@ -41,8 +44,12 @@ interface BookingState {
 
   // ── Residential Step 3 ──────────────────────────────────────────────
   bedrooms: number;
+  // Half steps allowed: 1, 1.5 … 5 (BATHROOM_LIMITS in lib/constants.ts).
   bathrooms: number;
   notes: string;
+  // Entry instructions (door code, gate, pets). Sent to booking_access, never
+  // to notes; cleared with everything else on the confirmation page.
+  accessInstructions: string;
 
   // ── Residential Step 4 ──────────────────────────────────────────────
   date: string;
@@ -55,6 +62,16 @@ interface BookingState {
 
   // ── Submission flag ─────────────────────────────────────────────────
   isSubmitting: boolean;
+
+  // ── Bot check (B5) ──────────────────────────────────────────────────
+  // When the first step was completed (ms since epoch); null until then.
+  formStartedAt: number | null;
+  // Value of the hidden honeypot field on the contact step. Not persisted.
+  honeypot: string;
+
+  // True when the saved date had passed on load and was cleared. Never
+  // persisted: it only lives long enough to explain the cleared date.
+  dateExpired: boolean;
 
   // ── Commercial Step 1 ───────────────────────────────────────────────
   facilityType: CommercialFacilityType;
@@ -73,7 +90,12 @@ interface BookingState {
   // ── Residential actions ─────────────────────────────────────────────
   setStep1: (service: ServiceType, frequency: Frequency) => void;
   setStep2: (address: string, city: string, zip: string) => void;
-  setStep3: (bedrooms: number, bathrooms: number, notes: string) => void;
+  setStep3: (
+    bedrooms: number,
+    bathrooms: number,
+    notes: string,
+    accessInstructions: string
+  ) => void;
   setStep4: (date: string, timeSlot: TimeSlot) => void;
   setStep5: (name: string, email: string, phone: string) => void;
 
@@ -95,8 +117,24 @@ interface BookingState {
     schedulePreference: SchedulePreference
   ) => void;
 
+  setHoneypot: (value: string) => void;
   setSubmitting: (value: boolean) => void;
+  clearDateExpired: () => void;
   reset: () => void;
+}
+
+/**
+ * True if a saved date can no longer be booked: malformed, on a past New York
+ * day, or (with a slot chosen) a slot whose start has already passed. Without a
+ * slot only the day matters, since a later slot may still be open today.
+ */
+export function isSavedDateExpired(date: string, timeSlot: TimeSlot, now: Date = new Date()) {
+  if (!date) return false;
+  if (!isValidDateStr(date)) return true;
+  if (timeSlot) {
+    return !isNyWallClockInFuture(date, TIME_SLOT_WINDOWS[timeSlot].start, now);
+  }
+  return date < nyDateStr(now);
 }
 
 const defaultState = {
@@ -109,12 +147,16 @@ const defaultState = {
   bedrooms: 2,
   bathrooms: 1,
   notes: "",
+  accessInstructions: "",
   date: "",
   timeSlot: null as TimeSlot,
   name: "",
   email: "",
   phone: "",
   isSubmitting: false,
+  formStartedAt: null as number | null,
+  honeypot: "",
+  dateExpired: false,
 
   // Commercial
   facilityType: null as CommercialFacilityType,
@@ -133,26 +175,49 @@ export const useBookingStore = create<BookingState>()(
       ...defaultState,
 
       // Residential
-      setStep1: (service, frequency) => set({ service, frequency }),
+      // The first step of either flow starts the fill-time clock; editing it
+      // later (returnTo=review) doesn't restart it.
+      setStep1: (service, frequency) =>
+        set((state) => ({ service, frequency, formStartedAt: state.formStartedAt ?? Date.now() })),
       setStep2: (address, city, zip) => set({ address, city, zip }),
-      setStep3: (bedrooms, bathrooms, notes) => set({ bedrooms, bathrooms, notes }),
-      setStep4: (date, timeSlot) => set({ date, timeSlot }),
+      setStep3: (bedrooms, bathrooms, notes, accessInstructions) =>
+        set({ bedrooms, bathrooms, notes, accessInstructions }),
+      setStep4: (date, timeSlot) => set({ date, timeSlot, dateExpired: false }),
       setStep5: (name, email, phone) => set({ name, email, phone }),
 
       // Commercial
       setCommercialStep1: (facilityType, sqftRange, address, city, zip) =>
-        set({ facilityType, sqftRange, address, city, zip }),
+        set((state) => ({
+          facilityType,
+          sqftRange,
+          address,
+          city,
+          zip,
+          formStartedAt: state.formStartedAt ?? Date.now(),
+        })),
       setCommercialStep2: (floors, serviceAreas, notes) =>
         set({ floors, serviceAreas, commercialNotes: notes }),
       setCommercialContact: (name, businessName, email, phone, frequency, schedulePreference) =>
         set({ name, businessName, email, phone, commercialFrequency: frequency, schedulePreference }),
 
+      setHoneypot: (honeypot) => set({ honeypot }),
       setSubmitting: (value) => set({ isSubmitting: value }),
+      clearDateExpired: () => set({ dateExpired: false }),
       reset: () => set(defaultState),
     }),
     {
       name: "booking-store",
       storage: createJSONStorage(() => sessionStorage),
+      // A saved date can go stale between visits (sessionStorage outlives a
+      // tab's idle hours): don't revive one that has passed. The slot is kept,
+      // since it is a preference rather than a date.
+      merge: (persisted, current) => {
+        const merged = { ...current, ...(persisted as Partial<BookingState> | undefined) };
+        if (isSavedDateExpired(merged.date, merged.timeSlot)) {
+          return { ...merged, date: "", dateExpired: true };
+        }
+        return merged;
+      },
       partialize: (state) => ({
         // Residential
         service: state.service,
@@ -163,11 +228,13 @@ export const useBookingStore = create<BookingState>()(
         bedrooms: state.bedrooms,
         bathrooms: state.bathrooms,
         notes: state.notes,
+        accessInstructions: state.accessInstructions,
         date: state.date,
         timeSlot: state.timeSlot,
         name: state.name,
         email: state.email,
         phone: state.phone,
+        formStartedAt: state.formStartedAt,
         // Commercial
         facilityType: state.facilityType,
         sqftRange: state.sqftRange,
@@ -181,3 +248,17 @@ export const useBookingStore = create<BookingState>()(
     }
   )
 );
+
+/**
+ * True once the store has been filled from sessionStorage. Step guards must not
+ * redirect before this: while React hydrates, Zustand serves the default
+ * (empty) state, so a guard would send a visitor with a saved booking back to
+ * step 1. The server snapshot is false, so this is also false during hydration.
+ */
+export function useBookingHydrated(): boolean {
+  return useSyncExternalStore(
+    (onChange) => useBookingStore.persist.onFinishHydration(onChange),
+    () => useBookingStore.persist.hasHydrated(),
+    () => false
+  );
+}

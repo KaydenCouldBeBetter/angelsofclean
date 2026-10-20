@@ -6,15 +6,22 @@ import Link from "next/link";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
-import CommercialNav from "@/components/booking/CommercialNav";
-import CommercialStepper from "@/components/booking/CommercialStepper";
+import DesktopNavbar, { COMMERCIAL_NAV_TAGLINE } from "@/components/booking/DesktopNavbar";
+import DesktopStepper from "@/components/booking/DesktopStepper";
+import Selectable, { SelectableGroup } from "@/components/booking/Selectable";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import WhenHydrated from "@/components/booking/WhenHydrated";
 import { useBookingStore } from "@/store/bookingStore";
-import { COMMERCIAL_SERVICE_AREAS } from "@/lib/constants";
+import {
+  COMMERCIAL_MAX_FLOORS,
+  COMMERCIAL_SERVICE_AREAS,
+  COMMERCIAL_STEP_LABELS,
+  FIELD_MAX_LENGTHS,
+} from "@/lib/constants";
 
-export default function CommercialStep2() {
+function CommercialStep2Content() {
   const router = useRouter();
   const store = useBookingStore();
 
@@ -45,8 +52,8 @@ export default function CommercialStep2() {
   return (
     <>
       {/* Desktop */}
-      <CommercialNav />
-      <CommercialStepper currentStep={2} />
+      <DesktopNavbar tagline={COMMERCIAL_NAV_TAGLINE} />
+      <DesktopStepper steps={COMMERCIAL_STEP_LABELS} currentStep={2} />
 
       {/* Mobile header */}
       <div className="md:hidden">
@@ -83,15 +90,15 @@ export default function CommercialStep2() {
             </span>
             <button
               type="button"
-              onClick={() => setFloors((f) => Math.min(20, f + 1))}
+              onClick={() => setFloors((f) => Math.min(COMMERCIAL_MAX_FLOORS, f + 1))}
               aria-label="Increase floors"
-              disabled={floors >= 20}
+              disabled={floors >= COMMERCIAL_MAX_FLOORS}
               className="w-12 h-12 rounded-xl border-2 border-zinc-200 text-zinc-700 text-xl font-semibold hover:border-zinc-300 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
             >
               +
             </button>
           </div>
-          <p className="text-xs text-zinc-400 mt-2">
+          <p className="text-xs text-zinc-500 mt-2">
             Select the number of floors that require cleaning service.
           </p>
         </div>
@@ -104,68 +111,25 @@ export default function CommercialStep2() {
           <p className="text-xs text-zinc-500 mb-3">
             Select all areas that need regular cleaning.
           </p>
-          <div
-            role="group"
+          <SelectableGroup
+            type="checkbox"
             aria-label="Areas requiring attention"
             className="grid grid-cols-1 md:grid-cols-2 gap-3"
           >
-            {COMMERCIAL_SERVICE_AREAS.map((area) => {
-              const isChecked = selectedAreas.includes(area.id);
-              return (
-                <label
-                  key={area.id}
-                  className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-colors ${
-                    isChecked
-                      ? "border-teal-600 bg-teal-50"
-                      : "border-zinc-200 bg-white hover:border-zinc-300"
-                  }`}
-                >
-                  <div
-                    role="checkbox"
-                    aria-checked={isChecked}
-                    className={`w-5 h-5 rounded flex-shrink-0 border-2 flex items-center justify-center transition-colors ${
-                      isChecked
-                        ? "bg-teal-600 border-teal-600"
-                        : "border-zinc-300 bg-white"
-                    }`}
-                  >
-                    {isChecked && (
-                      <svg
-                        className="w-3 h-3 text-white"
-                        viewBox="0 0 12 10"
-                        fill="none"
-                        aria-hidden="true"
-                      >
-                        <path
-                          d="M1 5l3.5 3.5L11 1"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    )}
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={() => toggleArea(area.id)}
-                    className="sr-only"
-                    aria-label={area.label}
-                  />
-                  <span
-                    className={`text-sm font-medium ${
-                      isChecked ? "text-teal-700" : "text-zinc-700"
-                    }`}
-                  >
-                    {area.label}
-                  </span>
-                </label>
-              );
-            })}
-          </div>
+            {COMMERCIAL_SERVICE_AREAS.map((area) => (
+              <Selectable
+                key={area.id}
+                value={area.id}
+                selected={selectedAreas.includes(area.id)}
+                onSelect={() => toggleArea(area.id)}
+                className="flex items-center p-4 pr-8"
+              >
+                {area.label}
+              </Selectable>
+            ))}
+          </SelectableGroup>
           {selectedAreas.length === 0 && (
-            <p className="text-xs text-zinc-400 mt-2">
+            <p className="text-xs text-zinc-500 mt-2">
               Select at least one area to continue.
             </p>
           )}
@@ -175,16 +139,17 @@ export default function CommercialStep2() {
         <div className="mb-6 md:mb-8">
           <Label htmlFor="notes" className="text-sm font-semibold text-zinc-900 mb-1 block">
             Special Requirements or Notes{" "}
-            <span className="font-normal text-zinc-400">(optional)</span>
+            <span className="font-normal text-zinc-500">(optional)</span>
           </Label>
           <Textarea
             id="notes"
             placeholder="e.g., High-traffic areas, specialized equipment needed, restricted access hours, hazardous materials…"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
+            maxLength={FIELD_MAX_LENGTHS.notes}
             className="min-h-28 resize-none"
           />
-          <p className="text-xs text-zinc-400 mt-1.5">
+          <p className="text-xs text-zinc-500 mt-1.5">
             Optional — include any details that would help us prepare an accurate quote.
           </p>
         </div>
@@ -200,7 +165,7 @@ export default function CommercialStep2() {
           </Button>
           <Link
             href="/commercial"
-            className="text-sm text-teal-700 hover:text-teal-800 transition-colors"
+            className="text-sm text-primary hover:text-primary-pressed transition-colors"
           >
             ← Back to Facility Info
           </Link>
@@ -212,5 +177,13 @@ export default function CommercialStep2() {
         <BottomCTA label="Next" onClick={handleNext} disabled={!isValid} />
       </div>
     </>
+  );
+}
+
+export default function CommercialStep2() {
+  return (
+    <WhenHydrated>
+      <CommercialStep2Content />
+    </WhenHydrated>
   );
 }

@@ -8,7 +8,7 @@ interface BottomCTAProps {
 
 export default function BottomCTA({ label, onClick, disabled = false }: BottomCTAProps) {
   return (
-    <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-zinc-100">
+    <div data-bottom-cta className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-zinc-100">
       <Button
         onClick={onClick}
         disabled={disabled}

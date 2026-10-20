@@ -1,18 +1,13 @@
-import Link from "next/link";
 import { getDashboardStats, getEmployees } from "@/lib/supabase/queries";
-import { createClient } from "@/lib/supabase/server";
-import { DASHBOARD_STATUS, type Job, type JobStatus } from "../data/mock";
+import { DASHBOARD_STATUS } from "../status-config";
+import type { Job, JobStatus } from "@/lib/admin-types";
 import { NewBookingButton } from "../NewBookingModal";
-
-function formatTime(iso: string) {
-  const d = new Date(iso);
-  const h = d.getHours();
-  const m = d.getMinutes();
-  return `${h > 12 ? h - 12 : h}:${m.toString().padStart(2, "0")}`;
-}
+import JobRowActions from "./JobRowActions";
+import LoadError from "../LoadError";
+import { formatNy, formatNyTimeRange } from "@/lib/datetime";
 
 function timeRange(job: Job) {
-  return `${formatTime(job.start)}–${formatTime(job.end)}`;
+  return formatNyTimeRange(job.start, job.end);
 }
 
 function StatusChip({ status }: { status: JobStatus }) {
@@ -27,14 +22,36 @@ function StatusChip({ status }: { status: JobStatus }) {
 }
 
 export default async function AdminDashboardPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const adminEmail = user?.email ?? "admin";
-
   const [stats, employees] = await Promise.all([getDashboardStats(), getEmployees()]);
-  const employeeMap = Object.fromEntries(employees.map((e) => [e.id, e]));
 
-  const { todayJobs, totalPending, completedThisWeek, totalEmployees } = stats;
+  const displayDate = formatNy(new Date(), {
+    weekday: "short", month: "long", day: "numeric", year: "numeric",
+  });
+
+  const header = (
+    <header className="flex-shrink-0 h-16 bg-white border-b border-[#e2e8e6] flex items-center px-8 justify-between">
+      <div>
+        <h1 className="font-semibold text-lg text-[#1c1c1e] leading-tight">
+          Dashboard
+        </h1>
+        <p className="text-xs text-[#5c5c5e]">Overview for today</p>
+      </div>
+      <span className="text-sm text-[#5c5c5e]">{displayDate}</span>
+    </header>
+  );
+
+  if (!stats.ok || !employees.ok) {
+    return (
+      <>
+        {header}
+        <LoadError what="the dashboard" />
+      </>
+    );
+  }
+
+  const employeeMap = Object.fromEntries(employees.data.map((e) => [e.id, e]));
+
+  const { todayJobs, totalPending, completedThisWeek, totalEmployees } = stats.data;
 
   const inProgressCount = todayJobs.filter((job) => job.status === "active").length;
   const activeEmployees = new Set(
@@ -46,7 +63,7 @@ export default async function AdminDashboardPage() {
       label: "Today's Bookings",
       value: String(todayJobs.length),
       sub: `${inProgressCount} in progress`,
-      accent: "#1a6b5a",
+      accent: "var(--primary)",
     },
     {
       label: "Pending Confirmation",
@@ -68,22 +85,9 @@ export default async function AdminDashboardPage() {
     },
   ];
 
-  const displayDate = new Date().toLocaleDateString("en-US", {
-    weekday: "short", month: "long", day: "numeric", year: "numeric",
-  });
-
   return (
     <>
-      {/* Header */}
-      <header className="flex-shrink-0 h-16 bg-white border-b border-[#e2e8e6] flex items-center px-8 justify-between">
-        <div>
-          <h1 className="font-semibold text-lg text-[#1c1c1e] leading-tight">
-            Dashboard
-          </h1>
-          <p className="text-xs text-[#5c5c5e]">Overview for today</p>
-        </div>
-        <span className="text-sm text-[#5c5c5e]">{displayDate}</span>
-      </header>
+      {header}
 
       {/* Content */}
       <div className="flex-1 overflow-auto bg-[#f7f9f8]">
@@ -118,7 +122,7 @@ export default async function AdminDashboardPage() {
             <h2 className="font-semibold text-[17px] text-[#1c1c1e]">
               Today&apos;s Jobs
             </h2>
-            <NewBookingButton adminEmail={adminEmail} />
+            <NewBookingButton />
           </div>
 
           {/* Jobs Table */}
@@ -130,7 +134,7 @@ export default async function AdminDashboardPage() {
             ) : (
               <>
                 {/* Table Header */}
-                <div className="grid grid-cols-[1fr_1fr_1.6fr_0.8fr_1fr_0.8fr_0.5fr] bg-[#f7f9f8] border-b border-[#e2e8e6] px-6 py-3">
+                <div className="grid grid-cols-[1fr_1fr_1.6fr_0.8fr_1fr_0.8fr_10rem] bg-[#f7f9f8] border-b border-[#e2e8e6] px-6 py-3">
                   {[
                     "Client",
                     "Service",
@@ -158,7 +162,7 @@ export default async function AdminDashboardPage() {
                   return (
                     <div
                       key={job.id}
-                      className="grid grid-cols-[1fr_1fr_1.6fr_0.8fr_1fr_0.8fr_0.5fr] items-center px-6 py-5 border-b border-[#e2e8e6] last:border-b-0"
+                      className="grid grid-cols-[1fr_1fr_1.6fr_0.8fr_1fr_0.8fr_10rem] items-center px-6 py-5 border-b border-[#e2e8e6] last:border-b-0"
                     >
                       <span className="text-sm font-semibold text-[#1c1c1e]">
                         {job.client}
@@ -180,14 +184,7 @@ export default async function AdminDashboardPage() {
                         {employee ? employee.name : "Unassigned"}
                       </span>
                       <StatusChip status={job.status} />
-                      <div className="flex justify-end">
-                        <Link
-                          href={`/admin/bookings/${job.id}`}
-                          className="bg-[#f7f9f8] border border-[#e2e8e6] text-[#1c1c1e] text-xs font-medium px-4 py-1.5 rounded-md hover:bg-[#eef1ef] transition-colors"
-                        >
-                          View
-                        </Link>
-                      </div>
+                      <JobRowActions jobId={job.id} client={job.client} status={job.status} />
                     </div>
                   );
                 })}

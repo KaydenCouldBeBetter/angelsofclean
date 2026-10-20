@@ -6,12 +6,14 @@ import Link from "next/link";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
+import FieldError from "@/components/booking/FieldError";
+import WhenHydrated from "@/components/booking/WhenHydrated";
 import { useBookingStore } from "@/store/bookingStore";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SERVICE_AREA_ZIPS } from "@/lib/constants";
+import { FIELD_MAX_LENGTHS, SERVICE_AREA_ZIPS } from "@/lib/constants";
 
-export default function AddressPage() {
+function AddressPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo");
@@ -28,6 +30,7 @@ export default function AddressPage() {
 
   const [touched, setTouched] = useState({ zip: false });
   const zipValid = /^\d{5}$/.test(zip.trim());
+  const showZipError = touched.zip && zip.trim() !== "" && !zipValid;
   const isValid = address.trim() !== "" && city.trim() !== "" && zipValid;
 
   function handleNext() {
@@ -61,12 +64,13 @@ export default function AddressPage() {
         <div className="flex flex-col gap-5">
           {/* Street Address — full width */}
           <div className="flex flex-col gap-2">
-            <Label htmlFor="address">Street Address</Label>
+            <Label htmlFor="address">Street address</Label>
             <Input
               id="address"
               placeholder="123 Main Street"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
+              maxLength={FIELD_MAX_LENGTHS.address}
               className="h-12"
             />
           </div>
@@ -80,12 +84,13 @@ export default function AddressPage() {
                 placeholder="Syracuse"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
+                maxLength={FIELD_MAX_LENGTHS.city}
                 className="h-12"
               />
             </div>
 
             <div className="flex flex-col gap-2 lg:flex-1">
-              <Label htmlFor="zip">ZIP Code</Label>
+              <Label htmlFor="zip">ZIP code</Label>
               <Input
                 id="zip"
                 placeholder="13039"
@@ -94,17 +99,21 @@ export default function AddressPage() {
                 onBlur={() => setTouched((t) => ({ ...t, zip: true }))}
                 inputMode="numeric"
                 maxLength={5}
+                aria-invalid={showZipError}
+                aria-describedby={showZipError ? "zip-error" : undefined}
                 className="h-12"
               />
-              {touched.zip && zip.trim() !== "" && !zipValid && (
-                <p className="text-xs text-red-500">Please enter a valid 5-digit ZIP code.</p>
+              {showZipError && (
+                <FieldError id="zip-error">
+                  Please enter a valid 5-digit ZIP code.
+                </FieldError>
               )}
             </div>
           </div>
 
           {/* Service area note */}
-          <div className="rounded-xl bg-teal-50 px-4 py-3">
-            <p className="text-sm text-[#1a6b5a]">
+          <div className="rounded-xl bg-primary/5 px-4 py-3">
+            <p className="text-sm text-primary">
               We currently serve: Cicero, Camillus, Syracuse, Liverpool, Baldwinsville, Brewerton, Solvay, Manlius, and Marcellus.
             </p>
           </div>
@@ -115,12 +124,12 @@ export default function AddressPage() {
           <button
             onClick={handleNext}
             disabled={!isValid}
-            className="w-[360px] h-14 rounded-xl bg-[#1a6b5a] text-white text-base font-semibold hover:bg-[#155a4b] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-[360px] h-14 rounded-xl bg-primary text-white text-base font-semibold hover:bg-primary-pressed transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {returnTo === "review" ? "Save & Return to Review" : "Next \u2192"}
           </button>
           <div className="mt-3">
-            <Link href="/residential" className="text-sm font-medium text-[#1a6b5a] hover:underline">
+            <Link href="/residential" className="text-sm font-medium text-primary hover:underline">
               &larr; Back
             </Link>
           </div>
@@ -132,5 +141,13 @@ export default function AddressPage() {
         <BottomCTA label={returnTo === "review" ? "Save & Return to Review" : "Next"} onClick={handleNext} disabled={!isValid} />
       </div>
     </>
+  );
+}
+
+export default function AddressPage() {
+  return (
+    <WhenHydrated>
+      <AddressPageContent />
+    </WhenHydrated>
   );
 }

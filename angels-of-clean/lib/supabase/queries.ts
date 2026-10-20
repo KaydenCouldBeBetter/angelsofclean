@@ -1,28 +1,90 @@
 import { createClient } from "./server";
-import type { Employee, Job, ActivityEntry, JobStatus } from "@/app/admin/data/mock";
-import { SERVICE_LABELS, FREQUENCY_LABELS } from "@/lib/constants";
+import type { Employee, Job, ActivityEntry, JobStatus } from "@/lib/admin-types";
+import {
+  SERVICE_LABELS,
+  FREQUENCY_LABELS,
+  COMMERCIAL_FREQUENCY_LABELS,
+  COMMERCIAL_SERVICE_AREAS,
+  FACILITY_TYPE_LABELS,
+  SCHEDULE_PREFERENCE_LABELS,
+  SQFT_DISPLAY,
+  formatBathroomCount,
+} from "@/lib/constants";
 import type { ServiceType, Frequency } from "@/store/bookingStore";
+import { formatNy, formatNyDateTime, nyTodayStr } from "@/lib/datetime";
 
+// hired_date is a plain date (no time). Anchor it at noon UTC — safely inside
+// the same calendar day for New York — before formatting in the NY zone.
 function formatHiredDate(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  return formatNy(`${iso}T12:00:00Z`, { month: "short", year: "numeric" });
 }
 
-export async function getEmployees(): Promise<Employee[]> {
+// Date-string arithmetic done in UTC so it never depends on the process zone.
+// Inputs/outputs are "YYYY-MM-DD"; the anchor day is fixed by the string.
+function shiftDays(dateStr: string, n: number): string {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+function shiftMonths(dateStr: string, n: number): string {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  d.setUTCMonth(d.getUTCMonth() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+// Explicit column lists — avoids transferring columns the app never reads.
+const BOOKING_COLUMNS =
+  "id,booking_number,client_name,email,phone,service_type,frequency,address,city,bedrooms,bathrooms,notes,start_at,end_at,status,submitted_at,booking_employees(employee_id)" as const;
+
+// Calendar projection — the calendar UI renders no contact info, so email,
+// phone, and notes must never leave the server for that surface (the API
+// route ships this straight to the browser).
+const CALENDAR_BOOKING_COLUMNS =
+  "id,booking_number,client_name,service_type,frequency,address,city,bedrooms,bathrooms,start_at,end_at,status,submitted_at,booking_employees(employee_id)" as const;
+
+// Bookings-list projection — feeds the client BookingsList component, which
+// searches by email/phone (so those are kept) but never renders `notes`.
+// Omit `notes` so entry/access instructions aren't serialized to the browser.
+const LIST_BOOKING_COLUMNS =
+  "id,booking_number,client_name,email,phone,service_type,frequency,address,city,bedrooms,bathrooms,start_at,end_at,status,submitted_at,booking_employees(employee_id)" as const;
+
+const EMPLOYEE_COLUMNS = "id,name,initials,phone,hired_date" as const;
+
+// Log only the Postgres error code plus a correlation id — full Supabase
+// error objects can echo row data (customer PII) into server logs.
+function logQueryError(source: string, error: { code?: string } | null | undefined) {
+  console.error(`${source} failed`, {
+    code: error?.code ?? "unknown",
+    correlationId: crypto.randomUUID(),
+  });
+}
+
+// A failed query is reported as { ok: false }, never as an empty result, so a
+// page can't mistake "the database is down" for "there are no jobs".
+export type QueryResult<T> = { ok: true; data: T } | { ok: false };
+
+const FAILED = { ok: false } as const;
+
+export async function getEmployees(): Promise<QueryResult<Employee[]>> {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("employees").select("*").order("name");
+  const { data, error } = await supabase.from("employees").select(EMPLOYEE_COLUMNS).order("name");
 
   if (error || !data) {
-    console.error("getEmployees failed", error);
-    return [];
+    logQueryError("getEmployees", error);
+    return FAILED;
   }
 
-  return data.map((row) => ({
-    id: row.id,
-    name: row.name,
-    initials: row.initials,
-    phone: row.phone,
-    hiredDate: formatHiredDate(row.hired_date),
-  }));
+  return {
+    ok: true,
+    data: data.map((row) => ({
+      id: row.id,
+      name: row.name,
+      initials: row.initials,
+      phone: row.phone,
+      hiredDate: formatHiredDate(row.hired_date),
+    })),
+  };
 }
 
 // Nested-embed queries (`*, booking_employees(employee_id)`) don't reliably
@@ -32,15 +94,17 @@ type BookingWithEmployees = {
   id: string;
   booking_number: number;
   client_name: string;
-  email: string;
-  phone: string;
+  // Absent on the slim calendar projection (CALENDAR_BOOKING_COLUMNS).
+  email?: string;
+  phone?: string;
   service_type: string;
   frequency: string;
   address: string;
   city: string;
   bedrooms: number;
+  // numeric(2,1): PostgREST returns it as a JSON number, so 2.5 arrives as 2.5.
   bathrooms: number;
-  notes: string | null;
+  notes?: string | null;
   start_at: string;
   end_at: string;
   status: JobStatus;
@@ -66,33 +130,119 @@ function mapBookingToJob(row: BookingWithEmployees): Job {
     email: row.email,
     phone: row.phone,
     frequency: FREQUENCY_LABELS[row.frequency as NonNullable<Frequency>] ?? row.frequency,
-    property: `${pluralize(row.bedrooms, "Bedroom")} · ${pluralize(row.bathrooms, "Bathroom")}`,
+    property: `${pluralize(row.bedrooms, "Bedroom")} · ${formatBathroomCount(row.bathrooms)}`,
     notes: row.notes ?? undefined,
     submittedAt: row.submitted_at,
   };
 }
 
-export async function getJobs(): Promise<Job[]> {
+export async function getJobs(): Promise<QueryResult<Job[]>> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("bookings")
-    .select("*, booking_employees(employee_id)")
+    .select(BOOKING_COLUMNS)
     .order("start_at");
 
   if (error || !data) {
-    console.error("getJobs failed", error);
-    return [];
+    logQueryError("getJobs", error);
+    return FAILED;
   }
 
-  return (data as unknown as BookingWithEmployees[]).map(mapBookingToJob);
+  return { ok: true, data: (data as unknown as BookingWithEmployees[]).map(mapBookingToJob) };
+}
+
+/**
+ * Fetch bookings filtered by date tab — pushes the filter to Supabase
+ * so only matching rows are transferred.
+ */
+export async function getJobsByDateFilter(
+  filter: "today" | "upcoming" | "past" | "all",
+): Promise<QueryResult<Job[]>> {
+  const supabase = await createClient();
+  const today = nyTodayStr();
+
+  let query = supabase
+    .from("bookings")
+    .select(LIST_BOOKING_COLUMNS);
+
+  if (filter === "today") {
+    query = query.eq("scheduled_date", today);
+  } else if (filter === "upcoming") {
+    query = query.gt("scheduled_date", today);
+  } else if (filter === "past") {
+    query = query.lt("scheduled_date", today);
+  }
+  // "all" — no date filter
+
+  // Past jobs: most recent first. Everything else: chronological.
+  const ascending = filter !== "past";
+  query = query.order("start_at", { ascending });
+
+  const { data, error } = await query;
+
+  if (error || !data) {
+    logQueryError("getJobsByDateFilter", error);
+    return FAILED;
+  }
+
+  return { ok: true, data: (data as unknown as BookingWithEmployees[]).map(mapBookingToJob) };
+}
+
+/**
+ * Fetch only today's non-cancelled bookings — used by the employees page.
+ */
+export async function getTodayJobs(): Promise<QueryResult<Job[]>> {
+  const supabase = await createClient();
+  const today = nyTodayStr();
+
+  const { data, error } = await supabase
+    .from("bookings")
+    .select(BOOKING_COLUMNS)
+    .eq("scheduled_date", today)
+    .neq("status", "cancelled")
+    .order("start_at");
+
+  if (error || !data) {
+    logQueryError("getTodayJobs", error);
+    return FAILED;
+  }
+
+  return { ok: true, data: (data as unknown as BookingWithEmployees[]).map(mapBookingToJob) };
+}
+
+/**
+ * Fetch bookings within a date window — used by the calendar page.
+ * Defaults to ±2 months from today so the user can navigate without
+ * loading the entire booking history.
+ */
+export async function getJobsInRange(
+  from?: string,
+  to?: string,
+): Promise<QueryResult<Job[]>> {
+  const supabase = await createClient();
+
+  if (!from || !to) {
+    const today = nyTodayStr();
+    from = shiftMonths(today, -2);
+    to = shiftMonths(today, 2);
+  }
+
+  const { data, error } = await supabase
+    .from("bookings")
+    .select(CALENDAR_BOOKING_COLUMNS)
+    .gte("scheduled_date", from)
+    .lte("scheduled_date", to)
+    .order("start_at");
+
+  if (error || !data) {
+    logQueryError("getJobsInRange", error);
+    return FAILED;
+  }
+
+  return { ok: true, data: (data as unknown as BookingWithEmployees[]).map(mapBookingToJob) };
 }
 
 // ---------- Dashboard-specific queries ----------
-
-/** Local YYYY-MM-DD (avoids UTC date shift). */
-function localDateStr(d: Date = new Date()): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
 
 export interface DashboardStats {
   todayJobs: Job[];
@@ -101,28 +251,21 @@ export interface DashboardStats {
   totalEmployees: number;
 }
 
-export async function getDashboardStats(): Promise<DashboardStats> {
+export async function getDashboardStats(): Promise<QueryResult<DashboardStats>> {
   const supabase = await createClient();
-  const today = localDateStr();
+  const today = nyTodayStr();
 
-  // Monday of this week
-  const now = new Date();
-  const dayOfWeek = now.getDay(); // 0=Sun
+  // This week's Monday…Sunday, anchored on New York's "today".
+  const dayOfWeek = new Date(`${today}T00:00:00Z`).getUTCDay(); // 0=Sun
   const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() + mondayOffset);
-  const weekStart = localDateStr(monday);
-
-  // Sunday end of week
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-  const weekEnd = localDateStr(sunday);
+  const weekStart = shiftDays(today, mondayOffset);
+  const weekEnd = shiftDays(weekStart, 6);
 
   const [todayRes, pendingRes, completedRes, employeeRes] = await Promise.all([
     // Today's bookings (non-cancelled)
     supabase
       .from("bookings")
-      .select("*, booking_employees(employee_id)")
+      .select(BOOKING_COLUMNS)
       .eq("scheduled_date", today)
       .neq("status", "cancelled")
       .order("start_at"),
@@ -147,54 +290,154 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       .select("id", { count: "exact", head: true }),
   ]);
 
-  const todayJobs = todayRes.error || !todayRes.data
-    ? []
-    : (todayRes.data as unknown as BookingWithEmployees[]).map(mapBookingToJob);
+  // One failed query fails the whole dashboard: a card showing 0 beside real
+  // numbers would read as "nothing pending", not "couldn't load".
+  const failed =
+    todayRes.error ?? pendingRes.error ?? completedRes.error ?? employeeRes.error;
+  if (
+    failed ||
+    !todayRes.data ||
+    pendingRes.count === null ||
+    completedRes.count === null ||
+    employeeRes.count === null
+  ) {
+    logQueryError("getDashboardStats", failed);
+    return FAILED;
+  }
 
   return {
-    todayJobs,
-    totalPending: pendingRes.count ?? 0,
-    completedThisWeek: completedRes.count ?? 0,
-    totalEmployees: employeeRes.count ?? 0,
+    ok: true,
+    data: {
+      todayJobs: (todayRes.data as unknown as BookingWithEmployees[]).map(mapBookingToJob),
+      totalPending: pendingRes.count,
+      completedThisWeek: completedRes.count,
+      totalEmployees: employeeRes.count,
+    },
   };
 }
 
-export async function getJobById(id: string): Promise<Job | null> {
+// `data: null` means the booking doesn't exist; a failed lookup is { ok: false }.
+export async function getJobById(id: string): Promise<QueryResult<Job | null>> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("bookings")
-    .select("*, booking_employees(employee_id)")
+    .select(BOOKING_COLUMNS)
     .eq("id", id)
     .maybeSingle();
 
-  if (error || !data) {
-    if (error) console.error("getJobById failed", error);
-    return null;
+  if (error) {
+    logQueryError("getJobById", error);
+    return FAILED;
   }
 
-  return mapBookingToJob(data as unknown as BookingWithEmployees);
+  return {
+    ok: true,
+    data: data ? mapBookingToJob(data as unknown as BookingWithEmployees) : null,
+  };
 }
 
-export async function getActivityLog(bookingId: string): Promise<ActivityEntry[]> {
+// Entry instructions (door code, gate, pets) for one booking — the booking
+// detail page is the only reader. They live in booking_access, apart from
+// bookings, so none of the list, calendar or dashboard projections above can
+// include them. `data: null` means none were given.
+export async function getBookingAccess(bookingId: string): Promise<QueryResult<string | null>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("booking_access")
+    .select("instructions")
+    .eq("booking_id", bookingId)
+    .maybeSingle();
+
+  if (error) {
+    logQueryError("getBookingAccess", error);
+    return FAILED;
+  }
+
+  return { ok: true, data: data?.instructions ?? null };
+}
+
+export async function getActivityLog(bookingId: string): Promise<QueryResult<ActivityEntry[]>> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("activity_log")
-    .select("*")
+    .select("description,created_at")
     .eq("booking_id", bookingId)
     .order("created_at", { ascending: true });
 
   if (error || !data) {
-    console.error("getActivityLog failed", error);
-    return [];
+    logQueryError("getActivityLog", error);
+    return FAILED;
   }
 
-  return data.map((row) => ({
-    timestamp: new Date(row.created_at).toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    }),
-    description: row.description,
-  }));
+  return {
+    ok: true,
+    data: data.map((row) => ({
+      timestamp: formatNyDateTime(row.created_at),
+      description: row.description,
+    })),
+  };
+}
+
+// ---------- Commercial quote requests ----------
+
+export interface CommercialQuote {
+  id: string;
+  quoteRef: string; // e.g. "COM-1000"
+  businessName: string;
+  contactName: string;
+  email: string;
+  phone: string;
+  facility: string; // e.g. "Office · 1,000 – 2,000 sq ft · 3 floors"
+  address: string;
+  serviceAreas: string[];
+  frequency: string;
+  schedulePreference?: string;
+  notes?: string;
+  submittedAt: string; // formatted in New York time
+}
+
+const QUOTE_COLUMNS =
+  "id,quote_number,business_name,contact_name,email,phone,facility_type,sqft_range,address,city,zip,floors,service_areas,frequency,schedule_preference,notes,submitted_at" as const;
+
+/**
+ * Every commercial quote request, newest first — used by the admin Quotes page.
+ */
+export async function getCommercialQuotes(): Promise<QueryResult<CommercialQuote[]>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("commercial_quotes")
+    .select(QUOTE_COLUMNS)
+    .order("submitted_at", { ascending: false });
+
+  if (error || !data) {
+    logQueryError("getCommercialQuotes", error);
+    return FAILED;
+  }
+
+  return {
+    ok: true,
+    data: data.map((row) => ({
+      id: row.id,
+      quoteRef: `COM-${row.quote_number}`,
+      businessName: row.business_name,
+      contactName: row.contact_name,
+      email: row.email,
+      phone: row.phone,
+      facility: [
+        FACILITY_TYPE_LABELS[row.facility_type] ?? row.facility_type,
+        SQFT_DISPLAY[row.sqft_range] ?? row.sqft_range,
+        pluralize(row.floors, "floor"),
+      ].join(" · "),
+      address: `${row.address}, ${row.city} ${row.zip}`,
+      serviceAreas: row.service_areas.map(
+        (id) => COMMERCIAL_SERVICE_AREAS.find((area) => area.id === id)?.label ?? id,
+      ),
+      frequency: COMMERCIAL_FREQUENCY_LABELS[row.frequency] ?? row.frequency,
+      schedulePreference: row.schedule_preference
+        ? SCHEDULE_PREFERENCE_LABELS[row.schedule_preference] ?? row.schedule_preference
+        : undefined,
+      notes: row.notes ?? undefined,
+      submittedAt: formatNyDateTime(row.submitted_at),
+    })),
+  };
 }

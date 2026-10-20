@@ -1,29 +1,30 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import HomeHeader from "@/components/home/HomeHeader";
+import Hero from "@/components/home/Hero";
+import Services from "@/components/home/Services";
+import ServiceArea from "@/components/home/ServiceArea";
+import HowItWorks from "@/components/home/HowItWorks";
+import Reviews from "@/components/home/Reviews";
+import TrustFacts from "@/components/home/TrustFacts";
+import TeamPhotos from "@/components/home/TeamPhotos";
+import HomeFooter from "@/components/home/HomeFooter";
 
+// Homepage built from the HeroSplit frame (Figma 120:3). Reviews, trust facts and
+// team photos come from lib/homepage-content.ts and show a "Placeholder" label
+// until the owner replaces them (backlog B27).
 export default function Home() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Angels of Clean</CardTitle>
-          <CardDescription>Select a booking flow to continue</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <Link href="/residential">
-            <Button className="w-full h-14">Book Now — Residential</Button>
-          </Link>
-          <Link href="/commercial">
-            <Button variant="outline" className="w-full h-14">Get a Quote — Commercial</Button>
-          </Link>
-          <div className="border-t border-zinc-100 pt-3">
-            <Link href="/admin">
-              <Button variant="ghost" className="w-full h-10 text-zinc-400 text-xs">Admin Dashboard →</Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    <>
+      <HomeHeader />
+      <main>
+        <Hero />
+        <Services />
+        <ServiceArea />
+        <HowItWorks />
+        <Reviews />
+        <TrustFacts />
+        <TeamPhotos />
+      </main>
+      <HomeFooter />
+    </>
   );
 }

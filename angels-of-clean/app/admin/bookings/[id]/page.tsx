@@ -1,10 +1,14 @@
 import Link from "next/link";
-import { getJobById, getActivityLog, getEmployees } from "@/lib/supabase/queries";
-import { DASHBOARD_STATUS } from "../../data/mock";
+import { getJobById, getActivityLog, getBookingAccess, getEmployees } from "@/lib/supabase/queries";
+import { DASHBOARD_STATUS } from "../../status-config";
+import { formatNy, formatNyTime, formatNyTimeRange } from "@/lib/datetime";
+import { toStaffMember } from "@/lib/admin-types";
 import BookingActions from "./BookingActions";
+import EntryInstructions from "./EntryInstructions";
+import LoadError from "../../LoadError";
 
 function formatDetailDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", {
+  return formatNy(iso, {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -12,20 +16,31 @@ function formatDetailDate(iso: string) {
   });
 }
 
-function formatDetailTime(iso: string) {
-  const d = new Date(iso);
-  const h = d.getHours();
-  const m = d.getMinutes();
-  const ampm = h >= 12 ? "PM" : "AM";
-  const display = h > 12 ? h - 12 : h === 0 ? 12 : h;
-  return `${display}:${m.toString().padStart(2, "0")} ${ampm}`;
+function formatSubmitted(iso: string) {
+  const date = formatNy(iso, { month: "long", day: "numeric", year: "numeric" });
+  return `${date} · ${formatNyTime(iso)}`;
 }
 
-function formatSubmitted(iso: string) {
-  const d = new Date(iso);
-  const date = d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-  const time = formatDetailTime(iso);
-  return `${date} · ${time}`;
+// Booking ids are UUIDs. Postgres rejects anything else as an error, which
+// would otherwise show "couldn't load" for what is really a bad link.
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function BookingNotFound() {
+  return (
+    <>
+      <header className="flex-shrink-0 h-16 bg-white border-b border-[#e2e8e6] flex items-center px-8">
+        <h1 className="font-semibold text-lg text-[#1c1c1e]">Booking not found</h1>
+      </header>
+      <div className="flex-1 flex items-center justify-center bg-[#f7f9f8]">
+        <div className="text-center">
+          <p className="text-[#5c5c5e] mb-4">This booking does not exist.</p>
+          <Link href="/admin/bookings" className="text-primary font-medium hover:underline">
+            &larr; Back to Bookings
+          </Link>
+        </div>
+      </div>
+    </>
+  );
 }
 
 export default async function BookingDetailPage({
@@ -34,34 +49,38 @@ export default async function BookingDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [job, activityLog, employees] = await Promise.all([
+  if (!UUID_PATTERN.test(id)) return <BookingNotFound />;
+
+  // A failed entry-instructions lookup only affects its own card (below), so
+  // it isn't part of the whole-page error check.
+  const [jobResult, activityResult, employeesResult, accessResult] = await Promise.all([
     getJobById(id),
     getActivityLog(id),
     getEmployees(),
+    getBookingAccess(id),
   ]);
 
-  const displayDate = new Date().toLocaleDateString(
-    "en-US",
-    { weekday: "short", month: "long", day: "numeric", year: "numeric" },
-  );
+  const displayDate = formatNy(new Date(), {
+    weekday: "short", month: "long", day: "numeric", year: "numeric",
+  });
 
-  if (!job) {
+  // A failed lookup is not "this booking does not exist".
+  if (!jobResult.ok || !activityResult.ok || !employeesResult.ok) {
     return (
       <>
         <header className="flex-shrink-0 h-16 bg-white border-b border-[#e2e8e6] flex items-center px-8">
-          <h1 className="font-semibold text-lg text-[#1c1c1e]">Booking not found</h1>
+          <h1 className="font-semibold text-lg text-[#1c1c1e]">Booking</h1>
         </header>
-        <div className="flex-1 flex items-center justify-center bg-[#f7f9f8]">
-          <div className="text-center">
-            <p className="text-[#5c5c5e] mb-4">This booking does not exist.</p>
-            <Link href="/admin/bookings" className="text-[#1a6b5a] font-medium hover:underline">
-              &larr; Back to Bookings
-            </Link>
-          </div>
-        </div>
+        <LoadError what="this booking" />
       </>
     );
   }
+
+  const job = jobResult.data;
+  const activityLog = activityResult.data;
+  const employees = employeesResult.data;
+
+  if (!job) return <BookingNotFound />;
 
   const employeeMap = Object.fromEntries(employees.map((e) => [e.id, e]));
   const cfg = DASHBOARD_STATUS[job.status];
@@ -70,7 +89,7 @@ export default async function BookingDetailPage({
     ? assignedEmployees.map((e) => e.name).join(", ")
     : "Unassigned";
 
-  const subtitle = `${job.service} · ${job.client} · ${new Date(job.start).toLocaleDateString("en-US", { month: "long", day: "numeric" })}`;
+  const subtitle = `${job.service} · ${job.client} · ${formatNy(job.start, { month: "long", day: "numeric" })}`;
 
   const detailRows = [
     { label: "Client", value: job.client },
@@ -79,7 +98,7 @@ export default async function BookingDetailPage({
     { label: "Service", value: job.frequency ? `${job.service} · ${job.frequency}` : job.service },
     { label: "Address", value: job.address },
     { label: "Date", value: formatDetailDate(job.start) },
-    { label: "Time Slot", value: `${formatDetailTime(job.start)} – ${formatDetailTime(job.end)}` },
+    { label: "Time Slot", value: formatNyTimeRange(job.start, job.end) },
     { label: "Property", value: job.property },
     { label: "Notes", value: job.notes },
     { label: "Submitted", value: job.submittedAt ? formatSubmitted(job.submittedAt) : undefined },
@@ -126,22 +145,23 @@ export default async function BookingDetailPage({
             </div>
 
             {/* Status banner */}
+            {/* Same background as the status chip, so the text color is
+                checked against it (app/admin/__tests__/status-contrast). */}
             <div
-              className="mt-4 rounded-[10px] border px-6 py-3"
-              style={{
-                backgroundColor: job.status === "active" ? "#fef2e8"
-                  : job.status === "done" ? "#e1f2e7"
-                  : job.status === "confirmed" ? "#eaeefc"
-                  : job.status === "cancelled" ? "#feefee"
-                  : "#f7f9f8",
-                borderColor: cfg.accentColor,
-              }}
+              className={`mt-4 rounded-[10px] border px-6 py-3 ${cfg.chipBg}`}
+              style={{ borderColor: cfg.accentColor }}
             >
               <p className="text-[11px] text-[#5c5c5e]">Current Status</p>
               <p className="text-[15px] font-semibold mt-0.5" style={{ color: cfg.accentColor }}>
                 {cfg.label} {assignedEmployees.length > 0 ? `· Employee: ${employeeLabel}` : ""}
               </p>
             </div>
+
+            <EntryInstructions
+              bookingId={job.id}
+              instructions={accessResult.ok ? accessResult.data : null}
+              loadFailed={!accessResult.ok}
+            />
           </div>
 
           {/* Right column */}
@@ -153,7 +173,7 @@ export default async function BookingDetailPage({
               </div>
               <div className="h-px bg-[#e2e8e6] mx-6" />
               <div className="px-6 py-4">
-                <BookingActions job={job} employees={employees} />
+                <BookingActions job={job} employees={employees.map(toStaffMember)} />
               </div>
             </div>
 
@@ -168,7 +188,7 @@ export default async function BookingDetailPage({
                   {activityLog.map((entry, i) => (
                     <div key={i} className="relative pl-6">
                       {/* Dot */}
-                      <div className="absolute left-0 top-1 w-2 h-2 rounded bg-[#1a6b5a]" />
+                      <div className="absolute left-0 top-1 w-2 h-2 rounded bg-primary" />
                       {/* Connecting line */}
                       {i < activityLog.length - 1 && (
                         <div className="absolute left-[3px] top-[12px] w-0.5 h-9 bg-[#e2e8e6]" />

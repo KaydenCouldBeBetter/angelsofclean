@@ -1,33 +1,8 @@
 "use client";
 
 import { useBookingStore } from "@/store/bookingStore";
-
-const SERVICE_LABELS: Record<string, string> = {
-  standard: "Standard Clean",
-  deep: "Deep Clean",
-  moveinout: "Move-In / Move-Out",
-};
-
-const FREQUENCY_LABELS: Record<string, string> = {
-  "one-time": "One-time",
-  weekly: "Weekly",
-  "bi-weekly": "Bi-weekly",
-  monthly: "Monthly",
-};
-
-const TIMESLOT_LABELS: Record<string, string> = {
-  morning: "Morning (8am\u201312pm)",
-  afternoon: "Afternoon (12pm\u20134pm)",
-};
-
-function formatSummaryDate(iso: string): string {
-  const d = new Date(`${iso}T12:00:00`);
-  return d.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-}
+import { FREQUENCY_LABELS, SERVICE_LABELS, TIME_LABELS } from "@/lib/constants";
+import { formatBookingDate } from "@/lib/booking-date";
 
 interface SummaryRow {
   label: string;
@@ -68,7 +43,7 @@ export default function BookingSummary() {
   if (store.date && store.timeSlot) {
     rows.push({
       label: "Date & Time",
-      value: `${formatSummaryDate(store.date)} \u00B7 ${TIMESLOT_LABELS[store.timeSlot] ?? store.timeSlot}`,
+      value: `${formatBookingDate(store.date, "short")} \u00B7 ${TIME_LABELS[store.timeSlot] ?? store.timeSlot}`,
     });
   }
 
@@ -85,7 +60,7 @@ export default function BookingSummary() {
 
         <div className="px-6 py-5">
           {rows.length === 0 ? (
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-zinc-500">
               Your selections will appear here as you complete each step.
             </p>
           ) : (
@@ -93,7 +68,7 @@ export default function BookingSummary() {
               {rows.map((row, i) => (
                 <div key={row.label}>
                   <div className="py-2">
-                    <p className="text-xs text-zinc-400">{row.label}</p>
+                    <p className="text-xs text-zinc-500">{row.label}</p>
                     <p className="text-sm font-semibold text-zinc-900 mt-0.5">
                       {row.value}
                     </p>

@@ -6,14 +6,21 @@ import Link from "next/link";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
-import CommercialNav from "@/components/booking/CommercialNav";
-import CommercialStepper from "@/components/booking/CommercialStepper";
+import FieldError from "@/components/booking/FieldError";
+import { PrivacyNote } from "@/components/booking/PolicyNotes";
+import HoneypotField from "@/components/booking/HoneypotField";
+import DesktopNavbar, { COMMERCIAL_NAV_TAGLINE } from "@/components/booking/DesktopNavbar";
+import DesktopStepper from "@/components/booking/DesktopStepper";
+import Selectable, { SelectableGroup } from "@/components/booking/Selectable";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import WhenHydrated from "@/components/booking/WhenHydrated";
 import { useBookingStore } from "@/store/bookingStore";
 import {
   COMMERCIAL_FREQUENCIES,
+  COMMERCIAL_STEP_LABELS,
+  FIELD_MAX_LENGTHS,
   SCHEDULE_PREFERENCES,
 } from "@/lib/constants";
 import type { CommercialFrequency, SchedulePreference } from "@/store/bookingStore";
@@ -21,7 +28,7 @@ import type { CommercialFrequency, SchedulePreference } from "@/store/bookingSto
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$/;
 
-export default function CommercialStep3() {
+function CommercialStep3Content() {
   const router = useRouter();
   const store = useBookingStore();
 
@@ -39,6 +46,7 @@ export default function CommercialStep3() {
   const [schedulePreference, setSchedulePreference] = useState<SchedulePreference>(
     store.schedulePreference ?? null
   );
+  const [website, setWebsite] = useState("");
   const [touched, setTouched] = useState({
     name: false,
     email: false,
@@ -54,17 +62,24 @@ export default function CommercialStep3() {
     phoneValid &&
     frequency !== null;
 
+  const showNameError = touched.name && name.trim() === "";
+  const showEmailInvalid = touched.email && email.trim() !== "" && !emailValid;
+  const showEmailRequired = touched.email && email.trim() === "";
+  const showPhoneInvalid = touched.phone && phone.trim() !== "" && !phoneValid;
+  const showPhoneRequired = touched.phone && phone.trim() === "";
+
   function handleNext() {
     if (!isValid) return;
     store.setCommercialContact(name, businessName, email, phone, frequency, schedulePreference);
+    store.setHoneypot(website);
     router.push("/commercial/review");
   }
 
   return (
     <>
       {/* Desktop */}
-      <CommercialNav />
-      <CommercialStepper currentStep={3} />
+      <DesktopNavbar tagline={COMMERCIAL_NAV_TAGLINE} />
+      <DesktopStepper steps={COMMERCIAL_STEP_LABELS} currentStep={3} />
 
       {/* Mobile header */}
       <div className="md:hidden">
@@ -84,7 +99,7 @@ export default function CommercialStep3() {
         {/* Name row (stacked on mobile, 2-col on desktop) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 mb-4 md:mb-5">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="name">Contact Name</Label>
+            <Label htmlFor="name">Contact name</Label>
             <Input
               id="name"
               placeholder="Your full name"
@@ -92,20 +107,24 @@ export default function CommercialStep3() {
               onChange={(e) => setName(e.target.value)}
               onBlur={() => setTouched((t) => ({ ...t, name: true }))}
               autoComplete="name"
+              maxLength={FIELD_MAX_LENGTHS.name}
+              aria-invalid={showNameError}
+              aria-describedby={showNameError ? "name-error" : undefined}
               className="h-14"
             />
-            {touched.name && name.trim() === "" && (
-              <p className="text-xs text-red-500" role="alert">Name is required.</p>
+            {showNameError && (
+              <FieldError id="name-error">Full name is required.</FieldError>
             )}
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="businessName">Business Name</Label>
+            <Label htmlFor="businessName">Business name</Label>
             <Input
               id="businessName"
               placeholder="Company or facility name"
               value={businessName}
               onChange={(e) => setBusinessName(e.target.value)}
               autoComplete="organization"
+              maxLength={FIELD_MAX_LENGTHS.businessName}
               className="h-14"
             />
           </div>
@@ -114,7 +133,7 @@ export default function CommercialStep3() {
         {/* Email / Phone row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 mb-6 md:mb-8">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="email">Email Address</Label>
+            <Label htmlFor="email">Email address</Label>
             <Input
               id="email"
               type="email"
@@ -123,31 +142,47 @@ export default function CommercialStep3() {
               onChange={(e) => setEmail(e.target.value)}
               onBlur={() => setTouched((t) => ({ ...t, email: true }))}
               autoComplete="email"
+              maxLength={FIELD_MAX_LENGTHS.email}
+              aria-invalid={showEmailInvalid || showEmailRequired}
+              aria-describedby={
+                showEmailInvalid || showEmailRequired ? "email-error" : undefined
+              }
               className="h-14"
             />
-            {touched.email && !emailValid && (
-              <p className="text-xs text-red-500" role="alert">
-                {email.trim() === "" ? "Email is required." : "Enter a valid email address."}
-              </p>
+            {showEmailInvalid && (
+              <FieldError id="email-error">
+                Please enter a valid email address.
+              </FieldError>
+            )}
+            {showEmailRequired && (
+              <FieldError id="email-error">Email address is required.</FieldError>
             )}
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="phone">Phone Number</Label>
+            <Label htmlFor="phone">Phone number</Label>
             <Input
               id="phone"
               type="tel"
-              placeholder="(315) 555-0100"
+              placeholder="(315) 555-0123"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
               autoComplete="tel"
+              maxLength={FIELD_MAX_LENGTHS.phone}
               inputMode="tel"
+              aria-invalid={showPhoneInvalid || showPhoneRequired}
+              aria-describedby={
+                showPhoneInvalid || showPhoneRequired ? "phone-error" : undefined
+              }
               className="h-14"
             />
-            {touched.phone && !phoneValid && (
-              <p className="text-xs text-red-500" role="alert">
-                {phone.trim() === "" ? "Phone is required." : "Enter a valid 10-digit phone number."}
-              </p>
+            {showPhoneInvalid && (
+              <FieldError id="phone-error">
+                Please enter a valid 10-digit phone number.
+              </FieldError>
+            )}
+            {showPhoneRequired && (
+              <FieldError id="phone-error">Phone number is required.</FieldError>
             )}
           </div>
         </div>
@@ -155,95 +190,62 @@ export default function CommercialStep3() {
         {/* Frequency */}
         <div className="mb-6 md:mb-8">
           <Label className="text-sm font-semibold text-zinc-900 mb-1 block">
-            Preferred Cleaning Frequency
+            Preferred cleaning frequency
           </Label>
           <p className="text-xs text-zinc-500 mb-3">
             Select how often you&apos;d like cleaning service.
           </p>
-          <div
-            role="radiogroup"
+          <SelectableGroup
+            type="radio"
             aria-label="Cleaning frequency"
             className="flex flex-wrap gap-2"
           >
-            {COMMERCIAL_FREQUENCIES.map((freq) => {
-              const isSelected = frequency === freq.id;
-              return (
-                <button
-                  key={freq.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={isSelected}
-                  onClick={() => setFrequency(freq.id)}
-                  className={`h-11 px-4 rounded-xl border-2 text-sm font-medium transition-colors ${
-                    isSelected
-                      ? "border-teal-600 bg-teal-700 text-white"
-                      : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
-                  }`}
-                >
-                  {freq.label}
-                </button>
-              );
-            })}
-          </div>
+            {COMMERCIAL_FREQUENCIES.map((freq) => (
+              <Selectable
+                key={freq.id}
+                value={freq.id}
+                selected={frequency === freq.id}
+                onSelect={() => setFrequency(freq.id)}
+                className="flex items-center justify-center h-11 px-6"
+              >
+                {freq.label}
+              </Selectable>
+            ))}
+          </SelectableGroup>
         </div>
 
         {/* Schedule Preference */}
         <div className="mb-6 md:mb-8">
           <Label className="text-sm font-semibold text-zinc-900 mb-1 block">
-            Schedule Preference{" "}
-            <span className="font-normal text-zinc-400">(optional)</span>
+            Schedule preference{" "}
+            <span className="font-normal text-zinc-500">(optional)</span>
           </Label>
           <p className="text-xs text-zinc-500 mb-3">
             When would cleaning be least disruptive to your operations?
           </p>
-          <div
-            role="radiogroup"
+          <SelectableGroup
+            type="radio"
             aria-label="Schedule preference"
             className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3"
           >
-            {SCHEDULE_PREFERENCES.map((pref) => {
-              const isSelected = schedulePreference === pref.id;
-              return (
-                <label
-                  key={pref.id}
-                  className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-colors ${
-                    isSelected
-                      ? "border-teal-600 bg-teal-50"
-                      : "border-zinc-200 bg-white hover:border-zinc-300"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="schedulePreference"
-                    value={pref.id}
-                    checked={isSelected}
-                    onChange={() =>
-                      setSchedulePreference(isSelected ? null : pref.id)
-                    }
-                    className="sr-only"
-                  />
-                  <div
-                    className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${
-                      isSelected
-                        ? "border-teal-600 bg-teal-600"
-                        : "border-zinc-300"
-                    }`}
-                  >
-                    {isSelected && (
-                      <div className="w-2 h-2 rounded-full bg-white" />
-                    )}
-                  </div>
-                  <span
-                    className={`text-sm font-medium ${
-                      isSelected ? "text-teal-700" : "text-zinc-700"
-                    }`}
-                  >
-                    {pref.label}
-                  </span>
-                </label>
-              );
-            })}
-          </div>
+            {SCHEDULE_PREFERENCES.map((pref) => (
+              <Selectable
+                key={pref.id}
+                value={pref.id}
+                selected={schedulePreference === pref.id}
+                onSelect={() => setSchedulePreference(pref.id)}
+                className="flex items-center p-3 pr-8"
+              >
+                {pref.label}
+              </Selectable>
+            ))}
+          </SelectableGroup>
+        </div>
+
+        <HoneypotField value={website} onChange={setWebsite} />
+
+        <div className="mb-6 md:mb-8">
+          <PrivacyNote />
         </div>
 
         {/* Desktop Next + Back */}
@@ -257,7 +259,7 @@ export default function CommercialStep3() {
           </Button>
           <Link
             href="/commercial/services"
-            className="text-sm text-teal-700 hover:text-teal-800 transition-colors"
+            className="text-sm text-primary hover:text-primary-pressed transition-colors"
           >
             ← Back to Service Scope
           </Link>
@@ -269,5 +271,13 @@ export default function CommercialStep3() {
         <BottomCTA label="Next" onClick={handleNext} disabled={!isValid} />
       </div>
     </>
+  );
+}
+
+export default function CommercialStep3() {
+  return (
+    <WhenHydrated>
+      <CommercialStep3Content />
+    </WhenHydrated>
   );
 }

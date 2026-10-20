@@ -1,26 +1,37 @@
 "use client";
 
-import { useEffect } from "react";
+import WhatHappensNext from "@/components/booking/WhatHappensNext";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Clock } from "lucide-react";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
-import CommercialNav from "@/components/booking/CommercialNav";
-import CommercialStepper from "@/components/booking/CommercialStepper";
+import { AgreementNote } from "@/components/booking/PolicyNotes";
+import SubmitErrorAlert from "@/components/booking/SubmitErrorAlert";
+import ServiceUnavailable from "@/components/booking/ServiceUnavailable";
+import DesktopNavbar, { COMMERCIAL_NAV_TAGLINE } from "@/components/booking/DesktopNavbar";
+import DesktopStepper from "@/components/booking/DesktopStepper";
 import { Button } from "@/components/ui/button";
-import { useBookingStore } from "@/store/bookingStore";
+import { useBookingStore, useBookingHydrated } from "@/store/bookingStore";
 import {
   FACILITY_TYPE_LABELS,
   SQFT_DISPLAY,
   COMMERCIAL_SERVICE_AREAS,
   COMMERCIAL_FREQUENCY_LABELS,
+  COMMERCIAL_STEP_LABELS,
   SCHEDULE_PREFERENCE_LABELS,
+  QUOTE_NOTE,
 } from "@/lib/constants";
+import { submitCommercialQuote, type QuoteResult } from "@/app/actions/submitCommercialQuote";
 
 export default function CommercialReview() {
   const router = useRouter();
   const store = useBookingStore();
+  const hydrated = useBookingHydrated();
+  const [error, setError] = useState<string | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
 
   const {
     facilityType, sqftRange,
@@ -28,28 +39,75 @@ export default function CommercialReview() {
     floors, serviceAreas, commercialNotes,
     name, businessName, email, phone,
     commercialFrequency, schedulePreference,
+    formStartedAt, honeypot,
     isSubmitting, setSubmitting,
   } = store;
 
+  // No start time means the wizard state predates the bot check: start over.
   useEffect(() => {
-    if (!facilityType || !name || !businessName) router.replace("/commercial");
-  }, [facilityType, name, businessName, router]);
+    if (hydrated && (!facilityType || !name || !businessName || formStartedAt === null)) {
+      router.replace("/commercial");
+    }
+  }, [hydrated, facilityType, name, businessName, formStartedAt, router]);
 
   const areaLabels = serviceAreas
     .map((id) => COMMERCIAL_SERVICE_AREAS.find((a) => a.id === id)?.label ?? id)
     .join(", ");
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (isSubmitting) return;
+    // Any earlier error stays on screen while this attempt runs, so the retry
+    // button the customer just pressed doesn't vanish under them.
     setSubmitting(true);
-    router.push("/commercial/confirmation");
+
+    let result: QuoteResult;
+    try {
+      result = await submitCommercialQuote({
+        facilityType: facilityType ?? "",
+        sqftRange: sqftRange ?? "",
+        address, city, zip,
+        floors, serviceAreas,
+        notes: commercialNotes,
+        name, businessName, email, phone,
+        frequency: commercialFrequency ?? "",
+        schedulePreference,
+      }, {
+        website: honeypot,
+        elapsedMs: Date.now() - (formStartedAt ?? Date.now()),
+      });
+    } catch {
+      // The request never reached the server (offline, timeout).
+      result = {
+        success: false,
+        error: "We couldn't send your request. Check your connection and try again.",
+      };
+    }
+
+    // The confirmation page is only ever reached with a stored quote's reference.
+    if (!result.success || !result.quoteRef) {
+      setSubmitting(false);
+      setUnavailable(result.unavailable === true);
+      setError(result.error ?? "Something went wrong. Please try again.");
+      return;
+    }
+
+    router.push(`/commercial/confirmation?ref=${result.quoteRef}`);
+  }
+
+  if (unavailable) {
+    return (
+      <>
+        <DesktopNavbar tagline={COMMERCIAL_NAV_TAGLINE} />
+        <ServiceUnavailable subject="request" onRetry={handleSubmit} retrying={isSubmitting} />
+      </>
+    );
   }
 
   return (
     <>
       {/* Desktop */}
-      <CommercialNav />
-      <CommercialStepper currentStep={4} />
+      <DesktopNavbar tagline={COMMERCIAL_NAV_TAGLINE} />
+      <DesktopStepper steps={COMMERCIAL_STEP_LABELS} currentStep={4} />
 
       {/* Mobile header */}
       <div className="md:hidden">
@@ -71,26 +129,26 @@ export default function CommercialReview() {
           <div className="rounded-xl border border-zinc-200 p-4 md:p-5">
             <div className="flex items-start justify-between mb-3">
               <span className="text-sm font-semibold text-zinc-900">Facility Info</span>
-              <Link href="/commercial" className="text-sm text-teal-600 font-medium hover:text-teal-700">
+              <Link href="/commercial" className="text-sm text-primary font-medium hover:text-primary-pressed">
                 Edit
               </Link>
             </div>
             <div className="flex flex-col gap-1.5 text-sm">
               <div className="flex gap-3">
-                <span className="text-zinc-400 w-32 flex-shrink-0">Facility Type</span>
+                <span className="text-zinc-500 w-32 flex-shrink-0">Facility Type</span>
                 <span className="text-zinc-900 font-medium">
                   {facilityType ? FACILITY_TYPE_LABELS[facilityType] : "—"}
                 </span>
               </div>
               <div className="flex gap-3">
-                <span className="text-zinc-400 w-32 flex-shrink-0">Square Footage</span>
+                <span className="text-zinc-500 w-32 flex-shrink-0">Square Footage</span>
                 <span className="text-zinc-900 font-medium">
                   {sqftRange ? SQFT_DISPLAY[sqftRange] : "—"}
                 </span>
               </div>
               {address && (
                 <div className="flex gap-3">
-                  <span className="text-zinc-400 w-32 flex-shrink-0">Address</span>
+                  <span className="text-zinc-500 w-32 flex-shrink-0">Address</span>
                   <span className="text-zinc-900 font-medium">{address}, {city} {zip}</span>
                 </div>
               )}
@@ -101,22 +159,22 @@ export default function CommercialReview() {
           <div className="rounded-xl border border-zinc-200 p-4 md:p-5">
             <div className="flex items-start justify-between mb-3">
               <span className="text-sm font-semibold text-zinc-900">Service Scope</span>
-              <Link href="/commercial/services" className="text-sm text-teal-600 font-medium hover:text-teal-700">
+              <Link href="/commercial/services" className="text-sm text-primary font-medium hover:text-primary-pressed">
                 Edit
               </Link>
             </div>
             <div className="flex flex-col gap-1.5 text-sm">
               <div className="flex gap-3">
-                <span className="text-zinc-400 w-32 flex-shrink-0">Floors</span>
+                <span className="text-zinc-500 w-32 flex-shrink-0">Floors</span>
                 <span className="text-zinc-900 font-medium">{floors}</span>
               </div>
               <div className="flex gap-3">
-                <span className="text-zinc-400 w-32 flex-shrink-0">Areas</span>
+                <span className="text-zinc-500 w-32 flex-shrink-0">Areas</span>
                 <span className="text-zinc-900 font-medium">{areaLabels || "—"}</span>
               </div>
               {commercialNotes && (
                 <div className="flex gap-3">
-                  <span className="text-zinc-400 w-32 flex-shrink-0">Special Notes</span>
+                  <span className="text-zinc-500 w-32 flex-shrink-0">Special Notes</span>
                   <span className="text-zinc-900 font-medium">{commercialNotes}</span>
                 </div>
               )}
@@ -127,36 +185,36 @@ export default function CommercialReview() {
           <div className="rounded-xl border border-zinc-200 p-4 md:p-5">
             <div className="flex items-start justify-between mb-3">
               <span className="text-sm font-semibold text-zinc-900">Contact &amp; Frequency</span>
-              <Link href="/commercial/contact" className="text-sm text-teal-600 font-medium hover:text-teal-700">
+              <Link href="/commercial/contact" className="text-sm text-primary font-medium hover:text-primary-pressed">
                 Edit
               </Link>
             </div>
             <div className="flex flex-col gap-1.5 text-sm">
               <div className="flex gap-3">
-                <span className="text-zinc-400 w-32 flex-shrink-0">Contact</span>
+                <span className="text-zinc-500 w-32 flex-shrink-0">Contact</span>
                 <span className="text-zinc-900 font-medium">{name}</span>
               </div>
               <div className="flex gap-3">
-                <span className="text-zinc-400 w-32 flex-shrink-0">Business</span>
+                <span className="text-zinc-500 w-32 flex-shrink-0">Business</span>
                 <span className="text-zinc-900 font-medium">{businessName}</span>
               </div>
               <div className="flex gap-3">
-                <span className="text-zinc-400 w-32 flex-shrink-0">Email</span>
+                <span className="text-zinc-500 w-32 flex-shrink-0">Email</span>
                 <span className="text-zinc-900 font-medium">{email}</span>
               </div>
               <div className="flex gap-3">
-                <span className="text-zinc-400 w-32 flex-shrink-0">Phone</span>
+                <span className="text-zinc-500 w-32 flex-shrink-0">Phone</span>
                 <span className="text-zinc-900 font-medium">{phone}</span>
               </div>
               <div className="flex gap-3">
-                <span className="text-zinc-400 w-32 flex-shrink-0">Frequency</span>
+                <span className="text-zinc-500 w-32 flex-shrink-0">Frequency</span>
                 <span className="text-zinc-900 font-medium">
                   {commercialFrequency ? COMMERCIAL_FREQUENCY_LABELS[commercialFrequency] : "—"}
                 </span>
               </div>
               {schedulePreference && (
                 <div className="flex gap-3">
-                  <span className="text-zinc-400 w-32 flex-shrink-0">Preference</span>
+                  <span className="text-zinc-500 w-32 flex-shrink-0">Preference</span>
                   <span className="text-zinc-900 font-medium">
                     {SCHEDULE_PREFERENCE_LABELS[schedulePreference]}
                   </span>
@@ -166,12 +224,27 @@ export default function CommercialReview() {
           </div>
 
           {/* Commitment */}
-          <div className="flex items-start gap-3 rounded-xl border border-teal-100 bg-teal-50 p-4">
-            <span className="text-teal-600 text-base mt-0.5" aria-hidden="true">🕐</span>
-            <p className="text-sm text-teal-700 font-medium">
+          <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+            <Clock className="size-5 flex-shrink-0 text-primary mt-px" aria-hidden="true" />
+            <p className="text-sm text-primary font-medium">
               We respond to every quote request within one business day.
             </p>
           </div>
+
+          <p className="text-sm text-zinc-500">{QUOTE_NOTE}</p>
+
+          <WhatHappensNext />
+
+          {error && (
+            <SubmitErrorAlert
+              title="Your request was not sent"
+              message={error}
+              onRetry={handleSubmit}
+              retrying={isSubmitting}
+            />
+          )}
+
+          <AgreementNote action="Submit Quote Request" />
         </div>
 
         {/* Desktop Submit + Back */}
@@ -185,7 +258,7 @@ export default function CommercialReview() {
           </Button>
           <Link
             href="/commercial/contact"
-            className="text-sm text-teal-700 hover:text-teal-800 transition-colors"
+            className="text-sm text-primary hover:text-primary-pressed transition-colors"
           >
             ← Back to Contact &amp; Frequency
           </Link>

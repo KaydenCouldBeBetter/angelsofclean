@@ -6,19 +6,24 @@ import Link from "next/link";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
+import FieldError from "@/components/booking/FieldError";
+import { PrivacyNote } from "@/components/booking/PolicyNotes";
+import HoneypotField from "@/components/booking/HoneypotField";
+import WhenHydrated from "@/components/booking/WhenHydrated";
 import { useBookingStore } from "@/store/bookingStore";
+import { FIELD_MAX_LENGTHS } from "@/lib/constants";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$/;
 
-export default function ContactPage() {
+function ContactPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo");
   const store = useBookingStore();
-  const { setStep5 } = store;
+  const { setStep5, setHoneypot } = store;
 
   useEffect(() => {
     if (!store.date) router.replace("/residential");
@@ -27,14 +32,22 @@ export default function ContactPage() {
   const [name, setName] = useState(store.name || "");
   const [email, setEmail] = useState(store.email || "");
   const [phone, setPhone] = useState(store.phone || "");
+  const [website, setWebsite] = useState("");
   const [touched, setTouched] = useState({ name: false, email: false, phone: false });
 
   const emailValid = EMAIL_REGEX.test(email.trim());
   const phoneValid = PHONE_REGEX.test(phone.trim());
   const isValid = name.trim() !== "" && emailValid && phoneValid;
 
+  const showNameError = touched.name && name.trim() === "";
+  const showEmailInvalid = touched.email && email.trim() !== "" && !emailValid;
+  const showEmailRequired = touched.email && email.trim() === "";
+  const showPhoneInvalid = touched.phone && phone.trim() !== "" && !phoneValid;
+  const showPhoneRequired = touched.phone && phone.trim() === "";
+
   function handleNext() {
     setStep5(name, email, phone);
+    setHoneypot(website);
     router.push("/residential/review");
   }
 
@@ -57,9 +70,9 @@ export default function ContactPage() {
         </div>
 
         <div className="flex flex-col gap-5">
-          {/* Full Name — full width */}
+          {/* Full name — full width */}
           <div className="flex flex-col gap-2">
-            <Label htmlFor="name">Full Name</Label>
+            <Label htmlFor="name">Full name</Label>
             <Input
               id="name"
               placeholder="Jane Doe"
@@ -67,17 +80,20 @@ export default function ContactPage() {
               onChange={(e) => setName(e.target.value)}
               onBlur={() => setTouched((t) => ({ ...t, name: true }))}
               autoComplete="name"
+              maxLength={FIELD_MAX_LENGTHS.name}
+              aria-invalid={showNameError}
+              aria-describedby={showNameError ? "name-error" : undefined}
               className="h-12"
             />
-            {touched.name && name.trim() === "" && (
-              <p className="text-xs text-red-500">Full name is required.</p>
+            {showNameError && (
+              <FieldError id="name-error">Full name is required.</FieldError>
             )}
           </div>
 
           {/* Email + Phone — stacked on mobile, side by side on desktop */}
           <div className="flex flex-col gap-5 lg:flex-row lg:gap-4">
             <div className="flex flex-col gap-2 lg:flex-1">
-              <Label htmlFor="email">Email Address</Label>
+              <Label htmlFor="email">Email address</Label>
               <Input
                 id="email"
                 type="email"
@@ -86,41 +102,55 @@ export default function ContactPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 onBlur={() => setTouched((t) => ({ ...t, email: true }))}
                 autoComplete="email"
+                maxLength={FIELD_MAX_LENGTHS.email}
+                aria-invalid={showEmailInvalid || showEmailRequired}
+                aria-describedby={
+                  showEmailInvalid || showEmailRequired ? "email-error" : undefined
+                }
                 className="h-12"
               />
-              {touched.email && email.trim() !== "" && !emailValid && (
-                <p className="text-xs text-red-500">Please enter a valid email address.</p>
+              {showEmailInvalid && (
+                <FieldError id="email-error">
+                  Please enter a valid email address.
+                </FieldError>
               )}
-              {touched.email && email.trim() === "" && (
-                <p className="text-xs text-red-500">Email is required.</p>
+              {showEmailRequired && (
+                <FieldError id="email-error">Email address is required.</FieldError>
               )}
             </div>
 
             <div className="flex flex-col gap-2 lg:flex-1">
-              <Label htmlFor="phone">Phone Number</Label>
+              <Label htmlFor="phone">Phone number</Label>
               <Input
                 id="phone"
                 type="tel"
-                placeholder="(315) 555-0100"
+                placeholder="(315) 555-0123"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
                 autoComplete="tel"
+                maxLength={FIELD_MAX_LENGTHS.phone}
                 inputMode="tel"
+                aria-invalid={showPhoneInvalid || showPhoneRequired}
+                aria-describedby={
+                  showPhoneInvalid || showPhoneRequired ? "phone-error" : undefined
+                }
                 className="h-12"
               />
-              {touched.phone && phone.trim() !== "" && !phoneValid && (
-                <p className="text-xs text-red-500">Please enter a valid 10-digit phone number.</p>
+              {showPhoneInvalid && (
+                <FieldError id="phone-error">
+                  Please enter a valid 10-digit phone number.
+                </FieldError>
               )}
-              {touched.phone && phone.trim() === "" && (
-                <p className="text-xs text-red-500">Phone number is required.</p>
+              {showPhoneRequired && (
+                <FieldError id="phone-error">Phone number is required.</FieldError>
               )}
             </div>
           </div>
 
-          <p className="text-xs text-zinc-400">
-            Your information is secure. We never share your data with third parties.
-          </p>
+          <HoneypotField value={website} onChange={setWebsite} />
+
+          <PrivacyNote />
         </div>
 
         {/* Desktop inline CTA */}
@@ -128,12 +158,12 @@ export default function ContactPage() {
           <button
             onClick={handleNext}
             disabled={!isValid}
-            className="w-[360px] h-14 rounded-xl bg-[#1a6b5a] text-white text-base font-semibold hover:bg-[#155a4b] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-[360px] h-14 rounded-xl bg-primary text-white text-base font-semibold hover:bg-primary-pressed transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {returnTo === "review" ? "Save & Return to Review" : "Next \u2192"}
           </button>
           <div className="mt-3">
-            <Link href="/residential/datetime" className="text-sm font-medium text-[#1a6b5a] hover:underline">
+            <Link href="/residential/datetime" className="text-sm font-medium text-primary hover:underline">
               &larr; Back
             </Link>
           </div>
@@ -145,5 +175,13 @@ export default function ContactPage() {
         <BottomCTA label={returnTo === "review" ? "Save & Return to Review" : "Next"} onClick={handleNext} disabled={!isValid} />
       </div>
     </>
+  );
+}
+
+export default function ContactPage() {
+  return (
+    <WhenHydrated>
+      <ContactPageContent />
+    </WhenHydrated>
   );
 }

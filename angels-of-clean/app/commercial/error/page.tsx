@@ -2,9 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import CommercialNav from "@/components/booking/CommercialNav";
+import { Info } from "lucide-react";
+import DesktopNavbar, { COMMERCIAL_NAV_TAGLINE } from "@/components/booking/DesktopNavbar";
 import { Button } from "@/components/ui/button";
 import { useBookingStore } from "@/store/bookingStore";
+import { BUSINESS_PHONE } from "@/lib/constants";
 
 export default function CommercialError() {
   const router = useRouter();
@@ -12,7 +14,7 @@ export default function CommercialError() {
 
   return (
     <>
-      <CommercialNav />
+      <DesktopNavbar tagline={COMMERCIAL_NAV_TAGLINE} />
 
       <div className="max-w-sm mx-auto md:max-w-3xl px-4 pt-8 pb-12 md:pt-14 md:px-8">
         {/* Error header */}
@@ -55,7 +57,7 @@ export default function CommercialError() {
         {/* Address entered */}
         {address && (
           <div className="rounded-xl border border-red-200 bg-red-50 p-4 mb-4">
-            <p className="text-xs font-medium text-red-500 mb-1 uppercase tracking-wide">
+            <p className="text-xs font-medium text-[#c0392b] mb-1 uppercase tracking-wide">
               Address entered
             </p>
             <p className="text-sm text-red-900 font-semibold">
@@ -69,12 +71,7 @@ export default function CommercialError() {
           role="alert"
           className="flex items-start gap-3 rounded-xl border border-zinc-200 bg-white p-4 mb-8"
         >
-          <span
-            className="text-zinc-400 mt-0.5 text-base flex-shrink-0"
-            aria-hidden="true"
-          >
-            ℹ️
-          </span>
+          <Info className="size-5 flex-shrink-0 text-zinc-500 mt-px" aria-hidden="true" />
           <div>
             <p className="text-sm text-zinc-700">
               We don&apos;t currently serve this ZIP code. For a custom commercial
@@ -82,10 +79,10 @@ export default function CommercialError() {
             </p>
             <p className="text-sm text-zinc-700 mt-2">
               <a
-                href="tel:+13155550100"
-                className="text-teal-600 font-medium hover:text-teal-700 transition-colors"
+                href={BUSINESS_PHONE.tel}
+                className="text-primary font-medium hover:text-primary-pressed transition-colors"
               >
-                (315) 555-0100
+                {BUSINESS_PHONE.display}
               </a>
             </p>
           </div>
@@ -101,7 +98,7 @@ export default function CommercialError() {
           </Button>
           <Link
             href="/"
-            className="text-sm text-teal-700 hover:text-teal-800 text-center md:text-left transition-colors"
+            className="text-sm text-primary hover:text-primary-pressed text-center md:text-left transition-colors"
           >
             ← Return to Homepage
           </Link>

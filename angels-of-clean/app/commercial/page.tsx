@@ -6,20 +6,25 @@ import Link from "next/link";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
-import CommercialNav from "@/components/booking/CommercialNav";
-import CommercialStepper from "@/components/booking/CommercialStepper";
+import DesktopNavbar, { COMMERCIAL_NAV_TAGLINE } from "@/components/booking/DesktopNavbar";
+import DesktopStepper from "@/components/booking/DesktopStepper";
+import Selectable, { SelectableGroup } from "@/components/booking/Selectable";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import WhenHydrated from "@/components/booking/WhenHydrated";
 import { useBookingStore } from "@/store/bookingStore";
 import {
+  BUSINESS_PHONE,
   COMMERCIAL_FACILITY_TYPES,
   COMMERCIAL_SQFT_RANGES,
+  COMMERCIAL_STEP_LABELS,
+  FIELD_MAX_LENGTHS,
   SERVICE_AREA_ZIPS,
 } from "@/lib/constants";
 import type { CommercialFacilityType, CommercialSqftRange } from "@/store/bookingStore";
 
-export default function CommercialStep1() {
+function CommercialStep1Content() {
   const router = useRouter();
   const store = useBookingStore();
 
@@ -55,8 +60,8 @@ export default function CommercialStep1() {
   return (
     <>
       {/* Desktop */}
-      <CommercialNav />
-      <CommercialStepper currentStep={1} />
+      <DesktopNavbar tagline={COMMERCIAL_NAV_TAGLINE} />
+      <DesktopStepper steps={COMMERCIAL_STEP_LABELS} currentStep={1} />
 
       {/* Mobile header */}
       <div className="md:hidden">
@@ -78,31 +83,23 @@ export default function CommercialStep1() {
           <Label className="text-sm font-semibold text-zinc-900 mb-3 block">
             Facility Type
           </Label>
-          <div
-            role="radiogroup"
+          <SelectableGroup
+            type="radio"
             aria-label="Facility type"
             className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-3"
           >
-            {COMMERCIAL_FACILITY_TYPES.map((ft) => {
-              const isSelected = facilityType === ft.id;
-              return (
-                <button
-                  key={ft.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={isSelected}
-                  onClick={() => setFacilityType(ft.id)}
-                  className={`h-12 md:h-12 rounded-xl border-2 text-sm font-medium transition-colors px-3 ${
-                    isSelected
-                      ? "border-teal-600 bg-teal-50 text-teal-700"
-                      : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
-                  }`}
-                >
-                  {ft.label}
-                </button>
-              );
-            })}
-          </div>
+            {COMMERCIAL_FACILITY_TYPES.map((ft) => (
+              <Selectable
+                key={ft.id}
+                value={ft.id}
+                selected={facilityType === ft.id}
+                onSelect={() => setFacilityType(ft.id)}
+                className="flex items-center justify-center h-12 px-3"
+              >
+                {ft.label}
+              </Selectable>
+            ))}
+          </SelectableGroup>
         </div>
 
         {/* Square Footage */}
@@ -110,32 +107,24 @@ export default function CommercialStep1() {
           <Label className="text-sm font-semibold text-zinc-900 mb-3 block">
             Approximate Square Footage
           </Label>
-          <div
-            role="radiogroup"
+          <SelectableGroup
+            type="radio"
             aria-label="Square footage range"
             className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3"
           >
-            {COMMERCIAL_SQFT_RANGES.map((range) => {
-              const isSelected = sqftRange === range.id;
-              return (
-                <button
-                  key={range.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={isSelected}
-                  onClick={() => setSqftRange(range.id)}
-                  className={`h-11 rounded-xl border-2 text-sm font-medium transition-colors px-2 md:px-3 ${
-                    isSelected
-                      ? "border-teal-600 bg-teal-700 text-white"
-                      : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300"
-                  }`}
-                >
-                  <span className="md:hidden">{range.shortLabel}</span>
-                  <span className="hidden md:inline">{range.label}</span>
-                </button>
-              );
-            })}
-          </div>
+            {COMMERCIAL_SQFT_RANGES.map((range) => (
+              <Selectable
+                key={range.id}
+                value={range.id}
+                selected={sqftRange === range.id}
+                onSelect={() => setSqftRange(range.id)}
+                className="flex items-center justify-center h-11 px-2 md:px-3"
+              >
+                <span className="md:hidden">{range.shortLabel}</span>
+                <span className="hidden md:inline">{range.label}</span>
+              </Selectable>
+            ))}
+          </SelectableGroup>
         </div>
 
         {/* Service Address */}
@@ -147,6 +136,7 @@ export default function CommercialStep1() {
               placeholder="Enter street address"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
+              maxLength={FIELD_MAX_LENGTHS.address}
               autoComplete="street-address"
               className="h-14"
             />
@@ -160,6 +150,7 @@ export default function CommercialStep1() {
                 placeholder="City"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
+                maxLength={FIELD_MAX_LENGTHS.city}
                 autoComplete="address-level2"
                 className="h-14"
               />
@@ -178,17 +169,22 @@ export default function CommercialStep1() {
                 className="h-14"
               />
               {touched.zip && zip.trim() !== "" && !zipValid && (
-                <p className="text-xs text-red-500" role="alert">
+                <p className="text-xs text-[#c0392b]" role="alert">
                   Enter a valid 5-digit ZIP code.
                 </p>
               )}
             </div>
           </div>
 
-          <p className="text-xs text-zinc-400">
-            We serve the greater Syracuse, NY area. Call{" "}
-            <span className="font-medium">(315) 555-0100</span> if you&apos;re
-            unsure about your location.
+          <p className="text-xs text-zinc-500">
+            We serve the greater Syracuse, NY area.{" "}
+            <a
+              href={BUSINESS_PHONE.tel}
+              className="text-zinc-700 font-medium hover:text-primary transition-colors"
+            >
+              Call us
+            </a>
+            {" "}if you&apos;re unsure about your location.
           </p>
         </div>
 
@@ -203,9 +199,9 @@ export default function CommercialStep1() {
           </Button>
           <Link
             href="/"
-            className="text-sm text-teal-700 hover:text-teal-800 transition-colors"
+            className="text-sm text-primary hover:text-primary-pressed transition-colors"
           >
-            ← Back to Commercial Services
+            ← Back to Home
           </Link>
         </div>
       </div>
@@ -215,5 +211,13 @@ export default function CommercialStep1() {
         <BottomCTA label="Next" onClick={handleNext} disabled={!isValid} />
       </div>
     </>
+  );
+}
+
+export default function CommercialStep1() {
+  return (
+    <WhenHydrated>
+      <CommercialStep1Content />
+    </WhenHydrated>
   );
 }

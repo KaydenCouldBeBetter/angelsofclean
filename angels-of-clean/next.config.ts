@@ -1,7 +1,17 @@
 import type { NextConfig } from "next";
+import { buildCsp } from "./lib/csp";
+
+// Admin pages get a per-request nonce policy from middleware.ts instead.
+const publicCsp = buildCsp({
+  isDev: process.env.NODE_ENV === "development",
+  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+});
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  logging: {
+    serverFunctions: false,
+  },
   async headers() {
     return [
       {
@@ -14,12 +24,12 @@ const nextConfig: NextConfig = {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",
           },
-          {
-            key: "Content-Security-Policy",
-            value:
-              "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com;",
-          },
         ],
+      },
+      {
+        // Everything except /admin and /admin/*.
+        source: "/:path((?!admin(?:/|$)).*)",
+        headers: [{ key: "Content-Security-Policy", value: publicCsp }],
       },
     ];
   },
