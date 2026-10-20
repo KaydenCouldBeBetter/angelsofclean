@@ -181,7 +181,7 @@ function JobCard({ info }: { info: EventContentArg }) {
       </div>
 
       {/* Service */}
-      <span className="text-[11px] text-zinc-500 truncate">{service}</span>
+      <span className="text-[11px] text-zinc-600 truncate">{service}</span>
 
       {/* Bottom row */}
       <div className="flex items-center justify-between gap-1 mt-auto pt-1">
@@ -190,7 +190,7 @@ function JobCard({ info }: { info: EventContentArg }) {
             <span className="w-4 h-4 rounded-full bg-[#1b3b36] text-white text-[8px] font-bold flex items-center justify-center flex-shrink-0">
               {employee.initials.slice(0, 2)}
             </span>
-            <span className="text-[10px] text-zinc-500 truncate">{employee.name}</span>
+            <span className="text-[10px] text-zinc-600 truncate">{employee.name}</span>
           </div>
         ) : (
           <span className="text-[10px] text-[#c0392b] font-medium">Unassigned</span>
@@ -271,6 +271,10 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
   const fcEvents = allJobs.map((job) => ({
     id: job.id,
     title: job.client,
+    // FullCalendar renders an event with a url as a real <a href>, so every job
+    // card is keyboard-focusable and opens its booking. Events aren't editable,
+    // so there is no drag gesture for the link to compete with.
+    url: `/admin/bookings/${job.id}`,
     // Offset-less New York wall-clock time — see timeZone="UTC" note above.
     start: nyWallClockISO(job.start),
     end: nyWallClockISO(job.end),
