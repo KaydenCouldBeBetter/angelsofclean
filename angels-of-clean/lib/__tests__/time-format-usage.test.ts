@@ -42,26 +42,14 @@ describe("time formatting goes through lib/datetime.ts", () => {
 // Wave 10C: dates too. A date label built with the browser's own zone (or a
 // zone-less `new Date("…T12:00:00")`) can show the wrong day, so every date the
 // customer sees goes through formatNy / lib/booking-date.ts.
-//
-// The date step still builds its month label with toLocaleDateString (finding
-// 12, fixed by wave 10B). Drop it from this list once 10B has merged.
-const DATE_STEP_PENDING_10B = [join("app", "residential", "datetime", "page.tsx")];
-const dateFiles = files.filter((f) => !DATE_STEP_PENDING_10B.includes(relative(ROOT, f)));
-
 describe("date formatting goes through lib/datetime.ts", () => {
-  it("only skips files that exist", () => {
-    for (const skipped of DATE_STEP_PENDING_10B) {
-      expect(files.map((f) => relative(ROOT, f))).toContain(skipped);
-    }
-  });
-
   it.each([
     ["toLocaleDateString", /toLocaleDateString/],
     ["toLocaleString", /toLocaleString/],
     // `${date}T12:00:00` is read in the browser's zone; `…T12:00:00Z` is not.
     ["a zone-less new Date(`…T12:00:00`)", /T12:00:00(?!Z)/],
   ])("no file outside lib/datetime.ts uses %s", (_name, pattern) => {
-    const offenders = dateFiles
+    const offenders = files
       .filter((f) => pattern.test(readFileSync(f, "utf8")))
       .map((f) => relative(ROOT, f));
     expect(offenders).toEqual([]);
