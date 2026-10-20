@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import ComingSoonButton from "@/components/booking/ComingSoonButton";
 import { BUSINESS_PHONE } from "@/lib/constants";
 
 // The commercial flow's only difference from the residential navbar.
@@ -31,9 +32,7 @@ export default function DesktopNavbar({ tagline }: DesktopNavbarProps) {
         <a href={BUSINESS_PHONE.tel} className="text-sm text-zinc-700">
           {BUSINESS_PHONE.display}
         </a>
-        <button className="h-9 px-5 rounded-md border border-zinc-300 text-sm font-medium text-zinc-700 hover:bg-zinc-50 transition-colors">
-          Log In
-        </button>
+        <ComingSoonButton className="h-9">Log In</ComingSoonButton>
       </div>
     </header>
   );

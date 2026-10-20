@@ -4,6 +4,7 @@ import WhatHappensNext from "@/components/booking/WhatHappensNext";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Clock } from "lucide-react";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
@@ -21,7 +22,7 @@ import {
   COMMERCIAL_FREQUENCY_LABELS,
   COMMERCIAL_STEP_LABELS,
   SCHEDULE_PREFERENCE_LABELS,
-  PRICE_NOTE,
+  QUOTE_NOTE,
 } from "@/lib/constants";
 import { submitCommercialQuote, type QuoteResult } from "@/app/actions/submitCommercialQuote";
 
@@ -224,13 +225,13 @@ export default function CommercialReview() {
 
           {/* Commitment */}
           <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
-            <span className="text-primary text-base mt-0.5" aria-hidden="true">🕐</span>
+            <Clock className="size-5 flex-shrink-0 text-primary mt-px" aria-hidden="true" />
             <p className="text-sm text-primary font-medium">
               We respond to every quote request within one business day.
             </p>
           </div>
 
-          <p className="text-sm text-zinc-500">{PRICE_NOTE}</p>
+          <p className="text-sm text-zinc-500">{QUOTE_NOTE}</p>
 
           <WhatHappensNext />
 
