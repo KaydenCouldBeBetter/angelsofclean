@@ -11,12 +11,18 @@ import Selectable, { SelectableGroup } from "@/components/booking/Selectable";
 import WhenHydrated from "@/components/booking/WhenHydrated";
 import { useBookingStore } from "@/store/bookingStore";
 import { TIME_SLOT_WINDOWS } from "@/lib/constants";
-import { addDaysToDateStr, isNyWallClockInFuture, nyTodayStr } from "@/lib/datetime";
+import {
+  addDaysToDateStr,
+  formatNy,
+  isNyWallClockInFuture,
+  nyTodayStr,
+} from "@/lib/datetime";
 
+// Evening slot removed per Figma F2 (B34). Only morning and afternoon are
+// offered; availability per day will be wired up in B10.
 const TIME_SLOTS = [
   { id: "morning" as const, label: TIME_SLOT_WINDOWS.morning.label, sub: TIME_SLOT_WINDOWS.morning.display },
   { id: "afternoon" as const, label: TIME_SLOT_WINDOWS.afternoon.label, sub: TIME_SLOT_WINDOWS.afternoon.display },
-  { id: "evening" as const, label: "Evening", sub: "Unavailable", disabled: true },
 ];
 
 const BOOKABLE_SLOTS = ["morning", "afternoon"] as const;
@@ -98,8 +104,9 @@ function DateTimePageContent() {
     router.push(returnTo === "review" ? "/residential/review" : "/residential/contact");
   }
 
-  // Get current month/year for header
-  const monthLabel = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  // Month label built through lib/datetime.ts so it reflects New York's current
+  // month, not the browser's (finding 12 / B8 leftovers).
+  const monthLabel = formatNy(new Date(), { month: "long", year: "numeric" });
 
   return (
     <>
@@ -116,24 +123,23 @@ function DateTimePageContent() {
 
         {store.dateExpired && <DateExpiredNotice />}
 
-        {/* Month navigation */}
+        {/* Month label — arrows removed until B10 (finding 9) */}
         <div className="hidden lg:flex items-center gap-2 text-sm font-medium text-zinc-700">
-          <button className="text-primary hover:underline">&larr;</button>
           <span>{monthLabel}</span>
-          <button className="text-primary hover:underline">&rarr;</button>
         </div>
 
-        {/* Date chips — mobile: horizontal scroll, desktop: 3-col grid */}
+        {/* Date chips — mobile: horizontal scroll with top padding so the focus
+            ring isn't clipped; desktop: 3-col grid (overflow visible). */}
         <SelectableGroup
           type="radio"
           aria-label="Select a date"
-          className="flex gap-2 overflow-x-auto pb-1 lg:grid lg:grid-cols-3 lg:overflow-visible lg:pb-0 lg:gap-3"
+          className="flex gap-2 overflow-x-auto pt-1 pb-1 lg:grid lg:grid-cols-3 lg:overflow-visible lg:pt-0 lg:pb-0 lg:gap-3"
         >
           {days.map((day) => (
             <Selectable
               key={day.full}
               value={day.full}
-              aria-label={`${day.label} the ${day.date}`}
+              aria-label={`${day.label} ${day.date}${day.isFull ? ", Full" : ""}`}
               selected={selectedDate === day.full}
               disabled={day.isFull}
               onSelect={() => handleSelectDate(day.full)}
@@ -159,12 +165,10 @@ function DateTimePageContent() {
             className="flex flex-col gap-3 lg:flex-row"
           >
             {TIME_SLOTS.map((slot) => {
-              // Evening is always disabled; morning/afternoon are disabled when
-              // their start has already passed for the selected date (cutoff).
-              const cutoffPassed =
-                slot.id !== "evening" &&
-                !isSlotBookable(selectedDate, slot.id as "morning" | "afternoon");
-              const disabled = slot.disabled || cutoffPassed;
+              // Morning/afternoon are disabled when their start has already
+              // passed for the selected date (same-day cutoff).
+              const cutoffPassed = !isSlotBookable(selectedDate, slot.id);
+              const disabled = cutoffPassed;
               const sub = cutoffPassed ? "Unavailable" : slot.sub;
               return (
                 <Selectable
@@ -172,7 +176,7 @@ function DateTimePageContent() {
                   value={slot.id}
                   selected={selectedSlot === slot.id && !disabled}
                   disabled={disabled}
-                  onSelect={() => setSelectedSlot(slot.id as "morning" | "afternoon")}
+                  onSelect={() => setSelectedSlot(slot.id)}
                   className="block w-full p-4 text-left lg:flex-1 lg:text-center"
                 >
                   <span

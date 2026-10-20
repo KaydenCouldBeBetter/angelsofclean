@@ -6,6 +6,7 @@ import Link from "next/link";
 import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
+import FieldError from "@/components/booking/FieldError";
 import { PrivacyNote } from "@/components/booking/PolicyNotes";
 import HoneypotField from "@/components/booking/HoneypotField";
 import DesktopNavbar, { COMMERCIAL_NAV_TAGLINE } from "@/components/booking/DesktopNavbar";
@@ -61,6 +62,12 @@ function CommercialStep3Content() {
     phoneValid &&
     frequency !== null;
 
+  const showNameError = touched.name && name.trim() === "";
+  const showEmailInvalid = touched.email && email.trim() !== "" && !emailValid;
+  const showEmailRequired = touched.email && email.trim() === "";
+  const showPhoneInvalid = touched.phone && phone.trim() !== "" && !phoneValid;
+  const showPhoneRequired = touched.phone && phone.trim() === "";
+
   function handleNext() {
     if (!isValid) return;
     store.setCommercialContact(name, businessName, email, phone, frequency, schedulePreference);
@@ -92,7 +99,7 @@ function CommercialStep3Content() {
         {/* Name row (stacked on mobile, 2-col on desktop) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 mb-4 md:mb-5">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="name">Contact Name</Label>
+            <Label htmlFor="name">Contact name</Label>
             <Input
               id="name"
               placeholder="Your full name"
@@ -101,14 +108,16 @@ function CommercialStep3Content() {
               onBlur={() => setTouched((t) => ({ ...t, name: true }))}
               autoComplete="name"
               maxLength={FIELD_MAX_LENGTHS.name}
+              aria-invalid={showNameError}
+              aria-describedby={showNameError ? "name-error" : undefined}
               className="h-14"
             />
-            {touched.name && name.trim() === "" && (
-              <p className="text-xs text-[#c0392b]" role="alert">Name is required.</p>
+            {showNameError && (
+              <FieldError id="name-error">Full name is required.</FieldError>
             )}
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="businessName">Business Name</Label>
+            <Label htmlFor="businessName">Business name</Label>
             <Input
               id="businessName"
               placeholder="Company or facility name"
@@ -124,7 +133,7 @@ function CommercialStep3Content() {
         {/* Email / Phone row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5 mb-6 md:mb-8">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="email">Email Address</Label>
+            <Label htmlFor="email">Email address</Label>
             <Input
               id="email"
               type="email"
@@ -134,16 +143,23 @@ function CommercialStep3Content() {
               onBlur={() => setTouched((t) => ({ ...t, email: true }))}
               autoComplete="email"
               maxLength={FIELD_MAX_LENGTHS.email}
+              aria-invalid={showEmailInvalid || showEmailRequired}
+              aria-describedby={
+                showEmailInvalid || showEmailRequired ? "email-error" : undefined
+              }
               className="h-14"
             />
-            {touched.email && !emailValid && (
-              <p className="text-xs text-[#c0392b]" role="alert">
-                {email.trim() === "" ? "Email is required." : "Enter a valid email address."}
-              </p>
+            {showEmailInvalid && (
+              <FieldError id="email-error">
+                Please enter a valid email address.
+              </FieldError>
+            )}
+            {showEmailRequired && (
+              <FieldError id="email-error">Email address is required.</FieldError>
             )}
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="phone">Phone Number</Label>
+            <Label htmlFor="phone">Phone number</Label>
             <Input
               id="phone"
               type="tel"
@@ -154,12 +170,19 @@ function CommercialStep3Content() {
               autoComplete="tel"
               maxLength={FIELD_MAX_LENGTHS.phone}
               inputMode="tel"
+              aria-invalid={showPhoneInvalid || showPhoneRequired}
+              aria-describedby={
+                showPhoneInvalid || showPhoneRequired ? "phone-error" : undefined
+              }
               className="h-14"
             />
-            {touched.phone && !phoneValid && (
-              <p className="text-xs text-[#c0392b]" role="alert">
-                {phone.trim() === "" ? "Phone is required." : "Enter a valid 10-digit phone number."}
-              </p>
+            {showPhoneInvalid && (
+              <FieldError id="phone-error">
+                Please enter a valid 10-digit phone number.
+              </FieldError>
+            )}
+            {showPhoneRequired && (
+              <FieldError id="phone-error">Phone number is required.</FieldError>
             )}
           </div>
         </div>
@@ -167,7 +190,7 @@ function CommercialStep3Content() {
         {/* Frequency */}
         <div className="mb-6 md:mb-8">
           <Label className="text-sm font-semibold text-zinc-900 mb-1 block">
-            Preferred Cleaning Frequency
+            Preferred cleaning frequency
           </Label>
           <p className="text-xs text-zinc-500 mb-3">
             Select how often you&apos;d like cleaning service.
@@ -194,7 +217,7 @@ function CommercialStep3Content() {
         {/* Schedule Preference */}
         <div className="mb-6 md:mb-8">
           <Label className="text-sm font-semibold text-zinc-900 mb-1 block">
-            Schedule Preference{" "}
+            Schedule preference{" "}
             <span className="font-normal text-zinc-500">(optional)</span>
           </Label>
           <p className="text-xs text-zinc-500 mb-3">

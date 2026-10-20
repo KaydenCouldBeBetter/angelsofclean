@@ -12,6 +12,7 @@ import SubmitErrorAlert from "@/components/booking/SubmitErrorAlert";
 import ServiceUnavailable from "@/components/booking/ServiceUnavailable";
 import { useBookingStore, useBookingHydrated } from "@/store/bookingStore";
 import { SERVICE_LABELS, FREQUENCY_LABELS, TIME_LABELS, PRICE_NOTE, formatBathroomCount } from "@/lib/constants";
+import { formatBookingDate } from "@/lib/booking-date";
 import { submitBooking, type BookingResult } from "@/app/actions/submitBooking";
 
 export default function ReviewPage() {
@@ -44,11 +45,7 @@ export default function ReviewPage() {
     }
   }, [hydrated, service, address, date, name, formStartedAt, dateExpired, router]);
 
-  const formattedDate = date
-    ? new Date(date + "T12:00:00").toLocaleDateString("en-US", {
-        weekday: "long", month: "long", day: "numeric", year: "numeric",
-      })
-    : "";
+  const formattedDate = formatBookingDate(date, "long");
 
   async function handleConfirm() {
     if (isSubmitting) return;
@@ -149,7 +146,7 @@ export default function ReviewPage() {
       <div className="flex flex-col gap-4 px-4 pt-4 pb-32 lg:px-0 lg:pb-0">
         <div className="mb-1">
           <h1 className="text-2xl font-bold leading-tight lg:text-3xl">
-            Review Your Booking
+            Review your booking
           </h1>
           <p className="text-sm text-zinc-500 mt-1">
             Please confirm everything looks correct before submitting.

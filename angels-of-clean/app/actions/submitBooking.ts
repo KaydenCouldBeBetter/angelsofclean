@@ -1,6 +1,13 @@
 "use server";
 
-import { BATHROOM_LIMITS, FIELD_MAX_LENGTHS, SERVICE_AREA_ZIPS, TIME_SLOT_WINDOWS } from "@/lib/constants";
+import {
+  BATHROOM_LIMITS,
+  FIELD_MAX_LENGTHS,
+  FREQUENCY_LABELS,
+  SERVICE_AREA_ZIPS,
+  SERVICE_LABELS,
+  TIME_SLOT_WINDOWS,
+} from "@/lib/constants";
 import { looksLikeBot, type BotCheck } from "@/lib/bot-check";
 import { allowPublicSubmission } from "@/lib/rate-limit";
 import { createServiceRoleClient } from "@/lib/supabase/service";
@@ -40,8 +47,8 @@ export interface BookingResult {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$/;
-const VALID_SERVICES = ["standard", "deep", "moveinout"];
-const VALID_FREQUENCIES = ["one-time", "weekly", "bi-weekly", "monthly"];
+const VALID_SERVICES = Object.keys(SERVICE_LABELS);
+const VALID_FREQUENCIES = Object.keys(FREQUENCY_LABELS);
 const VALID_TIME_SLOTS = Object.keys(TIME_SLOT_WINDOWS);
 
 const STRING_FIELDS = [

@@ -1,16 +1,17 @@
 import Link from "next/link";
+import WhatHappensNext from "@/components/booking/WhatHappensNext";
 
 interface ConfirmedWithoutDetailsProps {
   title: string;
-  referenceLabel: string;
   reference: string;
 }
 
 // Shown when a confirmation page is reloaded: the details were cleared from
 // this browser after the first view, but the reference is still in the URL.
+// The next steps and the phone number stay, since they're what a customer who
+// comes back to this page needs.
 export default function ConfirmedWithoutDetails({
   title,
-  referenceLabel,
   reference,
 }: ConfirmedWithoutDetailsProps) {
   return (
@@ -24,12 +25,13 @@ export default function ConfirmedWithoutDetails({
       </div>
       <h1 className="text-3xl font-bold text-zinc-900">{title}</h1>
       <p className="text-base font-semibold text-zinc-900">
-        {referenceLabel} {reference}
+        Reference number: {reference}
       </p>
       <p className="text-sm text-zinc-500">
         For your privacy, the details you entered are no longer stored in this browser. Keep
         this number for your records.
       </p>
+      <WhatHappensNext className="w-full text-left" />
       <Link
         href="/"
         className="mt-2 inline-flex h-12 items-center rounded-lg border border-zinc-300 px-6 text-sm font-medium text-zinc-900 hover:bg-zinc-50"

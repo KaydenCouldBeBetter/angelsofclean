@@ -90,7 +90,6 @@ describe("residential confirmation", () => {
     const text = render(<ResidentialConfirmation />);
 
     expect(text).toContain("AOC-1043");
-    expect(text).toContain("jane@example.com");
     expect(text).toContain("1 Test St");
     expect(useBookingStore.getState().email).toBe("");
     expect(useBookingStore.getState().address).toBe("");
@@ -105,8 +104,8 @@ describe("residential confirmation", () => {
 
     const text = render(<ResidentialConfirmation />);
 
-    expect(text).toContain("You're booked!");
-    expect(text).toContain("Confirmation # AOC-1043");
+    expect(text).toContain("Booking request received");
+    expect(text).toContain("Reference number: AOC-1043");
     expect(text).toContain("no longer stored in this browser");
     expect(replaceMock).not.toHaveBeenCalled();
   });
@@ -142,7 +141,7 @@ describe("commercial confirmation", () => {
     const text = render(<CommercialConfirmation />);
 
     expect(text).toContain("Quote request submitted!");
-    expect(text).toContain("Reference: COM-1007");
+    expect(text).toContain("Reference number: COM-1007");
     expect(replaceMock).not.toHaveBeenCalled();
   });
 

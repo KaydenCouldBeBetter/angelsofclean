@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BUSINESS_PHONE } from "@/lib/constants";
 import {
   LEGAL_FIELD_LABELS,
   LEGAL_INFO,
@@ -34,7 +35,10 @@ export function LegalValue({
   }
   if (field === "contactPhone") {
     return (
-      <a href={`tel:${value.replace(/[^\d+]/g, "")}`} className="text-primary underline underline-offset-2">
+      <a
+        href={value === BUSINESS_PHONE.display ? BUSINESS_PHONE.tel : `tel:${value.replace(/[^\d+]/g, "")}`}
+        className="text-primary underline underline-offset-2"
+      >
         {value}
       </a>
     );

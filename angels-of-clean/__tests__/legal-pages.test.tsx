@@ -15,6 +15,7 @@ vi.mock("next/link", () => ({
 }));
 
 import { LEGAL_INFO, isLegalDraft, missingLegalFields, type LegalInfo } from "@/lib/legal";
+import { BUSINESS_PHONE } from "@/lib/constants";
 import LegalPage, { ContactLines, LegalValue } from "@/components/legal/LegalPage";
 import { AgreementNote, PrivacyNote } from "@/components/booking/PolicyNotes";
 import PrivacyPage from "@/app/privacy/page";
@@ -101,6 +102,17 @@ describe("legal pages", () => {
     expect(text).toContain("Add to Google Calendar");
     expect(text).toMatch(/date, time and address to Google/);
     expect(text).toMatch(/Apple Calendar file is saved on your device/);
+  });
+
+  it("shows the real business phone, not a placeholder (finding 17)", () => {
+    for (const page of [<PrivacyPage key="p" />, <TermsPage key="t" />]) {
+      const text = render(page);
+      expect(text).not.toContain("[To be provided: business phone number]");
+      expect(text).toContain(BUSINESS_PHONE.display);
+      expect(hrefs()).toContain(BUSINESS_PHONE.tel);
+    }
+    expect(LEGAL_INFO.contactPhone).toBe(BUSINESS_PHONE.display);
+    expect(missingLegalFields(LEGAL_INFO)).not.toContain("business phone number");
   });
 
   it("terms of service renders with a draft banner and links to the privacy policy", () => {
