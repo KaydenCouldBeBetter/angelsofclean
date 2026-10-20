@@ -28,12 +28,14 @@ function Stepper({ label, value, min, max, step = 1, units, onChange }: StepperP
   return (
     <div className="flex flex-col gap-2">
       <Label id={`${label}-label`}>{label}</Label>
-      <div className="flex items-center border-2 border-zinc-200 rounded-xl overflow-hidden h-14" role="group" aria-labelledby={`${label}-label`}>
+      {/* overflow-hidden removed — it clipped the 2px focus ring on the end buttons.
+          The end buttons are individually rounded instead. */}
+      <div className="flex items-center border-2 border-zinc-200 rounded-xl h-14" role="group" aria-labelledby={`${label}-label`}>
         <button
           onClick={() => onChange(value - step)}
           disabled={value <= min}
           aria-label={`Decrease ${label}`}
-          className="w-14 h-full flex items-center justify-center text-xl font-semibold text-primary disabled:text-zinc-300 disabled:cursor-not-allowed hover:bg-zinc-50 transition-colors"
+          className="w-14 h-full flex items-center justify-center text-xl font-semibold text-primary disabled:text-zinc-300 disabled:cursor-not-allowed hover:bg-zinc-50 transition-colors rounded-l-xl"
         >
           −
         </button>
@@ -45,7 +47,7 @@ function Stepper({ label, value, min, max, step = 1, units, onChange }: StepperP
           onClick={() => onChange(value + step)}
           disabled={value >= max}
           aria-label={`Increase ${label}`}
-          className="w-14 h-full flex items-center justify-center text-xl font-semibold text-primary disabled:text-zinc-300 disabled:cursor-not-allowed hover:bg-zinc-50 transition-colors"
+          className="w-14 h-full flex items-center justify-center text-xl font-semibold text-primary disabled:text-zinc-300 disabled:cursor-not-allowed hover:bg-zinc-50 transition-colors rounded-r-xl"
         >
           +
         </button>

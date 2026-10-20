@@ -213,16 +213,16 @@ describe("the shared selectable control", () => {
     expect(container.querySelector('[role="radio"], [aria-checked]')).toBeNull();
   });
 
-  it("lets the two copies of a residential step hold their own selection", () => {
-    // The shell renders each step twice (mobile and desktop layouts). Their
-    // radios must not share a name, or checking one would uncheck the other.
+  it("renders each residential step once — no duplicate groups", () => {
+    // Finding 2: ResidentialShell previously rendered children twice (once for
+    // mobile, once for desktop), causing duplicate ids and unlabelled desktop
+    // fields. The shell now uses a single render with a responsive CSS layout.
     renderResidential("/residential", <ResidentialService />);
     const copies = container.querySelectorAll('[aria-label="Cleaning frequency"]');
-    expect(copies).toHaveLength(2);
-    const names = [...copies].map((c) => c.querySelector("input")!.name);
-    expect(names[0]).not.toBe(names[1]);
-    expect(checkedValues(copies[0] as HTMLElement)).toEqual(["one-time"]);
-    expect(checkedValues(copies[1] as HTMLElement)).toEqual(["one-time"]);
+    expect(copies).toHaveLength(1);
+    // The single group has a valid input name (SelectableGroup still generates
+    // one via useId so the radio set is self-contained).
+    expect(copies[0].querySelector("input")!.name).toBeTruthy();
   });
 });
 
