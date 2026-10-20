@@ -24,6 +24,15 @@ export const SERVICE_LABELS: Record<NonNullable<ServiceType>, string> = {
   moveinout: "Move-In / Move-Out",
 };
 
+// What each cleaning includes. The homepage cards and the residential step 1
+// cards both show these, so the wording lives here once.
+export const SERVICE_DESCRIPTIONS: Record<NonNullable<ServiceType>, string> = {
+  standard:
+    "Regular maintenance cleaning for your home. Includes dusting, vacuuming, mopping, and surface sanitizing.",
+  deep: "Thorough top-to-bottom cleaning. Includes baseboards, inside appliances, and detailed scrubbing.",
+  moveinout: "Complete property turnover clean. Every surface, every room, move-in ready.",
+};
+
 export const FREQUENCY_LABELS: Record<NonNullable<Frequency>, string> = {
   "one-time": "One-time",
   monthly: "Monthly",
@@ -59,6 +68,28 @@ export const TIME_LABELS: Record<NonNullable<TimeSlot>, string> = {
 // confirms the price after reviewing each booking, and nothing is charged online.
 export const PRICE_NOTE =
   "We\u2019ll confirm your price after reviewing your booking \u2014 you won\u2019t be charged anything online.";
+
+// The quote-request version of PRICE_NOTE, for the commercial review page: a
+// quote request is not a booking, and the office sends the quote afterwards.
+export const QUOTE_NOTE =
+  "We\u2019ll send your quote after reviewing your request \u2014 you won\u2019t be charged anything online.";
+
+// The references the server issues (`AOC-{booking_number}` in submitBooking.ts,
+// `COM-{quote_number}` in submitCommercialQuote.ts). The confirmation pages
+// print `?ref=` from the URL, so they accept only these shapes: anything else
+// is somebody's free text on our domain.
+export const BOOKING_REF_PATTERN = /^AOC-\d+$/;
+export const QUOTE_REF_PATTERN = /^COM-\d+$/;
+
+/** `value` if it looks like a booking reference the server issued, else null. */
+export function parseBookingRef(value: string | null): string | null {
+  return value !== null && BOOKING_REF_PATTERN.test(value) ? value : null;
+}
+
+/** `value` if it looks like a quote reference the server issued, else null. */
+export function parseQuoteRef(value: string | null): string | null {
+  return value !== null && QUOTE_REF_PATTERN.test(value) ? value : null;
+}
 
 // Longest accepted value for each free-text booking or quote field. Enforced on
 // the server (app/actions/) and mirrored as maxLength on the inputs.
@@ -151,26 +182,22 @@ export const COMMERCIAL_SERVICE_AREAS: { id: string; label: string }[] = [
   { id: "hallways",    label: "Stairwells & Hallways" },
 ];
 
+// The residential frequencies, then the two that only commercial customers
+// can pick. Labels come from FREQUENCY_LABELS so the casing can't drift.
+export const COMMERCIAL_FREQUENCY_LABELS: Record<NonNullable<CommercialFrequency>, string> = {
+  ...FREQUENCY_LABELS,
+  "2-3x": "2\u20133x / week",
+  daily: "Daily",
+};
+
 export const COMMERCIAL_FREQUENCIES: {
   id: NonNullable<CommercialFrequency>;
   label: string;
 }[] = [
-  { id: "one-time",  label: "One-time" },
-  { id: "monthly",   label: "Monthly" },
-  { id: "bi-weekly", label: "Bi-weekly" },
-  { id: "weekly",    label: "Weekly" },
-  { id: "2-3x",      label: "2–3x / Week" },
-  { id: "daily",     label: "Daily" },
+  ...FREQUENCY_OPTIONS,
+  { id: "2-3x", label: COMMERCIAL_FREQUENCY_LABELS["2-3x"] },
+  { id: "daily", label: COMMERCIAL_FREQUENCY_LABELS.daily },
 ];
-
-export const COMMERCIAL_FREQUENCY_LABELS: Record<NonNullable<CommercialFrequency>, string> = {
-  "one-time": "One-time",
-  monthly:    "Monthly",
-  "bi-weekly":"Bi-weekly",
-  weekly:     "Weekly",
-  "2-3x":     "2–3x / Week",
-  daily:      "Daily",
-};
 
 export const SCHEDULE_PREFERENCES: {
   id: NonNullable<SchedulePreference>;
