@@ -17,7 +17,7 @@ function redirectWithCookies(url: URL, from: NextResponse) {
   return response;
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Next.js reads the nonce from the request's CSP header while rendering and
   // stamps it on its own <script> tags. updateSession forwards these request
   // headers to the page.
