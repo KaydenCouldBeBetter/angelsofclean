@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Container from "@/components/site/Container";
+import MobileFooter from "@/components/site/MobileFooter";
 import {
   BUSINESS_ADDRESS,
   BUSINESS_EMAIL,
@@ -10,7 +11,8 @@ import {
 import { SERVICE_AREA_TOWNS } from "@/lib/homepage-content";
 import { FOOTER_LINKS } from "@/lib/site-content";
 
-// Footer shared by every marketing page. Figma sets the brand name and the
+// Footer shared by every marketing page. Phones get MobileFooter in place of
+// the column grid; the copyright and legal links below are shared. Figma sets the brand name and the
 // Facebook link in the standard brand teal on this dark background (2.7:1), so
 // they use the lighter --primary-on-dark teal (7.6:1) instead.
 const columnHeading = "text-sm font-semibold text-footer-heading";
@@ -19,9 +21,10 @@ const link = `${linkBase} text-footer-muted hover:text-white`;
 
 export default function SiteFooter() {
   return (
-    <footer className="mt-auto bg-ink pt-12 pb-8 md:pt-16">
-      <Container className="flex flex-col gap-8">
-        <div className="grid gap-8 md:grid-cols-2 md:gap-6 lg:flex lg:justify-between">
+    <footer className="mt-auto bg-ink pb-8 md:pt-16">
+      <MobileFooter />
+      <Container className="mt-7 flex flex-col gap-8 md:mt-0">
+        <div className="hidden gap-6 md:grid md:grid-cols-2 md:gap-6 lg:flex lg:justify-between">
           <div className="flex flex-col gap-8">
             <div className="flex flex-col gap-3 sm:max-w-56">
               <p className="text-xl font-semibold text-primary-on-dark">Angels of Clean</p>
@@ -50,11 +53,11 @@ export default function SiteFooter() {
               ))}
             </nav>
 
-            <section aria-labelledby="footer-service-areas" className="flex flex-col gap-3 text-center">
+            <section aria-labelledby="footer-service-areas" className="flex flex-col gap-3 lg:text-center">
               <h2 id="footer-service-areas" className={columnHeading}>
                 Service Areas
               </h2>
-              <ul className="grid grid-flow-col grid-rows-5 gap-x-6 gap-y-3 text-sm text-footer-muted">
+              <ul className="grid w-fit grid-flow-col grid-rows-5 gap-x-6 gap-y-3 text-sm text-footer-muted">
                 {SERVICE_AREA_TOWNS.map(({ town }) => (
                   <li key={town}>{town}</li>
                 ))}
