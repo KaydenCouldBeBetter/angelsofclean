@@ -142,6 +142,7 @@ function DateTimePageContent() {
               aria-label={`${day.label} ${day.date}${day.isFull ? ", Full" : ""}`}
               selected={selectedDate === day.full}
               disabled={day.isFull}
+              hideCheck
               onSelect={() => handleSelectDate(day.full)}
               className="flex flex-col items-center justify-center min-w-[52px] h-16 lg:h-[72px] flex-shrink-0"
             >

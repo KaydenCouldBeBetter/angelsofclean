@@ -60,6 +60,8 @@ interface SelectableProps {
   disabled?: boolean;
   /** Accessible name when the visible content isn't a good one. */
   "aria-label"?: string;
+  /** Hide the check mark; the solid fill alone marks the selected state. */
+  hideCheck?: boolean;
   /** Layout and size. Colours and the selected state come from here. */
   className?: string;
   children: React.ReactNode;
@@ -73,6 +75,7 @@ export default function Selectable({
   onSelect,
   disabled = false,
   "aria-label": ariaLabel,
+  hideCheck = false,
   className,
   children,
 }: SelectableProps) {
@@ -103,7 +106,7 @@ export default function Selectable({
         className="sr-only"
       />
       {children}
-      {selected && !disabled && (
+      {selected && !disabled && !hideCheck && (
         <svg
           aria-hidden="true"
           viewBox="0 0 12 10"

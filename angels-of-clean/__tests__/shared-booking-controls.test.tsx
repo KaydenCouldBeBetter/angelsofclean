@@ -69,7 +69,7 @@ const checkedValues = (el: HTMLElement) =>
 
 // What a screen reader gets: a real radio/checkbox that is checked, plus the
 // visual cue (solid fill and a check mark) on the same choice.
-function expectAnnouncedAndMarked(el: HTMLElement) {
+function expectAnnouncedAndMarked(el: HTMLElement, { check = true } = {}) {
   const checked = [...el.querySelectorAll("input")].filter((i) => i.checked);
   expect(checked.length).toBeGreaterThan(0);
   for (const input of checked) {
@@ -78,7 +78,9 @@ function expectAnnouncedAndMarked(el: HTMLElement) {
     expect(label.hasAttribute("data-selected")).toBe(true);
     expect(label.className).toContain("bg-primary");
     expect(label.className).toContain("text-white");
-    expect(label.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+    const svg = label.querySelector('svg[aria-hidden="true"]');
+    if (check) expect(svg).not.toBeNull();
+    else expect(svg).toBeNull();
   }
   const unchecked = [...el.querySelectorAll("input")].filter((i) => !i.checked && !i.disabled);
   for (const input of unchecked) {
@@ -166,7 +168,8 @@ describe("the shared selectable control", () => {
     renderResidential("/residential/datetime", <ResidentialDateTime />);
 
     expect(checkedValues(group("Select a date"))).toHaveLength(1);
-    expectAnnouncedAndMarked(group("Select a date"));
+    // Date chips are fill-only: no check mark.
+    expectAnnouncedAndMarked(group("Select a date"), { check: false });
     const slots = container.querySelector<HTMLElement>('[role="radiogroup"][aria-labelledby]')!;
     expect(checkedValues(slots)).toHaveLength(1);
     expectAnnouncedAndMarked(slots);
