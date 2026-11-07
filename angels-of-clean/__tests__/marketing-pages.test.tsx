@@ -109,6 +109,14 @@ describe("every marketing page", () => {
       expect(current.map((a) => a.textContent), link.href).toEqual([link.label]);
     }
   });
+
+  it.each(Object.keys(PAGES))("%s header offers both booking paths, commercial beside residential", (pathname) => {
+    render(pathname);
+    const bar = container.querySelector('header div.lg\\:flex a[href="/residential"]')!;
+    expect(clean(bar.textContent)).toBe("Book a cleaning");
+    expect(clean(bar.nextElementSibling?.textContent)).toBe("Get a commercial quote");
+    expect(bar.nextElementSibling?.getAttribute("href")).toBe("/commercial");
+  });
 });
 
 describe("navigation never leads to a page that isn't there", () => {
