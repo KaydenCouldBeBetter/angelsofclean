@@ -71,11 +71,11 @@ function CommercialStep2Content() {
         </p>
 
         {/* Floors stepper */}
-        <div className="mb-6 md:mb-8">
+        <div className="mb-6 md:mb-8 text-center md:text-left">
           <Label className="text-sm font-semibold text-zinc-900 mb-3 block">
             Number of Floors
           </Label>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center justify-center md:justify-start gap-4">
             <button
               type="button"
               onClick={() => setFloors((f) => Math.max(1, f - 1))}
