@@ -16,6 +16,14 @@ export const BUSINESS_PHONE = {
   tel: "tel:+13155161266",
 } as const;
 
+// Contact details shown on the marketing site (header, footer, Areas page).
+// The hours come from angelsofcleancny.com (Nov 2026); the owner still has to
+// confirm them, because the business's Facebook page says "Always open".
+export const BUSINESS_EMAIL = "angelsofclean@gmail.com";
+export const BUSINESS_ADDRESS = "Liverpool, NY 13088";
+export const BUSINESS_HOURS = ["Mon–Fri: 7:30 AM – 5:00 PM", "Sat: 8:00 AM – 3:30 PM", "Sun: Closed"] as const;
+export const BUSINESS_FACEBOOK_URL = "https://www.facebook.com/296394607384888";
+
 // ── Residential ──────────────────────────────────────────────────────────────
 
 export const SERVICE_LABELS: Record<NonNullable<ServiceType>, string> = {
