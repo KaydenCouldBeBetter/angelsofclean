@@ -88,7 +88,7 @@ function ResidentialPageContent() {
           <SelectableGroup
             type="radio"
             aria-label="Cleaning frequency"
-            className="flex gap-2 flex-wrap"
+            className="flex flex-wrap justify-center gap-3 lg:justify-start lg:gap-2"
           >
             {FREQUENCY_OPTIONS.map((freq) => (
               <Selectable
@@ -96,7 +96,7 @@ function ResidentialPageContent() {
                 value={freq.id}
                 selected={selectedFrequency === freq.id}
                 onSelect={() => setSelectedFrequency(freq.id)}
-                className="flex min-h-11 items-center justify-center px-6 py-2 lg:py-2.5"
+                className="flex min-h-12 items-center justify-center px-7 py-3 text-base lg:min-h-11 lg:px-6 lg:py-2.5"
               >
                 {freq.label}
               </Selectable>
