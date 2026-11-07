@@ -321,7 +321,6 @@ describe("mobile frequency chips (finding 23)", () => {
 describe("one source for service and frequency labels (finding 14)", () => {
   it.each([
     "components/booking/BookingSummary.tsx",
-    "components/home/Services.tsx",
     "app/residential/page.tsx",
     "app/actions/submitBooking.ts",
   ])("%s does not retype them", (file) => {

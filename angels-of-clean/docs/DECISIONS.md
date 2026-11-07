@@ -16,7 +16,7 @@ Extracted from the Claude references directory (`ClaudeReferences/`), project me
 ## Design Decisions
 
 ### Dual-path homepage (HeroSplit)
-Residential and commercial have different decision-making structures. Residential is a household impulse buy with instant self-service booking. Commercial is a single SMB decision-maker who needs a quote, not a price. A single homepage presents exactly two CTAs — "Book a cleaning" and "Get a commercial quote" (`components/home/Hero.tsx`) — satisfying Hick's Law (minimize choices). _(Corrected 2026-10-20: this said "Book Now" and "Get a Quote", which the code never used.)_
+Residential and commercial have different decision-making structures. Residential is a household impulse buy with instant self-service booking. Commercial is a single SMB decision-maker who needs a quote, not a price. A single homepage presents exactly two CTAs — "Book a cleaning" and "Get a commercial quote" (`components/home/Hero.tsx`) — satisfying Hick's Law (minimize choices). The wording stays as it is even though the 2026-11 Figma marketing frames say "Get a Quote" (owner decision 2026-11-06); every button on the marketing pages leads to one of the same two paths. _(Corrected 2026-10-20: this said "Book Now" and "Get a Quote", which the code never used.)_
 
 ### No registration before booking
 26% of users abandon when forced to create an account before purchasing (Baymard Institute, 2023). Adopted the Square Appointments pattern: optional account creation *after* booking confirmation, never before.
@@ -74,6 +74,15 @@ There is no domain yet, so there is no custom SMTP and no outbound email. Bookin
 
 ### Homepage ships with labelled placeholders (2026-10-19, B27)
 Reviews, trust facts and team photos on the homepage stay as obviously fake entries with a visible "Placeholder" label until the owner supplies real ones (`lib/homepage-content.ts`).
+
+### Marketing website: four pages from Figma, shipped with real reviews (2026-11-06, B27)
+The homepage follows the Figma "Marketing Website" page (`661:70`), and Services, About and Areas & Reviews are built from it too, so the header and footer never link to a missing page. Contact is the `#contact` section of Areas & Reviews. Decisions made while building it:
+- **Real content.** The four reviews, the AHCA / "10th year" claims and the footer hours are copied from the owner's existing site and ship as real. The hours have not been confirmed (Facebook says "Always open"), so confirm them before launch. Still placeholders, each labelled: the hero and About photos, the four team members and the service area map.
+- **Labels and button style.** Figma's second hero button reads "Get a Quote" with a coral outline (#fc6367, 2.95:1 on white, under the 3:1 WCAG 2.2 AA needs). The site keeps "Get a commercial quote" and a grey 2px outline (4.8:1).
+- **Footer teal.** Figma sets the brand name and Facebook link in the standard teal on the dark footer (2.7:1); the site uses the lighter `--primary-on-dark` teal (7.6:1).
+- **Fonts stay Geist**, not Figma's Inter (see "Geist font throughout").
+- **Marketing names differ from the booking flow.** The Services page says "Maintenance Clean" and "Move-In / Move-Out & Realtor Special" (Figma), while the booking flow says "Standard Clean" and "Move-In / Move-Out" (`lib/constants.ts`). Pick one set before launch.
+- **Estimates.** "Get an Estimate" goes to the contact section; there is no estimate form.
 
 ### Public signups stay on (2026-10-15)
 Customer accounts are planned, so Supabase public signups remain enabled. Because any visitor can therefore hold a signed-in session, admin access never rests on "signed in" alone: it needs `app_metadata.role = 'admin'`, checked in the proxy, in `requireAdmin()` and in RLS.

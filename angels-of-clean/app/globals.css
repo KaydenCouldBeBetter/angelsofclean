@@ -36,6 +36,13 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-pressed: var(--primary-pressed);
   --color-primary: var(--primary);
+  --color-primary-on-dark: var(--primary-on-dark);
+  --color-surface-tint: var(--surface-tint);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-footer-muted: var(--footer-muted);
+  --color-footer-heading: var(--footer-heading);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -61,7 +68,16 @@
      hex or a teal-* class (lib/__tests__/brand-token-usage.test.ts enforces it). */
   --primary: #1a6b5a;
   --primary-pressed: #124d41;
+  /* Brand teal for text on the dark footer: #1a6b5a is only 2.7:1 there. */
+  --primary-on-dark: #3ebfb5;
   --primary-foreground: oklch(0.985 0 0);
+  /* Marketing site surfaces and text (Figma "Marketing Website" page). */
+  --surface-tint: #f7ffff;
+  --line: #e2e8e6;
+  --ink: #1c1c1e;
+  --ink-muted: #5c5c5e;
+  --footer-muted: #8c8c8c;
+  --footer-heading: #d9d9d9;
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
