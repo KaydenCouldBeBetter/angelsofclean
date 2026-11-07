@@ -94,6 +94,22 @@ describe("homepage (Figma Marketing — Home)", () => {
     expect(links().some((a) => a.getAttribute("href")?.startsWith("/admin"))).toBe(false);
   });
 
+  it("puts Get a commercial quote right after Book a cleaning in the header, so a business never lands in the home flow", () => {
+    const header = container.querySelector("header")!;
+    const named = (name: string) =>
+      [...header.querySelectorAll("a")].filter((a) => a.textContent?.replace(/\s+/g, " ").trim() === name);
+
+    // One in the desktop bar and one in the mobile menu, each beside its Book a cleaning.
+    expect(named("Book a cleaning")).toHaveLength(2);
+    expect(named("Get a commercial quote")).toHaveLength(2);
+    named("Book a cleaning").forEach((book, i) => {
+      const quote = named("Get a commercial quote")[i];
+      expect(book.getAttribute("href")).toBe("/residential");
+      expect(quote.getAttribute("href")).toBe("/commercial");
+      expect(book.nextElementSibling).toBe(quote);
+    });
+  });
+
   it("marks Home as the current page in the header", () => {
     const current = [...container.querySelectorAll('header [aria-current="page"]')];
     expect(current.map((a) => a.textContent)).toEqual(["Home", "Home"]);
@@ -191,6 +207,7 @@ describe("mobile menu", () => {
       "Areas & Reviews",
       BUSINESS_PHONE.display,
       "Book a cleaning",
+      "Get a commercial quote",
     ].map((t) => (t === BUSINESS_PHONE.display ? `Call us: ${t}` : t)));
 
     act(() => {
