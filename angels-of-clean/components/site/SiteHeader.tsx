@@ -43,7 +43,7 @@ export default function SiteHeader() {
     );
 
   return (
-    <header className="border-b border-line bg-white">
+    <header className="sticky top-0 z-40 border-b border-line bg-white lg:static">
       <Container className="flex h-14 items-center justify-between lg:h-18">
         <Link href="/" className="flex items-center">
           <Image
@@ -102,7 +102,7 @@ export default function SiteHeader() {
         </button>
       </Container>
 
-      <nav id="mobile-nav" aria-label="Mobile" hidden={!open} className="border-t border-line bg-white lg:hidden">
+      <nav id="mobile-nav" aria-label="Mobile" hidden={!open} className="max-h-[calc(100dvh-3.5rem)] overflow-y-auto border-t border-line bg-white lg:hidden">
         <Container className="flex flex-col py-2">
           {NAV_LINKS.map((link) => (
             <Link
