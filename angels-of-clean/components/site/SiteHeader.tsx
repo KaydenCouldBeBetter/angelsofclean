@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, Phone, X } from "lucide-react";
 import Container from "@/components/site/Container";
 import CtaLink from "@/components/site/CtaLink";
 import { BUSINESS_PHONE } from "@/lib/constants";
@@ -12,7 +12,8 @@ import { NAV_LINKS } from "@/lib/site-content";
 import { cn } from "@/lib/utils";
 
 // Marketing header (Figma "Marketing — … — Desktop / Mobile"): logo, the four
-// pages, the phone number and the booking button; a menu button below 1024px.
+// pages, the phone number and the two booking paths (a home cleaning, a
+// commercial quote); a menu button below 1024px.
 function isCurrent(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 }
@@ -55,7 +56,7 @@ export default function SiteHeader() {
           />
         </Link>
 
-        <nav aria-label="Main" className="hidden items-center gap-8 lg:flex">
+        <nav aria-label="Main" className="hidden items-center gap-5 lg:flex xl:gap-8">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
@@ -68,17 +69,24 @@ export default function SiteHeader() {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-6 lg:flex">
+        <div className="hidden items-center gap-3 lg:flex xl:gap-6">
+          {/* Two buttons need the room the number takes, so from 1024px to 1279px it is an icon. */}
           <a
             href={BUSINESS_PHONE.tel}
-            className="inline-flex min-h-11 items-center text-sm text-ink-muted hover:text-primary"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center text-sm text-ink-muted hover:text-primary"
           >
+            <Phone aria-hidden="true" className="size-5 xl:hidden" />
             <span className="sr-only">Call us: </span>
-            {BUSINESS_PHONE.display}
+            <span className="sr-only xl:not-sr-only">{BUSINESS_PHONE.display}</span>
           </a>
-          <CtaLink href="/residential" size="nav">
-            Book a cleaning
-          </CtaLink>
+          <div className="flex items-center gap-3">
+            <CtaLink href="/residential" size="nav" className="px-4 xl:px-6">
+              Book a cleaning
+            </CtaLink>
+            <CtaLink href="/commercial" tone="outline" size="nav" className="px-4 xl:px-6">
+              Get a commercial quote
+            </CtaLink>
+          </div>
         </div>
 
         <button
@@ -111,9 +119,12 @@ export default function SiteHeader() {
             <span className="sr-only">Call us: </span>
             {BUSINESS_PHONE.display}
           </a>
-          <div className="py-3">
+          <div className="flex flex-col gap-3 py-3">
             <CtaLink href="/residential" size="hero">
               Book a cleaning
+            </CtaLink>
+            <CtaLink href="/commercial" tone="outline" size="hero">
+              Get a commercial quote
             </CtaLink>
           </div>
         </Container>
