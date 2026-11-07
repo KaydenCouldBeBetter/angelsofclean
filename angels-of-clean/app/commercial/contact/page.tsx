@@ -198,7 +198,7 @@ function CommercialStep3Content() {
           <SelectableGroup
             type="radio"
             aria-label="Cleaning frequency"
-            className="flex flex-wrap gap-2"
+            className="grid grid-cols-2 gap-2 md:flex md:flex-wrap"
           >
             {COMMERCIAL_FREQUENCIES.map((freq) => (
               <Selectable
@@ -206,7 +206,7 @@ function CommercialStep3Content() {
                 value={freq.id}
                 selected={frequency === freq.id}
                 onSelect={() => setFrequency(freq.id)}
-                className="flex items-center justify-center h-11 px-6"
+                className="flex items-center justify-center h-11 w-full px-3 text-center md:w-auto md:px-6"
               >
                 {freq.label}
               </Selectable>
