@@ -283,8 +283,8 @@ describe("Areas & Reviews page (Figma Marketing — Areas)", () => {
     expect(contact.querySelector('a[href="/commercial"]')?.textContent).toBe("Request a Commercial Quote");
   });
 
-  it("labels the map placeholder, visibly and for screen readers", () => {
-    const map = main().querySelector('[role="img"][aria-label="Service area map"]')!;
+  it("has a labelled service area map region, with the Placeholder label only while the flag is set", () => {
+    const map = main().querySelector('[role="region"][aria-label="Service area map"]')!;
     expect(map).not.toBeNull();
     expect(map.textContent?.includes("Placeholder")).toBe(SERVICE_AREA_MAP.placeholder);
   });

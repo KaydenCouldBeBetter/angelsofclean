@@ -10,8 +10,8 @@
 //     that describes the photo (who and what, not "photo"), and for a team
 //     member set `name` and `role`. Use a real person's name only with their
 //     consent.
-//   - Service area map: set `SERVICE_AREA_MAP.placeholder` to false once a real
-//     map is added in components/site/ServiceAreaMap.tsx.
+//   - Service area map: done. components/site/ServiceAreaMap.tsx draws a real
+//     OpenStreetMap map from SERVICE_AREA_COORDS below.
 //   - Reviews: only real reviews, in the customer's own words.
 //   - Then set `placeholder: false` on that entry. The "Placeholder" label goes
 //     away on its own. `hasPlaceholders` turns false once none are left.
@@ -126,7 +126,7 @@ export const TEAM_MEMBERS: TeamMemberContent[] = [1, 2, 3, 4].map((n) => ({
 }));
 
 /** The Areas page shows a grey "Service Area Map" box until a real map is built. */
-export const SERVICE_AREA_MAP = { placeholder: true };
+export const SERVICE_AREA_MAP = { placeholder: false };
 
 export interface PlaceholderEntry {
   section: "reviews" | "trust badges" | "photos" | "team photos" | "service area map";
@@ -171,3 +171,21 @@ export const SERVICE_AREA_TOWNS: { town: string; note: string; zips: string[] }[
   { town: "Manlius", note: "East side coverage", zips: ["13104"] },
   { town: "Marcellus", note: "Southwest reach", zips: ["13108"] },
 ];
+
+// Where each town's pin goes on the Areas page map (latitude, longitude, in
+// degrees). Approximate town centres, good enough for a pin at this zoom.
+// Keyed by the `town` names above; a test fails if one is missing.
+export const SERVICE_AREA_COORDS: Record<string, [lat: number, lng: number]> = {
+  Cicero: [43.1723, -76.1166],
+  Camillus: [43.0412, -76.305],
+  Syracuse: [43.0481, -76.1474],
+  Liverpool: [43.1065, -76.2177],
+  Baldwinsville: [43.1587, -76.333],
+  Brewerton: [43.2395, -76.1397],
+  Solvay: [43.0587, -76.2102],
+  Manlius: [43.0003, -75.9763],
+  Marcellus: [42.984, -76.338],
+};
+
+/** The town the company is based in. Its pin is drawn larger on the map. */
+export const HOME_BASE_TOWN = "Liverpool";
