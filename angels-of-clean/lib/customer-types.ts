@@ -44,6 +44,43 @@ export interface ServicePlan {
   statusLabel: string;
 }
 
+// What an invoice's chip says. "overdue" isn't stored: it is an open invoice
+// whose due day (a New York calendar day) has passed.
+export type InvoiceDisplay = "open" | "overdue" | "paid" | "void";
+
+export interface Invoice {
+  id: string;
+  /** "INV-1000" */
+  number: string;
+  description: string;
+  /** Whole US cents, as stored; never a float. */
+  amountCents: number;
+  /** "$125.00" */
+  amountLabel: string;
+  /** "YYYY-MM-DD", a New York calendar day. */
+  issuedOn: string;
+  /** "November 2, 2026" */
+  issuedLabel: string;
+  dueOn: string;
+  dueLabel: string;
+  status: "open" | "paid" | "void";
+  /** "December 5, 2026" once paid, otherwise null. */
+  paidLabel: string | null;
+}
+
+export interface BilledInvoice extends Invoice {
+  display: InvoiceDisplay;
+}
+
+/** An invoice's own page also shows the payment note and what it was for. */
+export interface InvoiceDetail extends Invoice {
+  paymentNote: string | null;
+  /** The visit it bills for, when it is for one. */
+  visit: { id: string; label: string } | null;
+  /** "COM-1007", when it is for a commercial quote. */
+  quoteRef: string | null;
+}
+
 export interface CustomerAccount {
   id: string;
   name: string;

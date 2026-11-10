@@ -5,6 +5,8 @@ const STYLES = {
   long: { weekday: "long", month: "long", day: "numeric", year: "numeric" },
   // "Mon, Nov 2": the booking summary sidebar.
   short: { weekday: "short", month: "short", day: "numeric" },
+  // "November 2, 2026": invoice and payment dates in the customer portal.
+  medium: { month: "long", day: "numeric", year: "numeric" },
 } as const satisfies Record<string, Intl.DateTimeFormatOptions>;
 
 /**

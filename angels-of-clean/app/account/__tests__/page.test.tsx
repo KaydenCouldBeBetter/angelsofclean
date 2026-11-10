@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { CustomerAccount, ServicePlan, Visit } from "@/lib/customer-types";
+import type { CustomerAccount, Invoice, ServicePlan, Visit } from "@/lib/customer-types";
 
 vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => (
@@ -16,7 +16,9 @@ const claimCustomerRecords = vi.fn(() => Promise.resolve());
 const getCustomerAccount = vi.fn<() => Promise<Q<CustomerAccount | null>>>();
 const getCustomerVisits = vi.fn<(id: string) => Promise<Q<Visit[]>>>();
 const getServicePlans = vi.fn<(id: string) => Promise<Q<ServicePlan[]>>>();
+const getCustomerInvoices = vi.fn<(id: string) => Promise<Q<Invoice[]>>>();
 vi.mock("@/lib/supabase/customer-queries", () => ({
+  getCustomerInvoices: (id: string) => getCustomerInvoices(id),
   claimCustomerRecords: () => claimCustomerRecords(),
   getCustomerAccount: () => getCustomerAccount(),
   getCustomerVisits: (id: string) => getCustomerVisits(id),
@@ -56,6 +58,23 @@ const PLAN: ServicePlan = {
   statusLabel: "Active",
 };
 
+function invoice(over: Partial<Invoice>): Invoice {
+  return {
+    id: "i-1",
+    number: "INV-1007",
+    description: "Standard clean",
+    amountCents: 12500,
+    amountLabel: "$125.00",
+    issuedOn: "2026-11-02",
+    issuedLabel: "November 2, 2026",
+    dueOn: "2026-11-30",
+    dueLabel: "November 30, 2026",
+    status: "open",
+    paidLabel: null,
+    ...over,
+  };
+}
+
 const render = async (searchParams: { invite?: string } = {}) =>
   renderToStaticMarkup(await AccountOverviewPage({ searchParams: Promise.resolve(searchParams) }));
 
@@ -67,6 +86,7 @@ beforeEach(() => {
   getCustomerAccount.mockResolvedValue({ ok: true, data: ACCOUNT });
   getCustomerVisits.mockResolvedValue({ ok: true, data: [] });
   getServicePlans.mockResolvedValue({ ok: true, data: [] });
+  getCustomerInvoices.mockResolvedValue({ ok: true, data: [] });
 });
 afterEach(() => vi.useRealTimers());
 
@@ -144,12 +164,67 @@ describe("account overview", () => {
     expect(html).toContain("tel:");
   });
 
-  it("never shows a price, a crew or entry instructions", async () => {
+  it("never shows a price on the visit and plan cards, or a crew or entry instructions", async () => {
     getCustomerVisits.mockResolvedValue({ ok: true, data: [visit({})] });
     getServicePlans.mockResolvedValue({ ok: true, data: [PLAN] });
     const html = await render();
     expect(html).not.toMatch(/\$\d/);
     expect(html).not.toMatch(/crew|cleaner|entry instructions|door code/i);
+  });
+
+  describe("billing card", () => {
+    beforeEach(() => {
+      getCustomerVisits.mockResolvedValue({ ok: true, data: [visit({})] });
+    });
+
+    it("shows what is owed, how many invoices are open, and how many are past due", async () => {
+      getCustomerInvoices.mockResolvedValue({
+        ok: true,
+        data: [
+          invoice({ id: "a", amountCents: 12500, dueOn: "2026-11-30" }),
+          invoice({ id: "b", amountCents: 7550, dueOn: "2026-10-30" }),
+          invoice({ id: "c", amountCents: 99900, status: "paid", paidLabel: "x" }),
+        ],
+      });
+      const html = await render();
+      const card = html.slice(html.indexOf('id="billing"'));
+      expect(card).toContain("$200.50");
+      expect(card).toContain("2 open invoices");
+      expect(card).toContain("1 past due");
+      expect(card).toContain('href="/account/billing"');
+    });
+
+    it("says paid up when nothing is open", async () => {
+      getCustomerInvoices.mockResolvedValue({ ok: true, data: [invoice({ status: "paid", paidLabel: "x" })] });
+      const html = await render();
+      expect(html).toContain("$0.00");
+      expect(html).toContain("all paid up");
+    });
+
+    it("leaves the card out when there are no invoices", async () => {
+      expect(await render()).not.toContain('id="billing"');
+    });
+
+    it("shows a billing outage on its own, without hiding the visits", async () => {
+      getCustomerInvoices.mockResolvedValue({ ok: false });
+      const html = await render();
+      expect(html).toContain("We couldn&#x27;t load your billing");
+      expect(html).toContain("Next visit");
+      expect(html).toContain("Tuesday, November 24, 2026");
+    });
+
+    it("reads invoices for this account only", async () => {
+      await render();
+      expect(getCustomerInvoices).toHaveBeenCalledWith("acc-1");
+    });
+
+    it("still shows billing to an account with an invoice but no visits or plan yet", async () => {
+      getCustomerVisits.mockResolvedValue({ ok: true, data: [] });
+      getCustomerInvoices.mockResolvedValue({ ok: true, data: [invoice({})] });
+      const html = await render();
+      expect(html).not.toContain("No bookings yet");
+      expect(html).toContain("$125.00");
+    });
   });
 
   it("says it is a connection problem, not an empty list, when a query fails", async () => {

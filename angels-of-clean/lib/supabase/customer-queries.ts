@@ -10,9 +10,17 @@ import {
 } from "@/lib/constants";
 import { formatBookingDate } from "@/lib/booking-date";
 import { formatNyTimeRange } from "@/lib/datetime";
+import { formatCents } from "@/lib/money";
 import { PLAN_STATUS_LABEL } from "@/lib/customer-status";
-import type { CustomerAccount, ServicePlan, Visit, VisitDetail } from "@/lib/customer-types";
-import type { BookingRow, ServicePlanRow } from "./types";
+import type {
+  CustomerAccount,
+  Invoice,
+  InvoiceDetail,
+  ServicePlan,
+  Visit,
+  VisitDetail,
+} from "@/lib/customer-types";
+import type { BookingRow, InvoiceRow, ServicePlanRow } from "./types";
 
 // The customer portal's reads. They run as the signed-in customer, so RLS
 // (private.is_account_member on every customer policy) already limits them to
@@ -36,6 +44,11 @@ const VISIT_COLUMNS =
   "id,booking_number,service_type,frequency,address,city,zip,bedrooms,bathrooms,scheduled_date,start_at,end_at,status,plan_id" as const;
 // The customer's own notes are shown on a visit's own page only.
 const VISIT_DETAIL_COLUMNS = `${VISIT_COLUMNS},notes` as const;
+const INVOICE_COLUMNS =
+  "id,invoice_number,amount_cents,description,issued_on,due_on,status,paid_on" as const;
+// The payment note and what the invoice is for are shown on its own page only.
+// created_by (which admin made it) is never selected.
+const INVOICE_DETAIL_COLUMNS = `${INVOICE_COLUMNS},payment_note,bookings(id,service_type,scheduled_date),commercial_quotes(quote_number)` as const;
 const PLAN_COLUMNS = "id,service_type,frequency,address,city,zip,status" as const;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -198,5 +211,80 @@ export async function getServicePlans(accountId: string): Promise<QueryResult<Se
   return {
     ok: true,
     data: data.map(toPlan).filter((plan): plan is ServicePlan => plan !== null),
+  };
+}
+
+type InvoiceListRow = Pick<
+  InvoiceRow,
+  "id" | "invoice_number" | "amount_cents" | "description" | "issued_on" | "due_on" | "status" | "paid_on"
+>;
+
+function toInvoice(row: InvoiceListRow): Invoice {
+  return {
+    id: row.id,
+    number: `INV-${row.invoice_number}`,
+    description: row.description,
+    amountCents: row.amount_cents,
+    amountLabel: formatCents(row.amount_cents),
+    issuedOn: row.issued_on,
+    issuedLabel: formatBookingDate(row.issued_on, "medium"),
+    dueOn: row.due_on,
+    dueLabel: formatBookingDate(row.due_on, "medium"),
+    status: row.status,
+    paidLabel: row.paid_on ? formatBookingDate(row.paid_on, "medium") : null,
+  };
+}
+
+/** Every invoice on the account. Split and totalled with prepareInvoices. */
+export async function getCustomerInvoices(accountId: string): Promise<QueryResult<Invoice[]>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("invoices")
+    .select(INVOICE_COLUMNS)
+    .eq("account_id", accountId)
+    .order("issued_on", { ascending: false });
+
+  if (error || !data) {
+    logQueryError("getCustomerInvoices", error);
+    return FAILED;
+  }
+  return { ok: true, data: data.map(toInvoice) };
+}
+
+/** One invoice on the account, or `data: null` when it isn't theirs or doesn't exist. */
+export async function getCustomerInvoice(
+  accountId: string,
+  id: string,
+): Promise<QueryResult<InvoiceDetail | null>> {
+  if (!UUID.test(id)) return { ok: true, data: null };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("invoices")
+    .select(INVOICE_DETAIL_COLUMNS)
+    .eq("account_id", accountId)
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    logQueryError("getCustomerInvoice", error);
+    return FAILED;
+  }
+  if (!data) return { ok: true, data: null };
+
+  const booking = data.bookings;
+  return {
+    ok: true,
+    data: {
+      ...toInvoice(data),
+      paymentNote: data.payment_note?.trim() ? data.payment_note : null,
+      visit: booking
+        ? {
+            id: booking.id,
+            label: `${SERVICE_LABELS[booking.service_type]} on ${formatBookingDate(booking.scheduled_date, "medium")}`,
+          }
+        : null,
+      quoteRef: data.commercial_quotes ? `COM-${data.commercial_quotes.quote_number}` : null,
+    },
   };
 }

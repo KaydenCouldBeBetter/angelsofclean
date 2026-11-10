@@ -5,14 +5,17 @@ import InviteNotice from "@/components/account/InviteNotice";
 import PlanCard from "@/components/account/PlanCard";
 import StatusChip from "@/components/account/StatusChip";
 import VisitList from "@/components/account/VisitList";
+import BalanceCard from "@/components/account/BalanceCard";
 import AuthAlert from "@/components/auth/AuthAlert";
 import { BUSINESS_PHONE } from "@/lib/constants";
+import { prepareInvoices } from "@/lib/customer-billing";
 import { splitVisits } from "@/lib/customer-visits";
 import { nyTodayStr } from "@/lib/datetime";
 import { parseInviteNotice } from "@/lib/supabase/customer-session";
 import {
   claimCustomerRecords,
   getCustomerAccount,
+  getCustomerInvoices,
   getCustomerVisits,
   getServicePlans,
 } from "@/lib/supabase/customer-queries";
@@ -58,9 +61,10 @@ export default async function AccountOverviewPage({
     );
   }
 
-  const [visitsResult, plansResult] = await Promise.all([
+  const [visitsResult, plansResult, invoicesResult] = await Promise.all([
     getCustomerVisits(account.id),
     getServicePlans(account.id),
+    getCustomerInvoices(account.id),
   ]);
 
   const heading = <h1 className="text-2xl font-bold text-ink">Welcome, {account.name}</h1>;
@@ -75,12 +79,16 @@ export default async function AccountOverviewPage({
     );
   }
 
-  const { upcoming, past } = splitVisits(visitsResult.data, nyTodayStr());
+  const today = nyTodayStr();
+  const { upcoming, past } = splitVisits(visitsResult.data, today);
+  // Billing fails on its own: a billing outage must not hide the visits.
+  const billing = invoicesResult.ok ? prepareInvoices(invoicesResult.data, today) : null;
   const plans = plansResult.data;
   const next = upcoming[0];
   const isCommercial = account.type === "commercial";
 
-  if (visitsResult.data.length === 0 && plans.length === 0) {
+  const hasInvoices = invoicesResult.ok && invoicesResult.data.length > 0;
+  if (visitsResult.data.length === 0 && plans.length === 0 && !hasInvoices) {
     return (
       <>
         {heading}
@@ -153,6 +161,28 @@ export default async function AccountOverviewPage({
           </p>
         )}
       </section>
+
+      {!invoicesResult.ok && (
+        <section aria-labelledby="billing" className="flex flex-col gap-3">
+          <h2 id="billing" className="text-lg font-semibold text-ink">
+            Billing
+          </h2>
+          <AccountLoadError what="your billing" />
+        </section>
+      )}
+      {billing && hasInvoices && (
+        <section aria-labelledby="billing" className="flex flex-col gap-3">
+          <h2 id="billing" className="text-lg font-semibold text-ink">
+            Billing
+          </h2>
+          <BalanceCard
+            balanceCents={billing.balanceCents}
+            openCount={billing.open.length}
+            overdueCount={billing.overdueCount}
+            href="/account/billing"
+          />
+        </section>
+      )}
 
       {past.length > 0 && (
         <section aria-labelledby="recent-visits" className="flex flex-col gap-3">

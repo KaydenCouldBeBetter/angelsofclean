@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, LayoutDashboard, LogOut } from "lucide-react";
+import { CalendarDays, LayoutDashboard, LogOut, Receipt } from "lucide-react";
 import { customerSignOut } from "@/app/(customer-auth)/actions";
 import { isCurrentNavItem, type AccountNavItem } from "@/lib/account-nav";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 const ICONS: Record<string, typeof CalendarDays> = {
   "/account": LayoutDashboard,
   "/account/visits": CalendarDays,
+  "/account/billing": Receipt,
 };
 
 // The customer portal's frame (same tokens as the marketing site and booking
