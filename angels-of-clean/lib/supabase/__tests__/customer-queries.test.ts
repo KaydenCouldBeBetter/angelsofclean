@@ -47,6 +47,8 @@ vi.mock("../server", () => ({
 import {
   claimCustomerRecords,
   getCustomerAccount,
+  getCustomerInvoice,
+  getCustomerInvoices,
   getCustomerVisit,
   getCustomerVisits,
   getServicePlans,
@@ -287,5 +289,125 @@ describe("claimCustomerRecords", () => {
   it("never throws on a failure; the portal just shows what the account already has", async () => {
     rpc.mockResolvedValue({ error: { code: "42501" } });
     await expect(claimCustomerRecords()).resolves.toBeUndefined();
+  });
+});
+
+describe("invoices", () => {
+  const INVOICE_ID = "33333333-3333-4333-8333-333333333333";
+  const INVOICE = {
+    id: INVOICE_ID,
+    invoice_number: 1007,
+    amount_cents: 12550,
+    description: "Standard clean, Nov 2",
+    issued_on: "2026-11-02",
+    due_on: "2026-11-30",
+    status: "open",
+    paid_on: null,
+    payment_note: null,
+    bookings: null,
+    commercial_quotes: null,
+  };
+
+  it("filters both invoice queries on the account", async () => {
+    results = [{ data: [INVOICE], error: null }];
+    await getCustomerInvoices(ACCOUNT_ID);
+    await getCustomerInvoice(ACCOUNT_ID, INVOICE_ID);
+    expect(recorded.map((q) => q.table)).toEqual(["invoices", "invoices"]);
+    for (const q of recorded) expect(q.eq).toContainEqual(["account_id", ACCOUNT_ID]);
+    expect(recorded[1].eq).toContainEqual(["id", INVOICE_ID]);
+  });
+
+  it("never selects who at the office made an invoice, or staff data", async () => {
+    await getCustomerInvoices(ACCOUNT_ID);
+    await getCustomerInvoice(ACCOUNT_ID, INVOICE_ID);
+    for (const q of recorded) {
+      expect(q.columns).not.toMatch(/created_by|email|phone|activity|employee/);
+    }
+  });
+
+  it("keeps the payment note and what it was for to the invoice's own page", async () => {
+    await getCustomerInvoices(ACCOUNT_ID);
+    await getCustomerInvoice(ACCOUNT_ID, INVOICE_ID);
+    expect(recorded[0].columns).not.toMatch(/payment_note|bookings|commercial_quotes/);
+    expect(recorded[1].columns).toMatch(/payment_note/);
+    expect(recorded[1].columns).toMatch(/bookings\(/);
+    // The embedded booking is only its id, type and date, never its contact or notes.
+    expect(recorded[1].columns).not.toMatch(/notes|client_name/);
+  });
+
+  it("maps an invoice to labels, with the amount from whole cents and NY dates", async () => {
+    results = [{ data: [{ ...INVOICE, status: "paid", paid_on: "2026-11-05" }], error: null }];
+    const result = await getCustomerInvoices(ACCOUNT_ID);
+    expect(recorded[0].order).toEqual(["issued_on", { ascending: false }]);
+    expect(result).toEqual({
+      ok: true,
+      data: [
+        {
+          id: INVOICE_ID,
+          number: "INV-1007",
+          description: "Standard clean, Nov 2",
+          amountCents: 12550,
+          amountLabel: "$125.50",
+          issuedOn: "2026-11-02",
+          issuedLabel: "November 2, 2026",
+          dueOn: "2026-11-30",
+          dueLabel: "November 30, 2026",
+          status: "paid",
+          paidLabel: "November 5, 2026",
+        },
+      ],
+    });
+  });
+
+  it("returns a detail with its visit link, quote reference and trimmed note", async () => {
+    results = [
+      {
+        data: {
+          ...INVOICE,
+          payment_note: "  Check #1042  ",
+          bookings: { id: VISIT_ID, service_type: "deep", scheduled_date: "2026-11-02" },
+          commercial_quotes: { quote_number: 1007 },
+        },
+        error: null,
+      },
+    ];
+    const result = await getCustomerInvoice(ACCOUNT_ID, INVOICE_ID);
+    expect(result.ok && result.data).toMatchObject({
+      number: "INV-1007",
+      paymentNote: "  Check #1042  ",
+      visit: { id: VISIT_ID, label: "Deep Clean on November 2, 2026" },
+      quoteRef: "COM-1007",
+    });
+  });
+
+  it("has no visit, quote or note when the invoice is a general charge", async () => {
+    results = [{ data: INVOICE, error: null }];
+    const result = await getCustomerInvoice(ACCOUNT_ID, INVOICE_ID);
+    expect(result.ok && result.data).toMatchObject({ paymentNote: null, visit: null, quoteRef: null });
+  });
+
+  it("returns null data for an invoice that isn't theirs, and doesn't query a malformed id", async () => {
+    results = [{ data: null, error: null }];
+    expect(await getCustomerInvoice(ACCOUNT_ID, INVOICE_ID)).toEqual({ ok: true, data: null });
+    recorded.length = 0;
+    for (const id of ["abc", "", "../x", "1 or 1=1"]) {
+      expect(await getCustomerInvoice(ACCOUNT_ID, id)).toEqual({ ok: true, data: null });
+    }
+    expect(recorded).toHaveLength(0);
+  });
+
+  it("fails, rather than showing no invoices, when the database is down", async () => {
+    results = [DB_DOWN];
+    expect(await getCustomerInvoices(ACCOUNT_ID)).toEqual({ ok: false });
+    results = [DB_DOWN];
+    expect(await getCustomerInvoice(ACCOUNT_ID, INVOICE_ID)).toEqual({ ok: false });
+    const logged = JSON.stringify(vi.mocked(console.error).mock.calls);
+    expect(logged).toContain("57P03");
+    expect(logged).not.toContain("Standard clean");
+  });
+
+  it("returns an empty list only when there genuinely are none", async () => {
+    results = [{ data: [], error: null }];
+    expect(await getCustomerInvoices(ACCOUNT_ID)).toEqual({ ok: true, data: [] });
   });
 });

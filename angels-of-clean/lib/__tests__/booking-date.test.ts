@@ -15,6 +15,12 @@ describe("formatBookingDate", () => {
     expect(formatBookingDate("2026-11-01", "short")).toBe("Sun, Nov 1"); // DST ends
   });
 
+  it("formats the medium label for invoice dates, with the year and no weekday", () => {
+    expect(formatBookingDate("2026-11-02", "medium")).toBe("November 2, 2026");
+    expect(formatBookingDate("2027-01-01", "medium")).toBe("January 1, 2027");
+    expect(formatBookingDate("2026-03-08", "medium")).toBe("March 8, 2026"); // DST starts
+  });
+
   it("keeps the last day of a month and year", () => {
     expect(formatBookingDate("2026-10-31", "short")).toBe("Sat, Oct 31");
     expect(formatBookingDate("2027-01-01", "long")).toBe("Friday, January 1, 2027");
@@ -25,6 +31,7 @@ describe("formatBookingDate", () => {
     (value) => {
       expect(formatBookingDate(value, "long")).toBe("");
       expect(formatBookingDate(value, "short")).toBe("");
+      expect(formatBookingDate(value, "medium")).toBe("");
     },
   );
 });

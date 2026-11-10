@@ -43,6 +43,18 @@ export const CUSTOMER_STATUS: Record<
   },
 };
 
+// An invoice's chip. Overdue is open past its due day; the words carry it, and the
+// icon on the page adds a second cue. Same colour pairs as the chips above.
+export const INVOICE_STATUS: Record<
+  "open" | "overdue" | "paid" | "void",
+  { label: string; chipBg: string; chipText: string }
+> = {
+  open: { label: "Open", chipBg: "bg-[#eaeefc]", chipText: "text-[#1d4ed8]" },
+  overdue: { label: "Overdue", chipBg: "bg-[#feefee]", chipText: "text-[#c0392b]" },
+  paid: { label: "Paid", chipBg: "bg-[#e1f2e7]", chipText: "text-[#166534]" },
+  void: { label: "Cancelled", chipBg: "bg-[#f7f9f8]", chipText: "text-[#5c5c5e]" },
+};
+
 // A service plan's chip, same pairs as the booking chips above.
 export const PLAN_STATUS_CHIP = {
   active: { chipBg: "bg-[#e1f2e7]", chipText: "text-[#166534]" },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CUSTOMER_STATUS, PLAN_STATUS_CHIP, PLAN_STATUS_LABEL } from "../customer-status";
+import { CUSTOMER_STATUS, INVOICE_STATUS, PLAN_STATUS_CHIP, PLAN_STATUS_LABEL } from "../customer-status";
 import { DASHBOARD_STATUS } from "@/app/admin/status-config";
 
 function luminance(hex: string): number {
@@ -43,11 +43,24 @@ describe("customer status colours (WCAG AA, 4.5:1)", () => {
     expect(contrast(hex(cfg.chipText), hex(cfg.chipBg))).toBeGreaterThanOrEqual(4.5);
   });
 
+  it.each(Object.entries(INVOICE_STATUS))("invoice %s chip", (_status, cfg) => {
+    expect(contrast(hex(cfg.chipText), hex(cfg.chipBg))).toBeGreaterThanOrEqual(4.5);
+  });
+
   it("uses the same colour pairs as the admin chips, which are tested on their own", () => {
     for (const status of Object.keys(CUSTOMER_STATUS) as (keyof typeof CUSTOMER_STATUS)[]) {
       expect(CUSTOMER_STATUS[status].chipBg).toBe(DASHBOARD_STATUS[status].chipBg);
       expect(CUSTOMER_STATUS[status].chipText).toBe(DASHBOARD_STATUS[status].chipText);
     }
+  });
+});
+
+describe("invoice status wording", () => {
+  it("has a distinct plain-words label for each state, and calls a void invoice cancelled", () => {
+    const labels = Object.values(INVOICE_STATUS).map((s) => s.label);
+    expect(new Set(labels).size).toBe(labels.length);
+    expect(INVOICE_STATUS.void.label).toBe("Cancelled");
+    expect(INVOICE_STATUS.overdue.label).toBe("Overdue");
   });
 });
 

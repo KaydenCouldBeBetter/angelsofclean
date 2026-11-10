@@ -9,6 +9,7 @@ export function accountNav(): AccountNavItem[] {
   return [
     { href: "/account", label: "Overview" },
     { href: "/account/visits", label: "Visits" },
+    { href: "/account/billing", label: "Billing" },
   ];
 }
 
