@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, LayoutDashboard, LogOut, Receipt } from "lucide-react";
+import { CalendarDays, FileText, LayoutDashboard, LogOut, MapPin, Receipt, Users } from "lucide-react";
 import { customerSignOut } from "@/app/(customer-auth)/actions";
 import { isCurrentNavItem, type AccountNavItem } from "@/lib/account-nav";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,9 @@ const ICONS: Record<string, typeof CalendarDays> = {
   "/account": LayoutDashboard,
   "/account/visits": CalendarDays,
   "/account/billing": Receipt,
+  "/account/quotes": FileText,
+  "/account/locations": MapPin,
+  "/account/team": Users,
 };
 
 // The customer portal's frame (same tokens as the marketing site and booking
@@ -69,12 +72,12 @@ export default function AccountShell({
         )}
 
         <nav aria-label="Account" className="px-2 pb-2 pt-1 lg:flex-1 lg:px-3 lg:pt-4">
-          <ul className="flex gap-1 lg:flex-col">
+          <ul className="flex flex-wrap gap-1 lg:flex-col">
             {nav.map((item) => {
               const current = isCurrentNavItem(pathname, item.href);
               const Icon = ICONS[item.href];
               return (
-                <li key={item.href} className="flex-1 lg:flex-none">
+                <li key={item.href} className="min-w-[5.5rem] flex-1 lg:flex-none">
                   <Link
                     href={item.href}
                     aria-current={current ? "page" : undefined}

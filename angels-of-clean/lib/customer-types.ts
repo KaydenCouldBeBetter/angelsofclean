@@ -87,3 +87,36 @@ export interface CustomerAccount {
   type: "residential" | "commercial";
   role: "owner" | "member";
 }
+
+/** A commercial quote request the account's people have sent in. */
+export interface CustomerQuote {
+  id: string;
+  /** "COM-1007" */
+  ref: string;
+  /** "November 2, 2026" */
+  submittedLabel: string;
+  facilityLabel: string;
+  /** "2,000–5,000 sq ft" style range, as the form offered it. */
+  sqftLabel: string;
+  frequencyLabel: string;
+  address: string;
+  cityLine: string;
+}
+
+/** A team member, as the owner sees the team. */
+export interface TeamMember {
+  userId: string;
+  email: string;
+  role: "owner" | "member";
+  /** "November 2, 2026" */
+  joinedLabel: string;
+}
+
+/** An invite that hasn't been used. The link itself is never stored, so never here. */
+export interface PendingInvite {
+  id: string;
+  email: string;
+  /** "November 9, 2026" */
+  expiresLabel: string;
+  expired: boolean;
+}
