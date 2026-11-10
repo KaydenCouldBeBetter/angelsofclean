@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
+import AccountShell from "@/components/account/AccountShell";
+import { accountNav } from "@/lib/account-nav";
+import { getCustomerAccount } from "@/lib/supabase/customer-queries";
 
 export const metadata: Metadata = {
   title: { default: "My account", template: "%s | My account | Angels of Clean" },
@@ -11,5 +14,13 @@ export const metadata: Metadata = {
 // page from ever being prerendered or cached for another.
 export default async function AccountLayout({ children }: { children: React.ReactNode }) {
   await connection();
-  return children;
+  // A failed lookup still renders the frame; the page shows its own load error.
+  const result = await getCustomerAccount();
+  const account = result.ok ? result.data : null;
+
+  return (
+    <AccountShell accountName={account?.name ?? null} nav={accountNav()}>
+      {children}
+    </AccountShell>
+  );
 }
