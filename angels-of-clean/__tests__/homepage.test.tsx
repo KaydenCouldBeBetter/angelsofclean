@@ -110,6 +110,12 @@ describe("homepage (Figma Marketing — Home)", () => {
     });
   });
 
+  it("links to customer login from the desktop bar and the mobile menu", () => {
+    const login = [...container.querySelectorAll("header a")].filter((a) => a.textContent === "Log in");
+    expect(login).toHaveLength(2);
+    login.forEach((a) => expect(a.getAttribute("href")).toBe("/login"));
+  });
+
   it("marks Home as the current page in the header", () => {
     const current = [...container.querySelectorAll('header [aria-current="page"]')];
     expect(current.map((a) => a.textContent)).toEqual(["Home", "Home"]);
@@ -206,6 +212,7 @@ describe("mobile menu", () => {
       "About",
       "Areas & Reviews",
       BUSINESS_PHONE.display,
+      "Log in",
       "Book a cleaning",
       "Get a commercial quote",
     ].map((t) => (t === BUSINESS_PHONE.display ? `Call us: ${t}` : t)));

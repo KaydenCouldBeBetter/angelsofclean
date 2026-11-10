@@ -39,6 +39,109 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          account_id: string
+          created_at: string
+          created_by: string | null
+          email: string
+          expires_at: string
+          id: string
+          token_hash: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          account_id: string
+          created_at?: string
+          created_by?: string | null
+          email: string
+          expires_at: string
+          id?: string
+          token_hash: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          account_id?: string
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          expires_at?: string
+          id?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_invites_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      account_members: {
+        Row: {
+          account_id: string
+          created_at: string
+          email: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          email: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          email?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_members_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accounts: {
+        Row: {
+          account_type: string
+          created_at: string
+          id: string
+          name: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_type: string
+          created_at?: string
+          id?: string
+          name: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_type?: string
+          created_at?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       activity_log: {
         Row: {
           action: string | null
@@ -135,6 +238,7 @@ export type Database = {
       }
       bookings: {
         Row: {
+          account_id: string | null
           address: string
           bathrooms: number
           bedrooms: number
@@ -148,6 +252,7 @@ export type Database = {
           id: string
           notes: string | null
           phone: string
+          plan_id: string | null
           scheduled_date: string
           service_type: string
           start_at: string
@@ -158,6 +263,7 @@ export type Database = {
           zip: string
         }
         Insert: {
+          account_id?: string | null
           address: string
           bathrooms: number
           bedrooms: number
@@ -171,6 +277,7 @@ export type Database = {
           id?: string
           notes?: string | null
           phone: string
+          plan_id?: string | null
           scheduled_date: string
           service_type: string
           start_at: string
@@ -181,6 +288,7 @@ export type Database = {
           zip: string
         }
         Update: {
+          account_id?: string | null
           address?: string
           bathrooms?: number
           bedrooms?: number
@@ -194,6 +302,7 @@ export type Database = {
           id?: string
           notes?: string | null
           phone?: string
+          plan_id?: string | null
           scheduled_date?: string
           service_type?: string
           start_at?: string
@@ -203,10 +312,26 @@ export type Database = {
           updated_at?: string
           zip?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bookings_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "service_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       commercial_quotes: {
         Row: {
+          account_id: string | null
           address: string
           business_name: string
           city: string
@@ -227,6 +352,7 @@ export type Database = {
           zip: string
         }
         Insert: {
+          account_id?: string | null
           address: string
           business_name: string
           city: string
@@ -247,6 +373,7 @@ export type Database = {
           zip: string
         }
         Update: {
+          account_id?: string | null
           address?: string
           business_name?: string
           city?: string
@@ -266,7 +393,15 @@ export type Database = {
           updated_at?: string
           zip?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "commercial_quotes_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       employees: {
         Row: {
@@ -295,6 +430,82 @@ export type Database = {
         }
         Relationships: []
       }
+      invoices: {
+        Row: {
+          account_id: string
+          amount_cents: number
+          booking_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string
+          due_on: string
+          id: string
+          invoice_number: number
+          issued_on: string
+          paid_on: string | null
+          payment_note: string | null
+          quote_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          amount_cents: number
+          booking_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description: string
+          due_on: string
+          id?: string
+          invoice_number?: never
+          issued_on?: string
+          paid_on?: string | null
+          payment_note?: string | null
+          quote_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          amount_cents?: number
+          booking_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          due_on?: string
+          id?: string
+          invoice_number?: never
+          issued_on?: string
+          paid_on?: string | null
+          payment_note?: string | null
+          quote_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rate_limits: {
         Row: {
           bucket: string
@@ -313,11 +524,62 @@ export type Database = {
         }
         Relationships: []
       }
+      service_plans: {
+        Row: {
+          account_id: string
+          address: string
+          city: string
+          created_at: string
+          frequency: string
+          id: string
+          notes: string | null
+          service_type: string
+          status: string
+          updated_at: string
+          zip: string
+        }
+        Insert: {
+          account_id: string
+          address: string
+          city: string
+          created_at?: string
+          frequency: string
+          id?: string
+          notes?: string | null
+          service_type: string
+          status?: string
+          updated_at?: string
+          zip: string
+        }
+        Update: {
+          account_id?: string
+          address?: string
+          city?: string
+          created_at?: string
+          frequency?: string
+          id?: string
+          notes?: string | null
+          service_type?: string
+          status?: string
+          updated_at?: string
+          zip?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_plans_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      accept_account_invite: { Args: { p_token_hash: string }; Returns: Json }
       assign_booking_employees: {
         Args: {
           p_allow_overlap?: boolean
@@ -331,6 +593,13 @@ export type Database = {
         Args: { p_bucket: string; p_limit: number; p_window_seconds: number }
         Returns: boolean
       }
+      claim_account_records: { Args: never; Returns: Json }
+      create_account_invite: {
+        Args: { p_email: string; p_token_hash: string }
+        Returns: Json
+      }
+      remove_account_member: { Args: { p_user_id: string }; Returns: Json }
+      revoke_account_invite: { Args: { p_invite_id: string }; Returns: Json }
       set_booking_access: {
         Args: { p_booking_id: string; p_instructions: string }
         Returns: Json

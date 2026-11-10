@@ -4,11 +4,12 @@ import { createServiceRoleClient } from "@/lib/supabase/service";
 
 // Public submissions of each kind allowed per client IP per window. A customer
 // submits once; this leaves room for corrections and for a few customers
-// sharing one IP.
+// sharing one IP. Sign-ups and password-reset requests send an email each, so
+// they share the same allowance.
 export const SUBMISSION_RATE_LIMIT = { limit: 5, windowSeconds: 60 * 60 };
 
-// Bookings and quote requests are counted separately.
-export type SubmissionKind = "booking" | "quote";
+// Each kind is counted separately.
+export type SubmissionKind = "booking" | "quote" | "signup" | "reset";
 
 // Assumes the host overwrites these headers with the real client address (as
 // Vercel does). Behind a proxy that only appends to x-forwarded-for, the first

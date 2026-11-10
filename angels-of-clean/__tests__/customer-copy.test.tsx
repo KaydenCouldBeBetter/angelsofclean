@@ -146,16 +146,13 @@ describe("residential confirmation copy (finding 3)", () => {
     expect(occurrences(text, "Monday, November 2, 2026")).toBe(2);
   });
 
-  it("turns Create Account into a disabled 'Coming soon' button in both copies (finding 9)", () => {
+  it("links Create Account to sign up in both copies (finding 9)", () => {
     render(<ResidentialConfirmation />);
-    const buttons = [...container.querySelectorAll("button")].filter((b) =>
-      b.textContent?.includes("Create Account"),
+    const links = [...container.querySelectorAll("a")].filter((l) =>
+      l.textContent?.includes("Create Account"),
     );
-    expect(buttons).toHaveLength(2);
-    for (const button of buttons) {
-      expect(button.disabled).toBe(true);
-      expect(button.textContent).toContain("Coming soon");
-    }
+    expect(links).toHaveLength(2);
+    for (const link of links) expect(link.getAttribute("href")).toBe("/signup");
   });
 });
 
@@ -221,16 +218,14 @@ describe("?ref= is accepted only in the shape the server issues (finding 13)", (
 });
 
 describe("Log In (finding 9)", () => {
-  it("is a disabled 'Coming soon' button in the desktop navbar", () => {
+  it("is a link to the login page in the desktop navbar", () => {
     render(<DesktopNavbar />);
-    const button = [...container.querySelectorAll("button")].find((b) =>
-      b.textContent?.includes("Log In"),
-    );
-    expect(button).toBeDefined();
-    expect(button!.disabled).toBe(true);
-    expect(button!.textContent).toContain("Coming soon");
+    const link = [...container.querySelectorAll("a")].find((l) => l.textContent?.includes("Log In"));
+    expect(link?.getAttribute("href")).toBe("/login");
+    expect(container.textContent).not.toContain("Coming soon");
   });
 });
+
 
 describe("phone links keep the visible text in their name (finding 6)", () => {
   it("commercial step 1, confirmation and error pages have no aria-label on the phone link", () => {

@@ -3,6 +3,7 @@
 import WhatHappensNext from "@/components/booking/WhatHappensNext";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { useBookingStore } from "@/store/bookingStore";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -10,7 +11,6 @@ import { buildIcs, googleCalendarUrl, type CalendarEvent } from "@/lib/calendar-
 import { isValidDateStr } from "@/lib/datetime";
 import { formatBookingDate } from "@/lib/booking-date";
 import ConfirmedWithoutDetails from "@/components/booking/ConfirmedWithoutDetails";
-import ComingSoonButton from "@/components/booking/ComingSoonButton";
 import {
   SERVICE_LABELS,
   FREQUENCY_LABELS,
@@ -172,7 +172,9 @@ export default function ConfirmationPage() {
               <p className="text-sm text-zinc-500">
                 Create an account to pre-fill your info on future bookings.
               </p>
-              <ComingSoonButton className="w-fit h-11">Create Account</ComingSoonButton>
+              <Link href="/signup" className={cn(buttonVariants(), "w-fit h-11 px-4")}>
+                Create Account
+              </Link>
             </div>
           </div>
 
@@ -228,7 +230,9 @@ export default function ConfirmationPage() {
           <p className="text-sm text-zinc-500 mt-1">
             Create a free account &mdash; no password required during booking.
           </p>
-          <ComingSoonButton className="mt-3 h-9">Create Account</ComingSoonButton>
+          <Link href="/signup" className={cn(buttonVariants(), "mt-3 h-11 px-4")}>
+            Create Account
+          </Link>
         </div>
 
         {/* Return home */}

@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 import { buildCsp } from "./lib/csp";
 
-// Admin pages get a per-request nonce policy from middleware.ts instead.
+// Admin and account pages get a per-request nonce policy from proxy.ts instead.
 const publicCsp = buildCsp({
   isDev: process.env.NODE_ENV === "development",
   supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -27,8 +27,8 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        // Everything except /admin and /admin/*.
-        source: "/:path((?!admin(?:/|$)).*)",
+        // Everything except /admin, /account and what's under them.
+        source: "/:path((?!(?:admin|account)(?:/|$)).*)",
         headers: [{ key: "Content-Security-Policy", value: publicCsp }],
       },
     ];

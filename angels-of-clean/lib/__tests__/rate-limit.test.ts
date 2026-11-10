@@ -30,6 +30,16 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
+describe("allowPublicSubmission kinds", () => {
+  it.each(["booking", "quote", "signup", "reset"] as const)(
+    "counts %s in its own bucket, so one kind can't use up another's allowance",
+    async (kind) => {
+      await allowPublicSubmission(kind);
+      expect(bucketOfLastCall()).toMatch(new RegExp(`^${kind}:[0-9a-f]{64}$`));
+    },
+  );
+});
+
 describe("allowPublicSubmission", () => {
   it("asks the database to count one hit against the configured limit and window", async () => {
     expect(await allowPublicSubmission("booking")).toBe(true);
