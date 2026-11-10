@@ -85,7 +85,10 @@ The homepage follows the Figma "Marketing Website" page (`661:70`), and Services
 - **Estimates.** "Get an Estimate" goes to the contact section; there is no estimate form.
 
 ### Public signups stay on (2026-10-15)
-Customer accounts are planned, so Supabase public signups remain enabled. Because any visitor can therefore hold a signed-in session, admin access never rests on "signed in" alone: it needs `app_metadata.role = 'admin'`, checked in the proxy, in `requireAdmin()` and in RLS.
+Customer accounts exist (see "Customer portal"), so Supabase public signups remain enabled. Because any visitor can therefore hold a signed-in session, admin access never rests on "signed in" alone: it needs `app_metadata.role = 'admin'`, checked in the proxy, in `requireAdmin()` and in RLS.
+
+### Customer portal (2026-11-10)
+Customers (households and businesses) sign in to see their recurring service plan, upcoming and past visits, invoices, and for businesses their quote requests, locations and team. Decisions: **billing is admin-entered and read-only** (no online payment; the page tells customers to call), **one portal** for both customer types, **accounts link by confirmed email** (an invite also needs the invited email), and business owners add people through **manual invite links** they copy and send (no email service yet). Invoice amounts are the one place prices appear to customers; they are the office's own invoices, so they don't conflict with "Quote after booking, no customer-facing prices" (which is about the booking and quote flows). Supabase must keep **Confirm email** on in production, because claiming trusts `email_confirmed_at`. Business locations aren't a table: they are the distinct addresses on visits and plans.
 
 ### ZIP list confirmed (2026-10-19, B16)
 `SERVICE_AREA_ZIPS` is the owner's confirmed list (Cicero is `13039`, Camillus `13031`, and `13035` is not served).
