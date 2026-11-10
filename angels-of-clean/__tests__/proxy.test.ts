@@ -95,6 +95,64 @@ describe("admin proxy", () => {
   });
 });
 
+describe("account proxy", () => {
+  it.each(["/account", "/account/billing", "/account/visits/abc"])(
+    "sends a signed-out visitor from %s to the customer login",
+    async (path) => {
+      expect(await visit(path)).toBe("/login");
+    },
+  );
+
+  it.each([undefined, "customer", "editor", ["admin"]])(
+    "lets any signed-in user (role %j) open account pages: RLS decides what they hold",
+    async (role) => {
+      currentSession = signedIn(role);
+      expect(await visit("/account")).toBe("allowed");
+      expect(await visit("/account/billing")).toBe("allowed");
+    },
+  );
+
+  it("does not let a customer session into the admin panel", async () => {
+    currentSession = signedIn(undefined);
+    expect(await visit("/admin/dashboard")).toBe("/admin");
+    expect(await visit("/admin/bookings/abc")).toBe("/admin");
+  });
+
+  it("never treats a path that merely starts with /account as an account page", async () => {
+    // /accounts and /account-x are marketing-site paths, not guarded here.
+    currentSession = signedIn(undefined);
+    expect(await visit("/accounts")).not.toBe("/login");
+  });
+
+  it("keeps refreshed session cookies on a redirect to login", async () => {
+    refreshedCookies = [{ name: "sb-projref-auth-token", value: "fresh" }];
+    const res = await proxy(new NextRequest("https://angelsofclean.example/account"));
+    expect(res.cookies.get("sb-projref-auth-token")?.value).toBe("fresh");
+  });
+
+  it("sends the page a nonce policy, like the admin pages", async () => {
+    currentSession = signedIn(undefined);
+    const res = await proxy(new NextRequest("https://angelsofclean.example/account"));
+    const sent = res.headers.get("content-security-policy");
+    expect(sent).toMatch(/script-src [^;]*'nonce-[^']+'[^;]*'strict-dynamic'/);
+    expect(sent).not.toMatch(/script-src [^;]*'unsafe-inline'/);
+    expect(forwardedRequest?.headers.get("content-security-policy")).toBe(sent);
+  });
+
+  it("says why when Auth can't answer, and never opens the page", async () => {
+    currentSession = { state: "unavailable" };
+    expect(await visit("/account/billing")).toBe("/login?notice=unavailable");
+  });
+
+  it("never redirects to an address taken from the request", async () => {
+    const res = await proxy(
+      new NextRequest("https://angelsofclean.example/account?next=https://evil.example"),
+    );
+    expect(new URL(res.headers.get("location")!).origin).toBe("https://angelsofclean.example");
+    expect(res.headers.get("location")).not.toContain("evil");
+  });
+});
+
 describe("admin proxy when Auth doesn't answer in time", () => {
   beforeEach(() => {
     currentSession = { state: "unavailable" };
@@ -166,7 +224,7 @@ describe("proxy file convention", () => {
     expect(existsSync(path.join(appRoot, "middleware.ts"))).toBe(false);
   });
 
-  it("guards every admin page and nothing else", () => {
-    expect(config).toEqual({ matcher: ["/admin/:path*"] });
+  it("guards every admin and account page and nothing else", () => {
+    expect(config).toEqual({ matcher: ["/admin/:path*", "/account/:path*"] });
   });
 });

@@ -79,6 +79,9 @@ export default function SiteHeader() {
             <span className="sr-only">Call us: </span>
             <span className="sr-only xl:not-sr-only">{BUSINESS_PHONE.display}</span>
           </a>
+          <Link href="/login" className={linkClass("/login")}>
+            Log in
+          </Link>
           <div className="flex items-center gap-3">
             <CtaLink href="/residential" size="nav" className="px-4 xl:px-6">
               Book a cleaning
@@ -119,6 +122,13 @@ export default function SiteHeader() {
             <span className="sr-only">Call us: </span>
             {BUSINESS_PHONE.display}
           </a>
+          <Link
+            href="/login"
+            onClick={() => setOpen(false)}
+            className={cn(linkClass("/login"), "min-h-12 text-base")}
+          >
+            Log in
+          </Link>
           <div className="flex flex-col gap-3 py-3">
             <CtaLink href="/residential" size="hero">
               Book a cleaning

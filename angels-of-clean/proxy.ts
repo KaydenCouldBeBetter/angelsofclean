@@ -39,6 +39,21 @@ export async function proxy(request: NextRequest) {
   const { supabaseResponse, session } = await updateSession(request);
 
   const { pathname } = request.nextUrl;
+  // Customer account pages: any signed-in user may open them (every customer is
+  // one), and what they can read is decided by RLS, not by this check. Admin pages
+  // below keep needing the role claim. Neither branch ever redirects to an address
+  // taken from the request.
+  if (pathname === "/account" || pathname.startsWith("/account/")) {
+    if (session.state !== "signed-in") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.search = session.state === "unavailable" ? "?notice=unavailable" : "";
+      return redirectWithCookies(url, supabaseResponse);
+    }
+    supabaseResponse.headers.set("Content-Security-Policy", csp);
+    return supabaseResponse;
+  }
+
   // Signed-out admins must reach sign-in and the start of password reset.
   const isPublicRoute = PUBLIC_ADMIN_ROUTES.includes(pathname);
 
@@ -73,5 +88,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/admin/:path*", "/account/:path*"],
 };

@@ -145,8 +145,8 @@ describe("navigation never leads to a page that isn't there", () => {
     }
   });
 
-  it("every internal link is one of the pages, the two booking paths, or the legal pages", () => {
-    const allowed = new Set([...Object.keys(PAGES), "/residential", "/commercial", "/privacy", "/terms"]);
+  it("every internal link is one of the pages, the two booking paths, customer login, or the legal pages", () => {
+    const allowed = new Set([...Object.keys(PAGES), "/residential", "/commercial", "/login", "/privacy", "/terms"]);
     for (const pathname of Object.keys(PAGES)) {
       render(pathname);
       container.querySelectorAll("a").forEach((a) => {
