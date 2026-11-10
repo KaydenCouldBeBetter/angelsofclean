@@ -6,10 +6,13 @@ import { cn } from "@/lib/utils";
 // two booking paths (/residential or /commercial), or to the Areas page's
 // contact section for an estimate.
 type Tone = "primary" | "outline" | "inverse";
-type Size = "nav" | "hero" | "band";
+type Size = "nav" | "hero" | "band" | "panel";
 
 const SIZE: Record<Size, string> = {
   nav: "h-11 rounded-xl px-6 text-sm font-semibold",
+  // The two large buttons beside the Areas page's contact card: they fill the
+  // width of their column and are tall enough to balance the card and map.
+  panel: "h-14 w-full rounded-xl px-8 text-lg font-semibold md:h-20 md:text-xl lg:h-24",
   hero: "h-14 w-full rounded-xl px-8 text-base font-semibold md:h-12 md:w-auto",
   band: "h-14 w-full rounded-xl px-8 text-base font-semibold md:h-12 md:w-55 md:text-sm",
 };
