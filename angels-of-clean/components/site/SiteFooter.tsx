@@ -75,11 +75,14 @@ export default function SiteFooter() {
                 {BUSINESS_EMAIL}
               </a>
               <p className="py-1 text-sm text-footer-muted">{BUSINESS_ADDRESS}</p>
-              {BUSINESS_HOURS.map((line) => (
-                <p key={line} className="py-1 text-sm text-footer-muted">
-                  {line}
-                </p>
-              ))}
+              {/* Decorative divider (border) separating contact details from hours. */}
+              <div className="mt-2 flex flex-col gap-1 border-t border-white/15 pt-3">
+                {BUSINESS_HOURS.map((line) => (
+                  <p key={line} className="py-1 text-sm text-footer-muted">
+                    {line}
+                  </p>
+                ))}
+              </div>
             </section>
           </div>
         </div>
