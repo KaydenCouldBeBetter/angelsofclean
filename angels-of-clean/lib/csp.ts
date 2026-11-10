@@ -12,6 +12,9 @@ type CspOptions = {
   nonce?: string;
   isDev: boolean;
   supabaseUrl: string | undefined;
+  // Let <img> load OpenStreetMap tiles (the Areas page map). Public pages only;
+  // admin pages never need it.
+  mapTiles?: boolean;
 };
 
 // The browser Supabase client talks to the project directly (session refresh,
@@ -26,7 +29,7 @@ function supabaseOrigins(supabaseUrl: string | undefined): string[] {
   }
 }
 
-export function buildCsp({ nonce, isDev, supabaseUrl }: CspOptions): string {
+export function buildCsp({ nonce, isDev, supabaseUrl, mapTiles }: CspOptions): string {
   // Dev tooling (React Refresh, error overlay) evaluates code; production
   // bundles don't.
   const devEval = isDev ? ["'unsafe-eval'"] : [];
@@ -40,7 +43,7 @@ export function buildCsp({ nonce, isDev, supabaseUrl }: CspOptions): string {
     // React style props, FullCalendar's injected stylesheet, and next/font all
     // need inline styles. A nonce here would switch 'unsafe-inline' off.
     "style-src": ["'self'", "'unsafe-inline'"],
-    "img-src": ["'self'", "blob:", "data:"],
+    "img-src": ["'self'", "blob:", "data:", ...(mapTiles ? ["https://tile.openstreetmap.org"] : [])],
     // next/font self-hosts Google Fonts, so nothing loads from Google.
     // FullCalendar's stylesheet embeds its icon font as a data: URI.
     "font-src": ["'self'", "data:"],

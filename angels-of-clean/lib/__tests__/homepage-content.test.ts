@@ -3,6 +3,8 @@ import { SERVICE_AREA_ZIPS } from "@/lib/constants";
 import {
   HOMEPAGE_REVIEWS,
   HOMEPAGE_TRUST_BADGES,
+  HOME_BASE_TOWN,
+  SERVICE_AREA_COORDS,
   SERVICE_AREA_MAP,
   SERVICE_AREA_TOWNS,
   SITE_PHOTOS,
@@ -105,5 +107,21 @@ describe("SERVICE_AREA_TOWNS", () => {
     const towns = SERVICE_AREA_TOWNS.map((t) => t.town);
     expect(new Set(towns).size).toBe(towns.length);
     for (const { town, note } of SERVICE_AREA_TOWNS) expect(note.trim(), town).not.toBe("");
+  });
+});
+
+describe("service area map pins", () => {
+  it("has a latitude and longitude near Syracuse for every town, and no extras", () => {
+    expect(Object.keys(SERVICE_AREA_COORDS).sort()).toEqual(SERVICE_AREA_TOWNS.map((t) => t.town).sort());
+    for (const [lat, lng] of Object.values(SERVICE_AREA_COORDS)) {
+      expect(lat).toBeGreaterThan(42.9);
+      expect(lat).toBeLessThan(43.3);
+      expect(lng).toBeGreaterThan(-76.4);
+      expect(lng).toBeLessThan(-75.9);
+    }
+  });
+
+  it("the home base is one of the towns", () => {
+    expect(SERVICE_AREA_TOWNS.map((t) => t.town)).toContain(HOME_BASE_TOWN);
   });
 });

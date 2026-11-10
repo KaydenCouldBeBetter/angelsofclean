@@ -67,3 +67,14 @@ describe("createNonce", () => {
     expect(createNonce()).not.toBe(a);
   });
 });
+
+describe("buildCsp map tiles", () => {
+  it("allows OpenStreetMap tile images only when asked, and never scripts or connections", () => {
+    const off = directives(buildCsp({ isDev: false, supabaseUrl: undefined }));
+    expect(off["img-src"]).toEqual(["'self'", "blob:", "data:"]);
+    const on = directives(buildCsp({ isDev: false, supabaseUrl: undefined, mapTiles: true }));
+    expect(on["img-src"]).toEqual(["'self'", "blob:", "data:", "https://tile.openstreetmap.org"]);
+    expect(on["script-src"]).toEqual(off["script-src"]);
+    expect(on["connect-src"]).toEqual(off["connect-src"]);
+  });
+});

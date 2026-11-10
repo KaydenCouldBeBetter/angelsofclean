@@ -5,6 +5,7 @@ import { buildCsp } from "./lib/csp";
 const publicCsp = buildCsp({
   isDev: process.env.NODE_ENV === "development",
   supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+  mapTiles: true, // the Areas page's OpenStreetMap map
 });
 
 const nextConfig: NextConfig = {
