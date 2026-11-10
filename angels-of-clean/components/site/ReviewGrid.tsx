@@ -1,8 +1,8 @@
-import PlaceholderBadge from "@/components/home/PlaceholderBadge";
+import ReviewCard from "@/components/site/ReviewCard";
 import type { ReviewContent } from "@/lib/homepage-content";
 import { cn } from "@/lib/utils";
 
-// Customer reviews from lib/homepage-content.ts, as white cards.
+// Customer reviews from lib/homepage-content.ts, one ReviewCard each.
 export default function ReviewGrid({ reviews, columns }: { reviews: ReviewContent[]; columns: 3 | 4 }) {
   return (
     <ul
@@ -11,18 +11,7 @@ export default function ReviewGrid({ reviews, columns }: { reviews: ReviewConten
     >
       {reviews.map((review) => (
         <li key={review.id}>
-          <figure className="flex h-full flex-col gap-3 rounded-xl bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] md:gap-4 md:p-8">
-            {review.placeholder && <PlaceholderBadge />}
-            <blockquote className="text-base text-ink md:text-lg md:leading-[29px]">
-              <p>&quot;{review.quote}&quot;</p>
-            </blockquote>
-            <figcaption className="mt-auto text-sm font-medium text-ink md:text-ink-muted">
-              <span aria-hidden="true" className="hidden md:inline">
-                —{" "}
-              </span>
-              {review.author}
-            </figcaption>
-          </figure>
+          <ReviewCard review={review} />
         </li>
       ))}
     </ul>

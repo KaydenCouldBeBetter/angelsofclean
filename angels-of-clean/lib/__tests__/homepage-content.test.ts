@@ -72,6 +72,19 @@ describe("marketing site placeholders", () => {
     }
   });
 
+  it("a review's highlight is a word-for-word part of its own quote", () => {
+    for (const review of HOMEPAGE_REVIEWS.filter((r) => r.highlight !== undefined)) {
+      expect(review.highlight!.trim(), review.id).not.toBe("");
+      expect(review.quote, review.id).toContain(review.highlight);
+    }
+  });
+
+  it("at most one review is featured, and it is shown on the homepage", () => {
+    const featured = HOMEPAGE_REVIEWS.filter((r) => r.featured);
+    expect(featured.length).toBeLessThanOrEqual(1);
+    for (const review of featured) expect(review.onHomepage, review.id).toBe(true);
+  });
+
   it("the homepage shows three reviews and the Areas page four", () => {
     expect(HOMEPAGE_REVIEWS.filter((r) => r.onHomepage)).toHaveLength(3);
     expect(HOMEPAGE_REVIEWS).toHaveLength(4);
