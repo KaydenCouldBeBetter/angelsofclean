@@ -1,57 +1,183 @@
 import Link from "next/link";
+import AccountLoadError from "@/components/account/AccountLoadError";
+import EmptyState from "@/components/account/EmptyState";
+import InviteNotice from "@/components/account/InviteNotice";
+import PlanCard from "@/components/account/PlanCard";
+import StatusChip from "@/components/account/StatusChip";
+import VisitList from "@/components/account/VisitList";
 import AuthAlert from "@/components/auth/AuthAlert";
-import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/server";
+import { BUSINESS_PHONE } from "@/lib/constants";
+import { splitVisits } from "@/lib/customer-visits";
+import { nyTodayStr } from "@/lib/datetime";
 import { parseInviteNotice } from "@/lib/supabase/customer-session";
-import { customerSignOut } from "@/app/(customer-auth)/actions";
+import {
+  claimCustomerRecords,
+  getCustomerAccount,
+  getCustomerVisits,
+  getServicePlans,
+} from "@/lib/supabase/customer-queries";
 
-const INVITE_MESSAGES = {
-  invalid: "That invite link has expired or was already used. Ask the account owner for a new one.",
-  wrong_email: "That invite was sent to a different email address than the one you signed in with.",
-  unverified: "Confirm your email address, then open the invite link again.",
-  already_in_account:
-    "You already have an account with bookings, so you can't join another one with this email. Ask the owner to invite a different address.",
-  error: "We couldn't use that invite link. Please try again.",
-} as const;
+export const metadata = { title: "Overview" };
 
-// Placeholder landing for Phase 2 (sign-in): proves the session works and shows
-// which account the customer belongs to. The portal itself (overview, visits,
-// billing) replaces it in the next phases.
-export default async function AccountPage({
+const RECENT_COUNT = 3;
+
+export default async function AccountOverviewPage({
   searchParams,
 }: {
   searchParams: Promise<{ invite?: string }>;
 }) {
-  const { invite } = await searchParams;
-  const notice = parseInviteNotice(invite);
+  const notice = parseInviteNotice((await searchParams).invite);
 
-  const supabase = await createClient();
-  // Picks up bookings made after sign-up. Idempotent.
-  await supabase.rpc("claim_account_records");
-  const { data: account } = await supabase.from("accounts").select("name, account_type").maybeSingle();
+  // Picks up bookings made since sign-up before anything is read.
+  await claimCustomerRecords();
+  const accountResult = await getCustomerAccount();
+
+  if (!accountResult.ok) {
+    return (
+      <>
+        <h1 className="text-2xl font-bold text-ink">Overview</h1>
+        <AccountLoadError what="your account" />
+      </>
+    );
+  }
+
+  const account = accountResult.data;
+  if (!account) {
+    return (
+      <>
+        <h1 className="text-2xl font-bold text-ink">Overview</h1>
+        {notice && <InviteNotice status={notice} />}
+        <AuthAlert tone="info">
+          This login isn&apos;t linked to a customer account. If you work for Angels of Clean, use the{" "}
+          <Link href="/admin/dashboard" className="font-semibold text-primary underline underline-offset-2">
+            admin portal
+          </Link>
+          .
+        </AuthAlert>
+      </>
+    );
+  }
+
+  const [visitsResult, plansResult] = await Promise.all([
+    getCustomerVisits(account.id),
+    getServicePlans(account.id),
+  ]);
+
+  const heading = <h1 className="text-2xl font-bold text-ink">Welcome, {account.name}</h1>;
+
+  if (!visitsResult.ok || !plansResult.ok) {
+    return (
+      <>
+        {heading}
+        {notice && <InviteNotice status={notice} />}
+        <AccountLoadError what="your visits" />
+      </>
+    );
+  }
+
+  const { upcoming, past } = splitVisits(visitsResult.data, nyTodayStr());
+  const plans = plansResult.data;
+  const next = upcoming[0];
+  const isCommercial = account.type === "commercial";
+
+  if (visitsResult.data.length === 0 && plans.length === 0) {
+    return (
+      <>
+        {heading}
+        {notice && <InviteNotice status={notice} />}
+        <EmptyState
+          heading="No bookings yet"
+          body={
+            isCommercial
+              ? "Once we've scheduled your service, your visits and plan will show up here."
+              : "Book your first cleaning and it will show up here."
+          }
+          actionHref={isCommercial ? "/commercial" : "/residential"}
+          actionLabel={isCommercial ? "Get a commercial quote" : "Book a cleaning"}
+        />
+      </>
+    );
+  }
 
   return (
-    <main id="main" className="mx-auto flex w-full max-w-xl flex-col gap-5 px-4 py-10">
-      <h1 className="text-2xl font-bold text-ink">
-        {account ? `Welcome, ${account.name}` : "Welcome"}
-      </h1>
-      {notice && <AuthAlert tone="info">{INVITE_MESSAGES[notice]}</AuthAlert>}
+    <>
+      {heading}
+      {notice && <InviteNotice status={notice} />}
+
+      <section aria-labelledby="next-visit" className="flex flex-col gap-3">
+        <h2 id="next-visit" className="text-lg font-semibold text-ink">
+          Next visit
+        </h2>
+        {next ? (
+          <Link
+            href={`/account/visits/${next.id}`}
+            className="flex flex-col gap-2 rounded-xl border border-line bg-white p-5 hover:border-primary/40"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <p className="text-xl font-bold text-ink">{next.dateLabel}</p>
+              <StatusChip status={next.status} className="flex-shrink-0" />
+            </div>
+            <p className="text-sm text-ink-muted">
+              {next.timeLabel} · {next.serviceLabel}
+            </p>
+            <p className="text-sm text-ink-muted">
+              {next.address}, {next.cityLine}
+            </p>
+          </Link>
+        ) : (
+          <div className="rounded-xl border border-line bg-white p-5 text-sm text-ink-muted">
+            <p>You don&apos;t have a visit coming up.</p>
+            <Link
+              href={isCommercial ? "/commercial" : "/residential"}
+              className="mt-2 inline-flex min-h-11 items-center font-semibold text-primary hover:underline"
+            >
+              {isCommercial ? "Get a commercial quote" : "Book a cleaning"}
+            </Link>
+          </div>
+        )}
+      </section>
+
+      <section aria-labelledby="service-plan" className="flex flex-col gap-3">
+        <h2 id="service-plan" className="text-lg font-semibold text-ink">
+          Service plan
+        </h2>
+        {plans.length > 0 ? (
+          plans.map((plan) => <PlanCard key={plan.id} plan={plan} />)
+        ) : (
+          <p className="rounded-xl border border-line bg-white p-5 text-sm text-ink-muted">
+            You don&apos;t have a recurring plan yet. To set up regular cleanings, call us at{" "}
+            <a href={BUSINESS_PHONE.tel} className="font-semibold text-primary underline underline-offset-2">
+              {BUSINESS_PHONE.display}
+            </a>
+            .
+          </p>
+        )}
+      </section>
+
+      {past.length > 0 && (
+        <section aria-labelledby="recent-visits" className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-3">
+            <h2 id="recent-visits" className="text-lg font-semibold text-ink">
+              Recent visits
+            </h2>
+            <Link
+              href="/account/visits"
+              className="inline-flex min-h-11 items-center text-sm font-semibold text-primary hover:underline"
+            >
+              View all visits
+            </Link>
+          </div>
+          <VisitList visits={past.slice(0, RECENT_COUNT)} label="Recent visits" />
+        </section>
+      )}
+
       <p className="text-sm text-ink-muted">
-        You&apos;re signed in. Your bookings and billing will appear here.
+        Questions about a visit? Call us at{" "}
+        <a href={BUSINESS_PHONE.tel} className="font-semibold text-primary underline underline-offset-2">
+          {BUSINESS_PHONE.display}
+        </a>
+        .
       </p>
-      <div className="flex flex-wrap gap-3">
-        <Link
-          href="/"
-          className="inline-flex h-11 items-center rounded-lg border border-line px-4 text-sm font-medium text-ink hover:bg-surface-tint"
-        >
-          Back to the site
-        </Link>
-        <form action={customerSignOut}>
-          <Button type="submit" variant="outline" className="h-11 px-4">
-            Sign out
-          </Button>
-        </form>
-      </div>
-    </main>
+    </>
   );
 }

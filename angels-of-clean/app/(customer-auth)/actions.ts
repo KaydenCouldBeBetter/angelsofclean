@@ -9,7 +9,7 @@ import { allowPublicSubmission } from "@/lib/rate-limit";
 import { looksLikeBot, type BotCheck } from "@/lib/bot-check";
 import { parseInviteToken } from "@/lib/customer-invite";
 import { EMAIL_REGEX, logAuthError, passwordProblem } from "@/lib/auth-input";
-import { FIELD_MAX_LENGTHS } from "@/lib/constants";
+import { BUSINESS_PHONE, FIELD_MAX_LENGTHS } from "@/lib/constants";
 
 // Customer sign-in, sign-up and password reset (the admin portal has its own in
 // app/admin/auth-actions.ts). Every destination below is fixed, never read from
@@ -126,6 +126,14 @@ export async function customerSignUp(input: SignUpInput): Promise<SignUpResult> 
     if (error.code === "weak_password") return { error: error.message };
     if (error.code === "over_email_send_rate_limit") {
       return { error: "Too many emails were requested. Wait a few minutes and try again." };
+    }
+    if (error.code === "signup_disabled") {
+      // Sign-ups are switched off in the Supabase project. Logged so the owner can
+      // find it, and worded so a customer knows it isn't their mistake.
+      logAuthError("customerSignUp", error);
+      return {
+        error: `Creating an account isn't available right now. You can still book, or call us at ${BUSINESS_PHONE.display}.`,
+      };
     }
     logAuthError("customerSignUp", error);
     return { error: GENERIC_ERROR };

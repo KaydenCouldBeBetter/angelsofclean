@@ -238,6 +238,18 @@ describe("customerSignUp", () => {
     expect(await customerSignUp(VALID_SIGNUP)).toEqual({ error: "Password is known to be weak." });
   });
 
+  it("says so, without blaming the customer, when sign-ups are switched off in Supabase", async () => {
+    signUp.mockResolvedValue({
+      data: { session: null },
+      error: { code: "signup_disabled", message: "Signups not allowed for this instance" },
+    });
+    const result = await customerSignUp(VALID_SIGNUP);
+    expect(result.error).toMatch(/isn't available right now/);
+    expect(result.error).toContain("(315) 516-1266");
+    // Still logged, so the owner can find the setting.
+    expect(JSON.stringify(vi.mocked(console.error).mock.calls)).toContain("signup_disabled");
+  });
+
   it("logs only the error code, never the email or name", async () => {
     signUp.mockResolvedValue({ data: { session: null }, error: { code: "unexpected_failure", message: "alice@example.com broke" } });
     await customerSignUp(VALID_SIGNUP);

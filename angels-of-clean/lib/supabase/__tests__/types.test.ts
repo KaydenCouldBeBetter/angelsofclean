@@ -4,8 +4,12 @@ import { createClient } from "@supabase/supabase-js";
 import { describe, expectTypeOf, it } from "vitest";
 import type { Database as GeneratedDatabase } from "../database.types";
 import type {
+  AccountMemberRow,
+  AccountRow,
   AssignBookingEmployeesResult,
   BookingRow,
+  InvoiceRow,
+  ServicePlanRow,
   BookingStatus,
   CommercialQuoteRow,
   Database,
@@ -34,6 +38,19 @@ describe("lib/supabase/types", () => {
     expectTypeOf<CommercialQuoteRow["schedule_preference"]>().toEqualTypeOf<
       "before" | "during" | "after" | "weekends" | null
     >();
+  });
+
+  it("narrows CHECK-constrained account, plan and invoice columns", () => {
+    expectTypeOf<AccountRow["account_type"]>().toEqualTypeOf<"residential" | "commercial">();
+    expectTypeOf<AccountMemberRow["role"]>().toEqualTypeOf<"owner" | "member">();
+    expectTypeOf<ServicePlanRow["service_type"]>().toEqualTypeOf<
+      "standard" | "deep" | "moveinout" | "commercial"
+    >();
+    expectTypeOf<ServicePlanRow["frequency"]>().toEqualTypeOf<
+      "daily" | "2-3x" | "weekly" | "bi-weekly" | "monthly"
+    >();
+    expectTypeOf<ServicePlanRow["status"]>().toEqualTypeOf<"active" | "paused" | "ended">();
+    expectTypeOf<InvoiceRow["status"]>().toEqualTypeOf<"open" | "paid" | "void">();
   });
 
   it("keeps every generated column and the generated Insert/Update optionality", () => {

@@ -26,6 +26,15 @@ type CommercialQuoteColumns = {
   schedule_preference: "before" | "during" | "after" | "weekends" | null;
 };
 
+type AccountColumns = { account_type: "residential" | "commercial" };
+type AccountMemberColumns = { role: "owner" | "member" };
+type ServicePlanColumns = {
+  service_type: "standard" | "deep" | "moveinout" | "commercial";
+  frequency: "daily" | "2-3x" | "weekly" | "bi-weekly" | "monthly";
+  status: "active" | "paused" | "ended";
+};
+type InvoiceColumns = { status: "open" | "paid" | "void" };
+
 // Replaces the types of C's columns in T, keeping T's optional/required
 // modifiers (a homomorphic mapped type), so Insert/Update stay as generated.
 type NarrowColumns<T, C> = { [K in keyof T]: K extends keyof C ? C[K] : T[K] };
@@ -44,12 +53,20 @@ type NarrowTable<
 
 type BookingsTable = NarrowTable<GeneratedTables["bookings"], BookingColumns>;
 type CommercialQuotesTable = NarrowTable<GeneratedTables["commercial_quotes"], CommercialQuoteColumns>;
+type AccountsTable = NarrowTable<GeneratedTables["accounts"], AccountColumns>;
+type AccountMembersTable = NarrowTable<GeneratedTables["account_members"], AccountMemberColumns>;
+type ServicePlansTable = NarrowTable<GeneratedTables["service_plans"], ServicePlanColumns>;
+type InvoicesTable = NarrowTable<GeneratedTables["invoices"], InvoiceColumns>;
 
 export type EmployeeRow = GeneratedTables["employees"]["Row"];
 export type BookingRow = BookingsTable["Row"];
 export type BookingEmployeeRow = GeneratedTables["booking_employees"]["Row"];
 export type ActivityLogRow = GeneratedTables["activity_log"]["Row"];
 export type CommercialQuoteRow = CommercialQuotesTable["Row"];
+export type AccountRow = AccountsTable["Row"];
+export type AccountMemberRow = AccountMembersTable["Row"];
+export type ServicePlanRow = ServicePlansTable["Row"];
+export type InvoiceRow = InvoicesTable["Row"];
 
 // jsonb returned by assign_booking_employees
 // (supabase/migrations/20261018142718_assign_booking_employees.sql).
@@ -88,9 +105,21 @@ export type SetBookingAccessResult =
 // in. Passed to createServerClient / createClient so queries return these types.
 export type Database = Omit<GeneratedDatabase, "public"> & {
   public: Omit<GeneratedPublic, "Tables" | "Functions"> & {
-    Tables: Omit<GeneratedTables, "bookings" | "commercial_quotes"> & {
+    Tables: Omit<
+      GeneratedTables,
+      | "bookings"
+      | "commercial_quotes"
+      | "accounts"
+      | "account_members"
+      | "service_plans"
+      | "invoices"
+    > & {
       bookings: BookingsTable;
       commercial_quotes: CommercialQuotesTable;
+      accounts: AccountsTable;
+      account_members: AccountMembersTable;
+      service_plans: ServicePlansTable;
+      invoices: InvoicesTable;
     };
     Functions: Omit<
       GeneratedPublic["Functions"],

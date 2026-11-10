@@ -18,10 +18,14 @@ export function passwordProblem(password: unknown): string | null {
   return null;
 }
 
-// Log only the auth error code plus a correlation id, never the email.
-export function logAuthError(source: string, error: { code?: string } | null | undefined) {
-  console.error(`${source} failed`, {
-    code: error?.code ?? "unknown",
-    correlationId: crypto.randomUUID(),
-  });
+// Log only the auth error's code and HTTP status plus a correlation id, never the
+// email or message (which can echo it). Written as one string, because the dev
+// server's log file prints an object argument as "{}".
+export function logAuthError(
+  source: string,
+  error: { code?: string; status?: number } | null | undefined,
+) {
+  console.error(
+    `${source} failed (code=${error?.code ?? "unknown"}, status=${error?.status ?? "unknown"}, id=${crypto.randomUUID()})`,
+  );
 }
