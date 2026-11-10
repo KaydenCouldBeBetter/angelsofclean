@@ -26,6 +26,13 @@ export interface ReviewContent {
   placeholder: boolean;
   /** True for the three reviews the homepage shows; the Areas page shows all of them. */
   onHomepage: boolean;
+  /**
+   * A short phrase from the quote, shown in bold teal. It must appear in `quote`
+   * word for word (a test checks), so it only ever emphasises the customer's own words.
+   */
+  highlight?: string;
+  /** The one review shown as a solid teal card. At most one review sets this. */
+  featured?: boolean;
 }
 
 export interface TrustBadgeContent {
@@ -59,6 +66,8 @@ export const HOMEPAGE_REVIEWS: ReviewContent[] = [
     author: "Heather W.",
     placeholder: false,
     onHomepage: true,
+    highlight: "House looks amazing!",
+    featured: true,
   },
   {
     id: "audrey-g",
@@ -66,6 +75,7 @@ export const HOMEPAGE_REVIEWS: ReviewContent[] = [
     author: "Audrey G.",
     placeholder: false,
     onHomepage: true,
+    highlight: "Fabulous cleaning team.",
   },
   {
     id: "michelle-b",
@@ -73,6 +83,7 @@ export const HOMEPAGE_REVIEWS: ReviewContent[] = [
     author: "Michelle B.",
     placeholder: false,
     onHomepage: false,
+    highlight: "Professional, efficient and friendly",
   },
   {
     id: "cathy-d",
@@ -81,6 +92,7 @@ export const HOMEPAGE_REVIEWS: ReviewContent[] = [
     author: "Cathy D.",
     placeholder: false,
     onHomepage: true,
+    highlight: "highly recommend them",
   },
 ];
 
