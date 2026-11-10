@@ -67,16 +67,13 @@ export default function AreasPage() {
             Questions or Comments?
           </SectionHeading>
           <div className="flex flex-col gap-8 lg:flex-row lg:gap-6">
-            <div className="flex flex-1 flex-col items-stretch gap-4 md:items-start md:gap-6">
-              <CtaLink href="/residential" size="nav" className="h-12 px-6 md:w-fit">
+            <div className="flex flex-1 flex-col items-stretch gap-6 md:gap-8 lg:gap-10">
+              <CtaLink href="/residential" size="panel">
                 Book a Residential Cleaning
               </CtaLink>
-              <CtaLink href="/commercial" tone="outline" size="nav" className="h-12 px-6 md:w-fit">
+              <CtaLink href="/commercial" tone="outline" size="panel">
                 Request a Commercial Quote
               </CtaLink>
-            </div>
-            <div className="flex flex-1 flex-col gap-6">
-              <ServiceAreaMap />
               <section aria-labelledby="direct-contact-heading" className="flex flex-col gap-4 rounded-xl bg-white p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] md:p-8">
                 <h3 id="direct-contact-heading" className="text-lg font-semibold text-ink md:leading-[26px]">
                   Reach Us Directly
@@ -109,6 +106,9 @@ export default function AreasPage() {
                   </div>
                 </div>
               </section>
+            </div>
+            <div className="flex flex-1 flex-col">
+              <ServiceAreaMap />
             </div>
           </div>
         </div>
