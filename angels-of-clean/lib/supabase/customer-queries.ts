@@ -4,19 +4,24 @@ import type { QueryResult } from "./queries";
 import { logAuthError } from "@/lib/auth-input";
 import {
   COMMERCIAL_FREQUENCY_LABELS,
+  FACILITY_TYPE_LABELS,
   FREQUENCY_LABELS,
   SERVICE_LABELS,
+  SQFT_DISPLAY,
   formatBathroomCount,
 } from "@/lib/constants";
 import { formatBookingDate } from "@/lib/booking-date";
-import { formatNyTimeRange } from "@/lib/datetime";
+import { formatNyTimeRange, nyDateStr } from "@/lib/datetime";
 import { formatCents } from "@/lib/money";
 import { PLAN_STATUS_LABEL } from "@/lib/customer-status";
 import type {
   CustomerAccount,
+  CustomerQuote,
   Invoice,
   InvoiceDetail,
+  PendingInvite,
   ServicePlan,
+  TeamMember,
   Visit,
   VisitDetail,
 } from "@/lib/customer-types";
@@ -48,7 +53,7 @@ const INVOICE_COLUMNS =
   "id,invoice_number,amount_cents,description,issued_on,due_on,status,paid_on" as const;
 // The payment note and what the invoice is for are shown on its own page only.
 // created_by (which admin made it) is never selected.
-const INVOICE_DETAIL_COLUMNS = `${INVOICE_COLUMNS},payment_note,bookings(id,service_type,scheduled_date),commercial_quotes(quote_number)` as const;
+export const INVOICE_DETAIL_COLUMNS = `${INVOICE_COLUMNS},payment_note,bookings(id,service_type,scheduled_date),commercial_quotes(quote_number)` as const;
 const PLAN_COLUMNS = "id,service_type,frequency,address,city,zip,status" as const;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -219,7 +224,7 @@ type InvoiceListRow = Pick<
   "id" | "invoice_number" | "amount_cents" | "description" | "issued_on" | "due_on" | "status" | "paid_on"
 >;
 
-function toInvoice(row: InvoiceListRow): Invoice {
+export function toInvoice(row: InvoiceListRow): Invoice {
   return {
     id: row.id,
     number: `INV-${row.invoice_number}`,
@@ -272,19 +277,113 @@ export async function getCustomerInvoice(
   }
   if (!data) return { ok: true, data: null };
 
-  const booking = data.bookings;
+  return { ok: true, data: toInvoiceDetail(data) };
+}
+
+// The row INVOICE_DETAIL_COLUMNS selects: an invoice with its visit and quote.
+type InvoiceDetailRow = InvoiceListRow &
+  Pick<InvoiceRow, "payment_note"> & {
+    bookings: { id: string; service_type: BookingRow["service_type"]; scheduled_date: string } | null;
+    commercial_quotes: { quote_number: number } | null;
+  };
+
+/** An invoice with what it was for, shared with the admin Customers page. */
+export function toInvoiceDetail(row: InvoiceDetailRow): InvoiceDetail {
+  const booking = row.bookings;
+  return {
+    ...toInvoice(row),
+    paymentNote: row.payment_note?.trim() ? row.payment_note : null,
+    visit: booking
+      ? {
+          id: booking.id,
+          label: `${SERVICE_LABELS[booking.service_type]} on ${formatBookingDate(booking.scheduled_date, "medium")}`,
+        }
+      : null,
+    quoteRef: row.commercial_quotes ? `COM-${row.commercial_quotes.quote_number}` : null,
+  };
+}
+
+
+const QUOTE_COLUMNS =
+  "id,quote_number,facility_type,sqft_range,frequency,address,city,zip,submitted_at" as const;
+
+/** The account's commercial quote requests, newest first. */
+export async function getCustomerQuotes(accountId: string): Promise<QueryResult<CustomerQuote[]>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("commercial_quotes")
+    .select(QUOTE_COLUMNS)
+    .eq("account_id", accountId)
+    .order("submitted_at", { ascending: false });
+
+  if (error || !data) {
+    logQueryError("getCustomerQuotes", error);
+    return FAILED;
+  }
+  return {
+    ok: true,
+    data: data.map((row) => ({
+      id: row.id,
+      ref: `COM-${row.quote_number}`,
+      submittedLabel: formatBookingDate(nyDateStr(row.submitted_at), "medium"),
+      facilityLabel: FACILITY_TYPE_LABELS[row.facility_type],
+      sqftLabel: SQFT_DISPLAY[row.sqft_range],
+      frequencyLabel: COMMERCIAL_FREQUENCY_LABELS[row.frequency],
+      address: row.address,
+      cityLine: `${row.city}, ${row.zip}`,
+    })),
+  };
+}
+
+/**
+ * The owner's view of the team: members and unused invites. RLS only lets an
+ * owner read other members' rows (a member sees just their own), so for anyone
+ * else this is a partial list; the page only asks for it when the role is owner.
+ * Invites are read by explicit columns: token_hash is not granted to customers.
+ */
+export async function getTeam(
+  accountId: string,
+): Promise<QueryResult<{ members: TeamMember[]; invites: PendingInvite[] }>> {
+  const supabase = await createClient();
+  const [membersResult, invitesResult] = await Promise.all([
+    supabase
+      .from("account_members")
+      .select("user_id,email,role,created_at")
+      .eq("account_id", accountId)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("account_invites")
+      .select("id,email,expires_at")
+      .eq("account_id", accountId)
+      .is("accepted_at", null)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  if (membersResult.error || !membersResult.data) {
+    logQueryError("getTeam.members", membersResult.error);
+    return FAILED;
+  }
+  if (invitesResult.error || !invitesResult.data) {
+    logQueryError("getTeam.invites", invitesResult.error);
+    return FAILED;
+  }
+
+  const nowMs = Date.now();
   return {
     ok: true,
     data: {
-      ...toInvoice(data),
-      paymentNote: data.payment_note?.trim() ? data.payment_note : null,
-      visit: booking
-        ? {
-            id: booking.id,
-            label: `${SERVICE_LABELS[booking.service_type]} on ${formatBookingDate(booking.scheduled_date, "medium")}`,
-          }
-        : null,
-      quoteRef: data.commercial_quotes ? `COM-${data.commercial_quotes.quote_number}` : null,
+      members: membersResult.data.map((m) => ({
+        userId: m.user_id,
+        email: m.email,
+        role: m.role,
+        joinedLabel: formatBookingDate(nyDateStr(m.created_at), "medium"),
+      })),
+      invites: invitesResult.data.map((i) => ({
+        id: i.id,
+        email: i.email,
+        expiresLabel: formatBookingDate(nyDateStr(i.expires_at), "medium"),
+        expired: new Date(i.expires_at).getTime() <= nowMs,
+      })),
     },
   };
 }

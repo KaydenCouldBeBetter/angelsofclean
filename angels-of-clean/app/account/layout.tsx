@@ -19,7 +19,7 @@ export default async function AccountLayout({ children }: { children: React.Reac
   const account = result.ok ? result.data : null;
 
   return (
-    <AccountShell accountName={account?.name ?? null} nav={accountNav()}>
+    <AccountShell accountName={account?.name ?? null} nav={accountNav(account)}>
       {children}
     </AccountShell>
   );
