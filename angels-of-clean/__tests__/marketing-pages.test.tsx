@@ -23,7 +23,6 @@ import {
   SERVICE_AREA_MAP,
   SERVICE_AREA_TOWNS,
   SITE_PHOTOS,
-  TEAM_MEMBERS,
 } from "@/lib/homepage-content";
 import {
   AHCA_TRAINING,
@@ -226,7 +225,6 @@ describe("About page (Figma Marketing — About)", () => {
     expect(headings("h1")).toEqual(["Cleaning with Intention"]);
     expect(headings("h2")).toEqual([
       "AHCA Certified Professionals",
-      "Meet the Team",
       "How We Make Sure Things Go Right",
       "Ready to Experience the Difference?",
     ]);
@@ -239,15 +237,10 @@ describe("About page (Figma Marketing — About)", () => {
     expect(text).toContain("Member in Good Standing — AHCA");
   });
 
-  it("shows four labelled team members and flags every placeholder", () => {
-    const team = main().querySelector('ul[aria-label="Team members"]')!;
-    expect(team.querySelectorAll("li")).toHaveLength(TEAM_MEMBERS.length);
-    team.querySelectorAll('[role="img"], img').forEach((photo) => {
-      expect(photo.getAttribute("aria-label") ?? photo.getAttribute("alt")).toBeTruthy();
-    });
+  it("has no team section and flags the About photo while it is a placeholder", () => {
+    expect(main().querySelector('ul[aria-label="Team members"]')).toBeNull();
     const badges = [...main().querySelectorAll("span")].filter((s) => s.textContent === "Placeholder");
-    const expected = TEAM_MEMBERS.filter((m) => m.placeholder).length + (SITE_PHOTOS.about.placeholder ? 1 : 0);
-    expect(badges).toHaveLength(expected);
+    expect(badges).toHaveLength(SITE_PHOTOS.about.placeholder ? 1 : 0);
   });
 
   it("ends with the two booking paths", () => {
