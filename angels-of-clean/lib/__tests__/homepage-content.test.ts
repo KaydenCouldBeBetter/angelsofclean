@@ -8,12 +8,9 @@ import {
   SERVICE_AREA_MAP,
   SERVICE_AREA_TOWNS,
   SITE_PHOTOS,
-  TEAM_MEMBERS,
   hasPlaceholders,
   listPlaceholders,
 } from "@/lib/homepage-content";
-
-const isBracketed = (text: string) => /^\[.+\]$/.test(text);
 
 describe("marketing site placeholders", () => {
   it("lists which placeholders remain (informational; never fails the build)", () => {
@@ -30,14 +27,6 @@ describe("marketing site placeholders", () => {
     );
 
     expect(hasPlaceholders).toBe(remaining.length > 0);
-  });
-
-  it("every team member still marked placeholder is obviously fake", () => {
-    for (const member of TEAM_MEMBERS.filter((m) => m.placeholder)) {
-      expect(member.src, member.id).toBeNull();
-      expect(isBracketed(member.name), member.id).toBe(true);
-      expect(isBracketed(member.role), member.id).toBe(true);
-    }
   });
 
   it("a photo still marked placeholder has no image yet", () => {
@@ -57,18 +46,14 @@ describe("marketing site placeholders", () => {
       expect(badge.label, badge.id).not.toMatch(/\[|\]/);
       expect(badge.shortLabel.trim(), badge.id).not.toBe("");
     }
-    for (const photo of [...Object.values(SITE_PHOTOS), ...TEAM_MEMBERS].filter((p) => !p.placeholder)) {
+    for (const photo of Object.values(SITE_PHOTOS).filter((p) => !p.placeholder)) {
       expect(photo.src, photo.id).toMatch(/^\/home\/.+\.(jpe?g|png|webp|avif)$/i);
       expect(photo.alt.trim(), photo.id).not.toBe("");
-    }
-    for (const member of TEAM_MEMBERS.filter((m) => !m.placeholder)) {
-      expect(member.name, member.id).not.toMatch(/\[|\]/);
-      expect(member.role, member.id).not.toMatch(/\[|\]/);
     }
   });
 
   it("ids are unique within each list", () => {
-    for (const list of [HOMEPAGE_REVIEWS, HOMEPAGE_TRUST_BADGES, TEAM_MEMBERS]) {
+    for (const list of [HOMEPAGE_REVIEWS, HOMEPAGE_TRUST_BADGES]) {
       const ids = list.map((item) => item.id);
       expect(new Set(ids).size).toBe(ids.length);
     }
