@@ -4,3 +4,7 @@ ClaudeReferences/
 
 # Local AI working notes and scaffolding — kept on disk, untracked from git.
 .claude/
+
+# Raw owner photos waiting to be resized into angels-of-clean/public/home/. Never commit originals.
+angels-of-clean/photo-inbox/
+angels-of-clean/AngelsImg/
