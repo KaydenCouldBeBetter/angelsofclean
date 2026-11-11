@@ -5,11 +5,10 @@
 // mistakes it for the real thing.
 //
 // How to replace each placeholder:
-//   - Photos (hero, about, team): put the image in public/home/ (for example
-//     public/home/team-1.jpg), set `src` to "/home/team-1.jpg", write an `alt`
-//     that describes the photo (who and what, not "photo"), and for a team
-//     member set `name` and `role`. Use a real person's name only with their
-//     consent.
+//   - Photos (hero, about): put the image in public/home/ (for example
+//     public/home/about.jpg), set `src` to "/home/about.jpg" and write an `alt`
+//     that describes the photo (what it shows, not "photo"). There is no team
+//     section: the owner cut it on 2026-11-10 (see docs/DECISIONS.md).
 //   - Service area map: done. components/site/ServiceAreaMap.tsx draws a real
 //     OpenStreetMap map from SERVICE_AREA_COORDS below.
 //   - Reviews: only real reviews, in the customer's own words.
@@ -50,12 +49,14 @@ export interface PhotoContent {
   src: string | null;
   /** Describes the photo. Ignored while `src` is null (the box is labelled instead). */
   alt: string;
+  /**
+   * Optional different images for tablet (768px and up) and desktop (1024px and
+   * up). `src` is then the phone image. Each is shown at its own screen size.
+   */
+  responsive?: { tablet: string; desktop: string };
+  /** "cover" (default) crops the photo to fill its box; "contain" shrinks it so the whole image shows. */
+  fit?: "cover" | "contain";
   placeholder: boolean;
-}
-
-export interface TeamMemberContent extends PhotoContent {
-  name: string;
-  role: string;
 }
 
 export const HOMEPAGE_REVIEWS: ReviewContent[] = [
@@ -112,24 +113,27 @@ export const HOMEPAGE_HERO_FACTS = [
 ] as const;
 
 export const SITE_PHOTOS: { hero: PhotoContent; about: PhotoContent } = {
-  hero: { id: "hero", src: null, alt: "Team photo", placeholder: true },
-  about: { id: "about", src: null, alt: "Team photo", placeholder: true },
+  hero: {
+    id: "hero",
+    src: "/home/hero-phone-85c24e.png",
+    responsive: { tablet: "/home/hero-tablet-a0df82.png", desktop: "/home/hero-desktop-977d63.png" },
+    alt: "We're hiring: experienced cleaning technicians for window, carpet and commercial cleaning in Liverpool, NY, Monday to Friday, full and part time. Apply at angelsofcleanct@gmail.com.",
+    placeholder: false,
+  },
+  about: {
+    id: "about",
+    src: "/home/about-services-flyer.jpg",
+    alt: "Angels of Clean cleaning services flyer: three job photos (a clean bathtub, a polished tile floor, a cleaner using a carpet cleaning hose), the service types Residential, Commercial, Flooring and Carpets, and a note that customised packages are available.",
+    fit: "contain",
+    placeholder: false,
+  },
 };
-
-export const TEAM_MEMBERS: TeamMemberContent[] = [1, 2, 3, 4].map((n) => ({
-  id: `team-${n}`,
-  src: null,
-  alt: "Team photo",
-  name: `[Team Member ${n}]`,
-  role: "[Role]",
-  placeholder: true,
-}));
 
 /** The Areas page shows a grey "Service Area Map" box until a real map is built. */
 export const SERVICE_AREA_MAP = { placeholder: false };
 
 export interface PlaceholderEntry {
-  section: "reviews" | "trust badges" | "photos" | "team photos" | "service area map";
+  section: "reviews" | "trust badges" | "photos" | "service area map";
   id: string;
 }
 
@@ -139,7 +143,6 @@ export function listPlaceholders(): PlaceholderEntry[] {
     ...HOMEPAGE_REVIEWS.filter((r) => r.placeholder).map((r) => ({ section: "reviews" as const, id: r.id })),
     ...HOMEPAGE_TRUST_BADGES.filter((b) => b.placeholder).map((b) => ({ section: "trust badges" as const, id: b.id })),
     ...Object.values(SITE_PHOTOS).filter((p) => p.placeholder).map((p) => ({ section: "photos" as const, id: p.id })),
-    ...TEAM_MEMBERS.filter((m) => m.placeholder).map((m) => ({ section: "team photos" as const, id: m.id })),
     ...(SERVICE_AREA_MAP.placeholder ? [{ section: "service area map" as const, id: "map" }] : []),
   ];
 }

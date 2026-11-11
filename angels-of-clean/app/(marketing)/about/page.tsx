@@ -4,8 +4,7 @@ import Band from "@/components/site/Band";
 import CtaBand from "@/components/site/CtaBand";
 import Photo from "@/components/site/Photo";
 import SectionHeading from "@/components/site/SectionHeading";
-import TeamGrid from "@/components/site/TeamGrid";
-import { SITE_PHOTOS, TEAM_MEMBERS } from "@/lib/homepage-content";
+import { SITE_PHOTOS } from "@/lib/homepage-content";
 import { ABOUT_PRINCIPLES, AHCA_TRAINING } from "@/lib/site-content";
 
 export const metadata: Metadata = {
@@ -41,7 +40,7 @@ export default function AboutPage() {
               Now in our 10th year, we clean homes and businesses across Central New York from our base in Liverpool, NY.
             </p>
           </div>
-          <Photo photo={SITE_PHOTOS.about} className="h-60 lg:h-100 lg:flex-1" />
+          <Photo photo={SITE_PHOTOS.about} className="h-96 lg:h-[34rem] lg:flex-1" />
         </div>
       </Band>
 
@@ -66,18 +65,6 @@ export default function AboutPage() {
           <p className="inline-flex min-h-12 items-center rounded-3xl bg-primary px-6 text-sm font-semibold text-white">
             Member in Good Standing — AHCA
           </p>
-        </div>
-      </Band>
-
-      <Band labelledBy="team-heading">
-        <div className="flex flex-col gap-8">
-          <SectionHeading
-            id="team-heading"
-            intro="Every team member is a trained, educated professional who understands the science behind effective, safe cleaning."
-          >
-            Meet the Team
-          </SectionHeading>
-          <TeamGrid members={TEAM_MEMBERS} />
         </div>
       </Band>
 
