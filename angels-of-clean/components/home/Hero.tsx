@@ -29,16 +29,10 @@ export default function Hero() {
           </ul>
 
           <div className="mt-8 flex flex-col gap-3 md:flex-row md:items-start md:gap-4">
-            <div className="flex flex-col gap-2 md:block">
-              <CtaLink href="/residential">Book a cleaning</CtaLink>
-              <p className="text-center text-sm text-ink-muted md:hidden">Homes · We confirm your time and price with you</p>
-            </div>
-            <div className="flex flex-col gap-2 md:block">
-              <CtaLink href="/commercial" tone="outline">
-                Get a commercial quote
-              </CtaLink>
-              <p className="text-center text-sm text-ink-muted md:hidden">Offices &amp; facilities · Custom cleaning plans</p>
-            </div>
+            <CtaLink href="/residential">Book a cleaning</CtaLink>
+            <CtaLink href="/commercial" tone="outline">
+              Get a commercial quote
+            </CtaLink>
           </div>
         </div>
 
