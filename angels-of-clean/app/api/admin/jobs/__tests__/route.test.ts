@@ -83,6 +83,12 @@ describe("GET /api/admin/jobs — submission check", () => {
     expect(getJobsInRangeMock).not.toHaveBeenCalled();
   });
 
+  it("says the dates are invalid, not missing, when both were sent", async () => {
+    const res = await GET(request("?from=2026-13-01&to=x"));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/invalid/i);
+  });
+
   it("tells caches never to store the jobs, which hold names and addresses (L12)", async () => {
     getJobsInRangeMock.mockResolvedValue({ ok: true, data: [] });
     const res = await GET(request("?from=2026-09-01&to=2026-09-30"));

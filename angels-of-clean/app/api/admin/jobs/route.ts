@@ -25,10 +25,17 @@ export async function GET(req: NextRequest) {
   const from = searchParams.get("from");
   const to = searchParams.get("to");
 
-  // A malformed date is the caller's mistake (400), not an outage (503).
-  if (!from || !to || !isValidDateStr(from) || !isValidDateStr(to)) {
+  if (!from || !to) {
     return NextResponse.json(
       { error: "Missing 'from' and 'to' query params (YYYY-MM-DD)" },
+      { status: 400 },
+    );
+  }
+
+  // A malformed date is the caller's mistake (400), not an outage (503).
+  if (!isValidDateStr(from) || !isValidDateStr(to)) {
+    return NextResponse.json(
+      { error: "Invalid 'from' or 'to' date (YYYY-MM-DD)" },
       { status: 400 },
     );
   }
