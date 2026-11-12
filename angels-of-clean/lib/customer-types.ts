@@ -42,6 +42,8 @@ export interface ServicePlan {
   cityLine: string;
   status: "active" | "paused";
   statusLabel: string;
+  /** What the office wrote for the customer ("Every other Wednesday"); absent when blank. */
+  notes?: string | null;
 }
 
 // What an invoice's chip says. "overdue" isn't stored: it is an open invoice
