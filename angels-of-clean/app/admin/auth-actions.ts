@@ -69,9 +69,9 @@ export async function requestPasswordReset(email: string): Promise<{ error?: str
   );
 
   if (error) {
-    if (error.code === "over_email_send_rate_limit") {
-      return { error: "Too many reset emails were requested. Wait a few minutes and try again." };
-    }
+    // Supabase sends this only for an address that has an account (it limits
+    // emails per user), so a different answer would reveal who is an admin.
+    if (error.code === "over_email_send_rate_limit") return {};
     logAuthError("requestPasswordReset", error);
     return { error: "Something went wrong. Please try again." };
   }

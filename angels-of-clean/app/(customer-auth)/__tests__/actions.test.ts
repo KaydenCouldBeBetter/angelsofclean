@@ -300,11 +300,11 @@ describe("requestCustomerPasswordReset", () => {
     expect(resetPasswordForEmail).not.toHaveBeenCalled();
   });
 
-  it("explains Supabase's email limit", async () => {
+  it("answers Supabase's per-email limit like any other request (it fires only for real accounts)", async () => {
     resetPasswordForEmail.mockResolvedValue({
       error: { code: "over_email_send_rate_limit", message: "email rate limit exceeded" },
     });
-    expect((await requestCustomerPasswordReset("alice@example.com")).error).toMatch(/too many reset emails/i);
+    expect(await requestCustomerPasswordReset("alice@example.com")).toEqual({});
   });
 });
 

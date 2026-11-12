@@ -77,16 +77,14 @@ describe("requestPasswordReset", () => {
     expect(resetPasswordForEmailMock).not.toHaveBeenCalled();
   });
 
-  it("explains when Supabase's email limit has been reached", async () => {
+  it("answers Supabase's per-email limit like any other request (it fires only for real accounts)", async () => {
     resetPasswordForEmailMock.mockResolvedValue({
       error: { code: "over_email_send_rate_limit", message: "email rate limit exceeded" },
     });
 
     const result = await requestPasswordReset("jordan@example.com");
 
-    expect(result).toEqual({
-      error: "Too many reset emails were requested. Wait a few minutes and try again.",
-    });
+    expect(result).toEqual({});
   });
 
   it("logs only the error code, never the email, when the request fails", async () => {
