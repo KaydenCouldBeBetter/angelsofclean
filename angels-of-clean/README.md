@@ -91,6 +91,13 @@ where email = 'YOUR_ADMIN_EMAIL';
 
 Then sign out of the admin panel and back in so the session token picks up the new claim. Grant the role before relying on the RLS policies, or you will lock yourself out of the admin panel.
 
+### Supabase Auth settings for production
+
+`supabase/config.toml` sets these for the local stack (`supabase/__tests__/auth-config.test.ts` checks them). The hosted project needs the same in the dashboard, under Authentication:
+
+- **Providers, Email, Confirm email: on.** Linking bookings to an account trusts a confirmed email, so with this off anyone could sign up with a customer's address and read their bookings.
+- **URL Configuration:** Site URL is the site's public address. Supabase accepts email links back to that host on its own. For any other host customers use (for example `www.` as well as the bare domain), add `<host>/auth/confirm`, `<host>/auth/recovery` and `<host>/admin/reset-password/confirm` to Redirect URLs, or links opened from there land on the homepage and can't finish a sign-up or reset. Don't add wildcards: the app builds these links from the request's origin.
+
 ## CI and branch protection
 
 CI is `.github/workflows/ci.yml`, one job named **`verify`**. It runs on every pull request and on every push to `v2`, on Node 22, in `angels-of-clean/`:

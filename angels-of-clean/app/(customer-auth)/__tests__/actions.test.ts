@@ -300,11 +300,11 @@ describe("requestCustomerPasswordReset", () => {
     expect(resetPasswordForEmail).not.toHaveBeenCalled();
   });
 
-  it("explains Supabase's email limit", async () => {
+  it("answers Supabase's per-email limit like any other request (it fires only for real accounts)", async () => {
     resetPasswordForEmail.mockResolvedValue({
       error: { code: "over_email_send_rate_limit", message: "email rate limit exceeded" },
     });
-    expect((await requestCustomerPasswordReset("alice@example.com")).error).toMatch(/too many reset emails/i);
+    expect(await requestCustomerPasswordReset("alice@example.com")).toEqual({});
   });
 });
 
@@ -344,5 +344,32 @@ describe("customerSignOut", () => {
   it("signs out and returns to the login page", async () => {
     await expect(customerSignOut()).rejects.toThrow("NEXT_REDIRECT:/login");
     expect(signOutMock).toHaveBeenCalled();
+  });
+});
+
+// S3 follow-up (code review): Supabase's per-address email limit fires only for
+// an address that has an account, so every email-sending action must answer it
+// like a normal request, and log the code, because the same code also means
+// the project-wide email quota ran out (an outage the owner needs to see).
+describe("Supabase's email limit never says whether an address has an account", () => {
+  const LIMIT = { code: "over_email_send_rate_limit", message: "email rate limit exceeded" };
+  const loggedLimit = () => JSON.stringify(vi.mocked(console.error).mock.calls).includes("over_email_send_rate_limit");
+
+  it("sign-up gives the usual check-your-email answer, and logs the code", async () => {
+    signUp.mockResolvedValue({ data: { session: null }, error: LIMIT });
+    expect(await customerSignUp(VALID_SIGNUP)).toEqual({ checkEmail: true });
+    expect(loggedLimit()).toBe(true);
+  });
+
+  it("resending the confirmation answers as if sent, and logs the code", async () => {
+    resend.mockResolvedValue({ error: LIMIT });
+    expect(await resendConfirmation("alice@example.com")).toEqual({});
+    expect(loggedLimit()).toBe(true);
+  });
+
+  it("a password reset logs the code too", async () => {
+    resetPasswordForEmail.mockResolvedValue({ error: LIMIT });
+    expect(await requestCustomerPasswordReset("alice@example.com")).toEqual({});
+    expect(loggedLimit()).toBe(true);
   });
 });

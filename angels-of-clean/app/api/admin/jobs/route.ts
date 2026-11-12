@@ -5,6 +5,7 @@ import {
   NOT_SIGNED_IN_ERROR,
 } from "@/lib/supabase/require-admin";
 import { getJobsInRange } from "@/lib/supabase/queries";
+import { isValidDateStr } from "@/lib/datetime";
 
 export async function GET(req: NextRequest) {
   // Verify the user is a signed-in admin, not just any authenticated account.
@@ -31,6 +32,14 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  // A malformed date is the caller's mistake (400), not an outage (503).
+  if (!isValidDateStr(from) || !isValidDateStr(to)) {
+    return NextResponse.json(
+      { error: "Invalid 'from' or 'to' date (YYYY-MM-DD)" },
+      { status: 400 },
+    );
+  }
+
   const jobs = await getJobsInRange(from, to);
 
   // A failed query must not look like an empty range to the calendar.
@@ -38,5 +47,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Could not load jobs" }, { status: 503 });
   }
 
-  return NextResponse.json(jobs.data);
+  // Customer names and addresses: never kept by a browser or shared cache.
+  return NextResponse.json(jobs.data, { headers: { "Cache-Control": "private, no-store" } });
 }

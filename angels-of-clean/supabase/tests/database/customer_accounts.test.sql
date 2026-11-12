@@ -265,7 +265,11 @@ select lives_ok($$ insert into invoices (account_id, booking_id, amount_cents, d
                    select account_id, id, 12500, 'Standard clean, Dec 2', '2026-12-20'
                      from bookings where email ilike 'alice@test.com' $$,
                 'an admin can create an invoice for a visit');
+-- created_by isn't granted to the API roles (20261112033836_invoice_column_grants),
+-- so read it as the table owner, then carry on as the admin.
+reset role;
 select is((select created_by from invoices), 'admin@test.com', 'recording who made it');
+set local role authenticated;
 select throws_ok($$ insert into invoices (account_id, booking_id, amount_cents, description, due_on)
                     select a.account_id, b.id, 5000, 'Wrong account', '2026-12-20'
                       from bookings a, bookings b

@@ -15,6 +15,7 @@ export default function PlanCard({ plan }: { plan: ServicePlan }) {
         <p className="truncate text-sm text-ink-muted">
           {plan.address}, {plan.cityLine}
         </p>
+        {plan.notes && <p className="mt-1 whitespace-pre-line break-words text-sm text-ink">{plan.notes}</p>}
       </div>
       <span
         className={cn(

@@ -74,7 +74,8 @@ export default async function AdminDashboardPage() {
     {
       label: "Active Employees",
       value: `${activeEmployees}/${totalEmployees}`,
-      sub: `${Math.max(totalEmployees - activeEmployees, 0)} unavailable today`,
+      // Employees with no job assigned today: free, not "unavailable".
+      sub: `${Math.max(totalEmployees - activeEmployees, 0)} with no jobs today`,
       accent: "#1d4ed8",
     },
     {

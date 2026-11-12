@@ -29,8 +29,10 @@ export async function signIn(email: string, password: string): Promise<{ error?:
 
   // Valid credentials but no admin role claim — don't leave a signed-in
   // session that every admin surface would then refuse.
+  // "local" ends only this browser's session: a customer who tried their login
+  // here stays signed in to the customer portal on their other devices.
   if (data.user?.app_metadata?.role !== "admin") {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "local" });
     return { error: "This account is not authorized for the admin portal." };
   }
 
@@ -67,10 +69,11 @@ export async function requestPasswordReset(email: string): Promise<{ error?: str
   );
 
   if (error) {
-    if (error.code === "over_email_send_rate_limit") {
-      return { error: "Too many reset emails were requested. Wait a few minutes and try again." };
-    }
+    // Logged first: the same code also means the project's email quota ran out.
     logAuthError("requestPasswordReset", error);
+    // Supabase sends this only for an address that has an account (it limits
+    // emails per user), so a different answer would reveal who is an admin.
+    if (error.code === "over_email_send_rate_limit") return {};
     return { error: "Something went wrong. Please try again." };
   }
 

@@ -411,3 +411,29 @@ describe("invoices", () => {
     expect(await getCustomerInvoices(ACCOUNT_ID)).toEqual({ ok: true, data: [] });
   });
 });
+
+// P1: the admin form tells staff "The customer sees these on their account."
+describe("service plan notes", () => {
+  const PLAN = {
+    id: "33333333-3333-4333-8333-333333333333",
+    service_type: "standard",
+    frequency: "bi-weekly",
+    address: "1 Main St",
+    city: "Syracuse",
+    zip: "13202",
+    status: "active",
+  };
+
+  it("selects the plan's notes, which the office writes for the customer", async () => {
+    await getServicePlans(ACCOUNT_ID);
+    expect(recorded[0].columns!.split(",")).toContain("notes");
+  });
+
+  it("returns the notes, and leaves them out when blank", async () => {
+    results = [
+      { data: [{ ...PLAN, notes: "Every other Wednesday" }, { ...PLAN, id: "4", notes: "  " }], error: null },
+    ];
+    const result = await getServicePlans(ACCOUNT_ID);
+    expect(result.ok && result.data.map((p) => p.notes)).toEqual(["Every other Wednesday", undefined]);
+  });
+});

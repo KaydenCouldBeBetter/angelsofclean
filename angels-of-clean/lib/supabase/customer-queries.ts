@@ -54,7 +54,8 @@ const INVOICE_COLUMNS =
 // The payment note and what the invoice is for are shown on its own page only.
 // created_by (which admin made it) is never selected.
 export const INVOICE_DETAIL_COLUMNS = `${INVOICE_COLUMNS},payment_note,bookings(id,service_type,scheduled_date),commercial_quotes(quote_number)` as const;
-const PLAN_COLUMNS = "id,service_type,frequency,address,city,zip,status" as const;
+// Plan notes are written for the customer (the admin form says so).
+const PLAN_COLUMNS = "id,service_type,frequency,address,city,zip,status,notes" as const;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -94,7 +95,10 @@ function toVisit(row: VisitRow): Visit {
   };
 }
 
-function toPlan(row: Pick<ServicePlanRow, "id" | "service_type" | "frequency" | "address" | "city" | "zip" | "status">): ServicePlan | null {
+function toPlan(
+  row: Pick<ServicePlanRow, "id" | "service_type" | "frequency" | "address" | "city" | "zip" | "status"> &
+    Partial<Pick<ServicePlanRow, "notes">>,
+): ServicePlan | null {
   // Ended plans aren't shown.
   if (row.status === "ended") return null;
   return {
@@ -106,6 +110,8 @@ function toPlan(row: Pick<ServicePlanRow, "id" | "service_type" | "frequency" | 
     cityLine: `${row.city}, ${row.zip}`,
     status: row.status,
     statusLabel: PLAN_STATUS_LABEL[row.status],
+    // Only set when there is something to show.
+    ...(row.notes?.trim() ? { notes: row.notes } : {}),
   };
 }
 

@@ -77,16 +77,14 @@ describe("requestPasswordReset", () => {
     expect(resetPasswordForEmailMock).not.toHaveBeenCalled();
   });
 
-  it("explains when Supabase's email limit has been reached", async () => {
+  it("answers Supabase's per-email limit like any other request (it fires only for real accounts)", async () => {
     resetPasswordForEmailMock.mockResolvedValue({
       error: { code: "over_email_send_rate_limit", message: "email rate limit exceeded" },
     });
 
     const result = await requestPasswordReset("jordan@example.com");
 
-    expect(result).toEqual({
-      error: "Too many reset emails were requested. Wait a few minutes and try again.",
-    });
+    expect(result).toEqual({});
   });
 
   it("logs only the error code, never the email, when the request fails", async () => {
@@ -155,5 +153,21 @@ describe("updatePassword", () => {
     const result = await updatePassword("correct horse battery");
 
     expect(result).toEqual({ error: "Password should contain a number." });
+  });
+});
+
+// S3 follow-up (code review): the same code also means the project's email
+// quota ran out, so it is logged even though the answer stays neutral.
+describe("requestPasswordReset and Supabase's email limit", () => {
+  it("logs the code (never the email) while answering as usual", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    resetPasswordForEmailMock.mockResolvedValue({
+      error: { code: "over_email_send_rate_limit", message: "email rate limit exceeded" },
+    });
+    expect(await requestPasswordReset("jordan@example.com")).toEqual({});
+    const logged = JSON.stringify(consoleSpy.mock.calls);
+    expect(logged).toContain("over_email_send_rate_limit");
+    expect(logged).not.toContain("jordan@example.com");
+    consoleSpy.mockRestore();
   });
 });

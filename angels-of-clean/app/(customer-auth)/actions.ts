@@ -124,8 +124,11 @@ export async function customerSignUp(input: SignUpInput): Promise<SignUpResult> 
 
   if (error) {
     if (error.code === "weak_password") return { error: error.message };
+    // Fires only for an address that has an account (or when the project's email
+    // quota is used up): answer as usual so it reveals nothing, but log it.
     if (error.code === "over_email_send_rate_limit") {
-      return { error: "Too many emails were requested. Wait a few minutes and try again." };
+      logAuthError("customerSignUp", error);
+      return { checkEmail: true };
     }
     if (error.code === "signup_disabled") {
       // Sign-ups are switched off in the Supabase project. Logged so the owner can
@@ -139,7 +142,8 @@ export async function customerSignUp(input: SignUpInput): Promise<SignUpResult> 
     return { error: GENERIC_ERROR };
   }
 
-  // Email confirmation is off (local development): there's a session already.
+  // Only when a project has email confirmation switched off (it must stay on:
+  // see supabase/config.toml): there's a session already.
   if (data.session) {
     const { destination } = await completeCustomerSignIn(supabase, inviteToken);
     redirect(destination);
@@ -162,10 +166,9 @@ export async function resendConfirmation(email: string): Promise<{ error?: strin
   });
 
   if (error) {
-    if (error.code === "over_email_send_rate_limit") {
-      return { error: "Too many emails were requested. Wait a few minutes and try again." };
-    }
     logAuthError("resendConfirmation", error);
+    // Fires only for an address that has an account: answer as if sent.
+    if (error.code === "over_email_send_rate_limit") return {};
     return { error: GENERIC_ERROR };
   }
   return {};
@@ -185,10 +188,11 @@ export async function requestCustomerPasswordReset(email: string): Promise<{ err
   });
 
   if (error) {
-    if (error.code === "over_email_send_rate_limit") {
-      return { error: "Too many reset emails were requested. Wait a few minutes and try again." };
-    }
+    // Logged first: the same code also means the project's email quota ran out.
     logAuthError("requestCustomerPasswordReset", error);
+    // Supabase sends this only for an address that has an account (it limits
+    // emails per user), so a different answer would reveal who is a customer.
+    if (error.code === "over_email_send_rate_limit") return {};
     return { error: GENERIC_ERROR };
   }
   return {};
