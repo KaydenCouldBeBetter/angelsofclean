@@ -1,9 +1,9 @@
 # Angels of Clean
 
-Booking and operations app for Angels of Clean, a residential and commercial cleaning company in Syracuse, NY.
+Developer reference for the app. For the overview, screenshots and a ten-minute local setup, start with the [repository README](../README.md).
 
-- **Customers** book a residential cleaning in a 6-step flow (`/residential`) or request a commercial quote in a 4-step flow (`/commercial`). No account is needed.
-- **Admins** sign in at `/admin` to manage bookings, the calendar, crew assignments and commercial quote requests.
+- **Customers** book a residential cleaning in a 6-step flow (`/residential`) or request a commercial quote in a 4-step flow (`/commercial`). Booking needs no account. Customers can also sign up (`/signup`) to follow their visits, plans and invoices at `/account`.
+- **Admins** sign in at `/admin` to manage bookings, the calendar, crew assignments, commercial quote requests and customers.
 
 Built with Next.js 16 (App Router, React 19, React Compiler), TypeScript, Tailwind CSS v4, shadcn/ui, FullCalendar and Supabase (Postgres, Auth, RLS). Tests run on Vitest.
 
@@ -15,7 +15,7 @@ For a tour of the code see [`docs/PROJECT_MAP.md`](docs/PROJECT_MAP.md); for des
 
 - **Node.js 22**, pinned in `.nvmrc` and in `engines` in `package.json` (and what CI builds and tests with). Run `nvm use` (or your version manager's equivalent) in `angels-of-clean/`. Next.js 16 itself needs at least Node 20.9.
 - npm (comes with Node). The lockfile is `package-lock.json`; use `npm ci`.
-- A Supabase project, plus Docker only if you want the local Supabase stack or the database tests.
+- Docker (or Podman with its Docker-compatible socket) for the local Supabase stack and the database tests. A hosted Supabase project works too.
 
 The Supabase CLI is a dev dependency, so run it as `npx supabase …` (no global install).
 
@@ -24,13 +24,17 @@ The Supabase CLI is a dev dependency, so run it as `npx supabase …` (no global
 ```bash
 cd angels-of-clean
 npm ci
-# create .env.local with the variables below
+npx supabase start           # local Postgres, Auth and Mailpit
+npx supabase db reset        # migrations, then supabase/seed.sql (invented demo data and demo logins)
+# create .env.local: the repository README has a one-liner that fills it from `npx supabase status`
 npm run dev                  # http://localhost:3000
 ```
 
+`.env.example` lists the variable names. `supabase/seed.sql` is for the local stack only: it creates accounts with a publicly known password (listed in the repository README), and `supabase db push` never runs it.
+
 ### Environment variables
 
-Set these in `.env.local` (never commit it). Names only:
+Set these in `.env.local` (never commit it; `.env.example` is the template). Names only:
 
 | Name | Where it is used |
 |------|------------------|
@@ -62,14 +66,14 @@ Schema changes are Supabase CLI migrations in `supabase/migrations/`, named `<14
 - Create a migration with `npx supabase migration new <name>`.
 - **Never edit or rename a migration that has been applied.** `supabase/__tests__/migrations.test.ts` fails if an applied file changes or if a new one sorts before them. Fix mistakes with a new migration.
 - One-off data fixes (not schema) go in `supabase/scripts/` and are run by hand.
-- Do not run anything against the remote database from a coding session (`db push`, `migration repair`, SQL). The owner does that.
+- Applying migrations to the hosted project (`db push`, `migration repair`, SQL) is a deliberate manual step the owner takes; nothing in this repository does it.
 - Never hand-edit `lib/supabase/database.types.ts`. `lib/supabase/types.ts` re-exports row types from it under the names the app imports, and narrows columns that have CHECK constraints.
 
 ### Workflow for a schema change
 
 1. `npx supabase migration new <name>`, then write the SQL in the new file.
 2. Optionally try it locally: `npx supabase start` (Docker), then `npx supabase db reset`.
-3. Add or update tests. `npx supabase test db` runs the pgTAP tests in `supabase/tests/database/` against the local stack.
+3. Add or update tests. `npx supabase test db` runs the pgTAP tests in `supabase/tests/database/` against the local stack. They expect an unseeded database, so run `npx supabase db reset --no-seed` first, and `npx supabase db reset` afterwards to bring the demo data back.
 4. Open a PR. CI does not apply migrations.
 5. After merge, the owner links the project once (`npx supabase login`, `npx supabase link --project-ref <ref>`), then applies it with `npx supabase db push`.
 6. Then regenerate types with `npm run db:types` and commit `lib/supabase/database.types.ts` in a follow-up PR.
@@ -123,20 +127,12 @@ CI uses placeholder environment values only. Never put real secrets in the workf
 
 This is configured in GitHub (Settings, Branches), not in the repo. Check it there if a PR can merge with a red `verify`.
 
-## Working in a git worktree
+## Contributing
 
-Each task (a backlog item or chore) is done in its own git worktree on its own branch, so several tasks can run side by side without touching each other or the main checkout.
-
-1. **Start.** Create a worktree from `v2` with a branch named for the task, for example `worktree-w5b-docs`. Worktrees live under `.claude/worktrees/`. `.worktreeinclude` copies the git-ignored files a worktree needs (`.env.local`, `docs/BACKLOG.md`, `docs/FIGMA_MAP.md`, `docs/audit/*.md`).
-2. **Install.** `cd angels-of-clean && npm ci`.
-3. **Read first.** `CLAUDE.md`, `docs/PROJECT_MAP.md`, `docs/DECISIONS.md` and the backlog entries for the task, then open only the files you need.
-4. **Stay in scope.** Change only the files the task lists. No unrelated refactors, no new features, no new dependencies without asking first. If something needs an owner decision or is ambiguous, stop and ask.
-5. **Database.** Schema changes go in a new migration (see above). Never run anything against the remote database. Write down what the owner must run instead.
-6. **Tests.** Add or update tests that would have caught the problem.
-7. **Verify.** Run `npm run lint`, `npx tsc --noEmit` and `npm test`. If anything fails, say so plainly with the output.
-8. **Backlog.** `docs/BACKLOG.md`, `docs/FIGMA_MAP.md` and `docs/audit/` are not in git because the repo is public. In a worktree they are read-only copies: never edit them. Report a "Backlog note" in the summary and the owner updates the real file.
-9. **Commit.** `fix: B<n> <short title>`, or `chore:` / `perf:` for non-backlog work.
-10. **Hand off.** Open a PR into `v2`. The summary says what changed, lists the files, and lists every manual step for the owner (for example, a migration to apply and then `npm run db:types`).
+- Branch from `v2` and open pull requests into `v2`. `main` is a frozen snapshot: never commit to it or merge into it.
+- Before you finish a change, run `npm run lint`, `npx tsc --noEmit` and `npm test`.
+- Schema changes are new migrations (see above), never edits to an applied one.
+- Keep customer data out of logs: log an error code and a correlation id only.
 
 ## Accessibility and design
 

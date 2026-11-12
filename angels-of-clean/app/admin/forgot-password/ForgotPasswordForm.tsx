@@ -77,7 +77,7 @@ export default function ForgotPasswordForm({ linkFailed }: { linkFailed: boolean
             maxLength={FIELD_MAX_LENGTHS.email}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="jordan@angelsofclean.com"
+            placeholder="you@example.com"
             className="w-full h-12 rounded-lg border border-zinc-300 px-3 text-sm"
           />
         </div>
