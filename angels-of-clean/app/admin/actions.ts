@@ -91,8 +91,10 @@ export async function assignEmployees(
   bookingId: string,
   employeeIds: string[],
   expectedEmployeeIds: string[],
-  { allowOverlap = false }: { allowOverlap?: boolean } = {},
+  options: { allowOverlap?: boolean } | null = {},
 ): Promise<AssignResult> {
+  // Callable by anyone with any arguments, so `null` must not throw.
+  const allowOverlap = options?.allowOverlap;
   const auth = await requireAdmin();
   if (!auth.ok) {
     return { success: false, error: auth.error };

@@ -395,3 +395,16 @@ describe("confirmBooking", () => {
     expect(revalidatePathMock).toHaveBeenCalledWith("/admin/dashboard");
   });
 });
+
+// L6: a server action is a public endpoint, so its arguments can be anything.
+describe("assignEmployees with a null options argument", () => {
+  it("treats it as no override instead of crashing", async () => {
+    rpcReturns({ status: "saved", added: [], removed: [], overridden: [] });
+    const result = await assignEmployees("b-1", [], [], null as never);
+    expect(result).toEqual({ success: true });
+    expect(rpcMock).toHaveBeenCalledWith(
+      "assign_booking_employees",
+      expect.objectContaining({ p_allow_overlap: false }),
+    );
+  });
+});
