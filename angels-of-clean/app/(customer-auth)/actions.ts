@@ -139,7 +139,8 @@ export async function customerSignUp(input: SignUpInput): Promise<SignUpResult> 
     return { error: GENERIC_ERROR };
   }
 
-  // Email confirmation is off (local development): there's a session already.
+  // Only when a project has email confirmation switched off (it must stay on:
+  // see supabase/config.toml): there's a session already.
   if (data.session) {
     const { destination } = await completeCustomerSignIn(supabase, inviteToken);
     redirect(destination);
