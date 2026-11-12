@@ -74,3 +74,18 @@ describe("GET /api/admin/jobs", () => {
     expect(getJobsInRangeMock).not.toHaveBeenCalled();
   });
 });
+
+describe("GET /api/admin/jobs — submission check", () => {
+  it("answers 400, not 503, to dates that aren't YYYY-MM-DD, without querying (L5)", async () => {
+    for (const query of ["?from=x&to=y", "?from=2026-02-30&to=2026-03-01", "?from=2026-09-01&to=09/30/2026"]) {
+      expect((await GET(request(query))).status).toBe(400);
+    }
+    expect(getJobsInRangeMock).not.toHaveBeenCalled();
+  });
+
+  it("tells caches never to store the jobs, which hold names and addresses (L12)", async () => {
+    getJobsInRangeMock.mockResolvedValue({ ok: true, data: [] });
+    const res = await GET(request("?from=2026-09-01&to=2026-09-30"));
+    expect(res.headers.get("Cache-Control")).toBe("private, no-store");
+  });
+});

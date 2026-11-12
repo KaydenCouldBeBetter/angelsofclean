@@ -5,6 +5,7 @@ import {
   NOT_SIGNED_IN_ERROR,
 } from "@/lib/supabase/require-admin";
 import { getJobsInRange } from "@/lib/supabase/queries";
+import { isValidDateStr } from "@/lib/datetime";
 
 export async function GET(req: NextRequest) {
   // Verify the user is a signed-in admin, not just any authenticated account.
@@ -24,7 +25,8 @@ export async function GET(req: NextRequest) {
   const from = searchParams.get("from");
   const to = searchParams.get("to");
 
-  if (!from || !to) {
+  // A malformed date is the caller's mistake (400), not an outage (503).
+  if (!from || !to || !isValidDateStr(from) || !isValidDateStr(to)) {
     return NextResponse.json(
       { error: "Missing 'from' and 'to' query params (YYYY-MM-DD)" },
       { status: 400 },
@@ -38,5 +40,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Could not load jobs" }, { status: 503 });
   }
 
-  return NextResponse.json(jobs.data);
+  // Customer names and addresses: never kept by a browser or shared cache.
+  return NextResponse.json(jobs.data, { headers: { "Cache-Control": "private, no-store" } });
 }
