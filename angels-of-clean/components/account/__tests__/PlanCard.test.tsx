@@ -20,6 +20,11 @@ describe("PlanCard", () => {
     expect(html).toContain("Every other Wednesday");
   });
 
+  it("wraps long words in the notes so a narrow phone never scrolls sideways (WCAG 1.4.10)", () => {
+    const html = renderToStaticMarkup(<PlanCard plan={{ ...PLAN, notes: "https://example.com/" + "x".repeat(200) }} />);
+    expect(html).toMatch(/<p class="[^"]*\bbreak-words\b[^"]*">https:\/\/example\.com/);
+  });
+
   it("adds nothing when the plan has no notes", () => {
     const withNull = renderToStaticMarkup(<PlanCard plan={{ ...PLAN, notes: null }} />);
     const without = renderToStaticMarkup(<PlanCard plan={PLAN} />);
