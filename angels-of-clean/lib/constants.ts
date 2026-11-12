@@ -130,6 +130,10 @@ export function formatBathroomCount(count: number): string {
   return `${count} ${count === 1 ? "Bathroom" : "Bathrooms"}`;
 }
 
+// How far ahead a customer may book (owner decision 2026-11-11: 3 months).
+// 92 days so it never falls short on a run of 31-day months. Admins aren't limited.
+export const BOOKING_MAX_DAYS_AHEAD = 92;
+
 // Shortest admin password the reset form accepts. Supabase's own project
 // setting may be stricter; its message is shown if so.
 export const PASSWORD_MIN_LENGTH = 8;

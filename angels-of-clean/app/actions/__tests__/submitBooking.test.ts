@@ -49,7 +49,7 @@ vi.mock("@/lib/rate-limit", () => ({
 
 import { submitBooking, adminCreateBooking, type BookingData } from "../submitBooking";
 import { requireAdmin } from "@/lib/supabase/require-admin";
-import { FIELD_MAX_LENGTHS } from "@/lib/constants";
+import { BOOKING_MAX_DAYS_AHEAD, FIELD_MAX_LENGTHS } from "@/lib/constants";
 import { MIN_FILL_MS, type BotCheck } from "@/lib/bot-check";
 
 // What a person's browser sends: empty honeypot, well past the minimum fill time.
@@ -353,6 +353,8 @@ describe("submitBooking", () => {
   });
 
   it("stores the correct UTC offsets on both sides of the fall DST change (Nov 1, 2026)", async () => {
+    // Within BOOKING_MAX_DAYS_AHEAD of these dates (approved test change, V1).
+    vi.setSystemTime(new Date("2026-10-01T14:00:00.000Z"));
     singleMock.mockResolvedValue({
       data: { id: "abc-123", booking_number: 1042 },
       error: null,
@@ -372,6 +374,8 @@ describe("submitBooking", () => {
   });
 
   it("stores the correct UTC offsets on both sides of the spring DST change (Mar 14, 2027)", async () => {
+    // Within BOOKING_MAX_DAYS_AHEAD of these dates (approved test change, V1).
+    vi.setSystemTime(new Date("2027-02-15T15:00:00.000Z"));
     singleMock.mockResolvedValue({
       data: { id: "abc-123", booking_number: 1042 },
       error: null,
@@ -728,5 +732,34 @@ describe("submitBooking client", () => {
     expect(result.success).toBe(true);
     expect(createServiceRoleClientMock).toHaveBeenCalledTimes(1);
     expect(sessionFromMock).not.toHaveBeenCalled();
+  });
+});
+
+// V1: the date step offers about a week, but a direct call could book any
+// future date. Customers may book up to BOOKING_MAX_DAYS_AHEAD (owner: 3 months).
+describe("how far ahead a customer can book", () => {
+  // NOW is 2026-07-15 in New York; 92 days later is 2026-10-15.
+  it("accepts the last allowed day", async () => {
+    singleMock.mockResolvedValue({ data: { id: "abc-123", booking_number: 1042 }, error: null });
+    expect((await submitBooking({ ...VALID_INPUT, date: "2026-10-15" }, HUMAN)).success).toBe(true);
+  });
+
+  it("refuses the day after, and far-future dates, before inserting", async () => {
+    for (const date of ["2026-10-16", "2099-01-01"]) {
+      expect(await submitBooking({ ...VALID_INPUT, date }, HUMAN)).toEqual({
+        success: false,
+        error: `Please choose a date within the next ${BOOKING_MAX_DAYS_AHEAD} days.`,
+      });
+    }
+    expect(bookingsInsertMock).not.toHaveBeenCalled();
+  });
+
+  it("is 3 months, as the owner decided", () => {
+    expect(BOOKING_MAX_DAYS_AHEAD).toBe(92);
+  });
+
+  it("doesn't limit admins, who book recurring and custom visits", async () => {
+    singleMock.mockResolvedValue({ data: { id: "abc-123", booking_number: 1042 }, error: null });
+    expect((await adminCreateBooking({ ...VALID_INPUT, date: "2027-03-01" })).success).toBe(true);
   });
 });
