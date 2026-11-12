@@ -2,6 +2,7 @@
 
 import {
   BATHROOM_LIMITS,
+  BOOKING_MAX_DAYS_AHEAD,
   FIELD_MAX_LENGTHS,
   FREQUENCY_LABELS,
   SERVICE_AREA_ZIPS,
@@ -12,7 +13,13 @@ import { looksLikeBot, type BotCheck } from "@/lib/bot-check";
 import { allowPublicSubmission } from "@/lib/rate-limit";
 import { createServiceRoleClient } from "@/lib/supabase/service";
 import { requireAdmin, type AdminContext } from "@/lib/supabase/require-admin";
-import { isNyWallClockInFuture, isValidDateStr, nyWallClockToInstant } from "@/lib/datetime";
+import {
+  addDaysToDateStr,
+  isNyWallClockInFuture,
+  isValidDateStr,
+  nyTodayStr,
+  nyWallClockToInstant,
+} from "@/lib/datetime";
 
 export interface BookingData {
   service: string;
@@ -107,6 +114,9 @@ interface BookingPath {
   // insert path for signed-out customers. Admin: the admin's own session, so
   // RLS applies.
   client: () => BookingClient;
+  // Public path only: the latest day a customer may book, counted from today
+  // in New York. Admins book recurring and custom visits further out.
+  maxDaysAhead?: number;
 }
 
 // Shared by submitBooking and adminCreateBooking so validation and insert
@@ -181,6 +191,14 @@ async function createBooking(data: BookingData, path: BookingPath): Promise<Book
     return {
       success: false,
       error: "That time has already passed. Please choose a later date or time.",
+    };
+  }
+
+  // YYYY-MM-DD strings compare correctly as text.
+  if (path.maxDaysAhead !== undefined && data.date > addDaysToDateStr(nyTodayStr(), path.maxDaysAhead)) {
+    return {
+      success: false,
+      error: `Please choose a date within the next ${path.maxDaysAhead} days.`,
     };
   }
 
@@ -291,6 +309,7 @@ export async function submitBooking(data: BookingData, botCheck: BotCheck): Prom
     rateLimited: true,
     acceptsAccessInstructions: true,
     client: createServiceRoleClient,
+    maxDaysAhead: BOOKING_MAX_DAYS_AHEAD,
   });
 }
 
