@@ -46,14 +46,14 @@ describe("supabase/config.toml auth settings", () => {
     expect(section("auth.email").enable_confirmations).toBe("true");
   });
 
-  it("allows the app's email-link routes as redirects, so the links land on them", () => {
-    // Supabase ignores a redirectTo that isn't allow-listed and sends the user to
-    // site_url (the homepage), which can't finish a sign-up or password reset.
+  it("allows the app's email-link routes on localhost, where npm run dev serves", () => {
+    // Auth accepts any redirect on site_url's host (127.0.0.1) but ignores one on
+    // another host that isn't listed, sending the user to site_url (the
+    // homepage), which can't finish a sign-up or password reset.
     const auth = section("auth");
-    const siteUrl = JSON.parse(auth.site_url) as string;
+    expect(new URL(JSON.parse(auth.site_url) as string).hostname).toBe("127.0.0.1");
     const allowed = JSON.parse(auth.additional_redirect_urls) as string[];
     for (const path of ["/auth/confirm", "/auth/recovery", "/admin/reset-password/confirm"]) {
-      expect(allowed).toContain(`${siteUrl}${path}`);
       expect(allowed).toContain(`http://localhost:3000${path}`);
     }
   });

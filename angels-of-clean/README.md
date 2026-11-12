@@ -96,7 +96,7 @@ Then sign out of the admin panel and back in so the session token picks up the n
 `supabase/config.toml` sets these for the local stack (`supabase/__tests__/auth-config.test.ts` checks them). The hosted project needs the same in the dashboard, under Authentication:
 
 - **Providers, Email, Confirm email: on.** Linking bookings to an account trusts a confirmed email, so with this off anyone could sign up with a customer's address and read their bookings.
-- **URL Configuration:** Site URL is the site's address, and Redirect URLs include `<site>/auth/confirm`, `<site>/auth/recovery` and `<site>/admin/reset-password/confirm`. Without them, sign-up and reset links land on the homepage and can't finish. Don't add wildcards: the app builds these links from the request's origin.
+- **URL Configuration:** Site URL is the site's public address. Supabase accepts email links back to that host on its own. For any other host customers use (for example `www.` as well as the bare domain), add `<host>/auth/confirm`, `<host>/auth/recovery` and `<host>/admin/reset-password/confirm` to Redirect URLs, or links opened from there land on the homepage and can't finish a sign-up or reset. Don't add wildcards: the app builds these links from the request's origin.
 
 ## CI and branch protection
 

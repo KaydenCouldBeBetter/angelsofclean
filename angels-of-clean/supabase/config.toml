@@ -161,14 +161,12 @@ site_url = "http://127.0.0.1:3000"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-# The app's email-link routes must be listed, or links land on site_url (the
-# homepage) and can't finish a sign-up or reset. Production needs the same three
-# paths on its own domain (Authentication -> URL Configuration -> Redirect URLs).
+# Auth accepts any redirect on site_url's own host (127.0.0.1). Any other host the
+# app is opened on must list the email-link routes, or the links fall back to
+# site_url (the homepage) and can't finish a sign-up or reset. `npm run dev`
+# serves http://localhost:3000, so those are listed.
 additional_redirect_urls = [
   "https://127.0.0.1:3000",
-  "http://127.0.0.1:3000/auth/confirm",
-  "http://127.0.0.1:3000/auth/recovery",
-  "http://127.0.0.1:3000/admin/reset-password/confirm",
   "http://localhost:3000/auth/confirm",
   "http://localhost:3000/auth/recovery",
   "http://localhost:3000/admin/reset-password/confirm",
