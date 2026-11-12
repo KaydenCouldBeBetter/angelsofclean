@@ -15,4 +15,8 @@ describe("next.config.ts hardening", async () => {
     expect(maxAge).toBeGreaterThanOrEqual(31_536_000);
     expect(hsts).toContain("includeSubDomains");
   });
+
+  it("doesn't advertise the framework in X-Powered-By (L11)", () => {
+    expect(nextConfig.poweredByHeader).toBe(false);
+  });
 });

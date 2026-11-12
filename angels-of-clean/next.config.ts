@@ -10,6 +10,8 @@ const publicCsp = buildCsp({
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  // No "X-Powered-By: Next.js": it only helps someone fingerprint the site.
+  poweredByHeader: false,
   logging: {
     serverFunctions: false,
   },
