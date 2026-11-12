@@ -69,10 +69,11 @@ export async function requestPasswordReset(email: string): Promise<{ error?: str
   );
 
   if (error) {
+    // Logged first: the same code also means the project's email quota ran out.
+    logAuthError("requestPasswordReset", error);
     // Supabase sends this only for an address that has an account (it limits
     // emails per user), so a different answer would reveal who is an admin.
     if (error.code === "over_email_send_rate_limit") return {};
-    logAuthError("requestPasswordReset", error);
     return { error: "Something went wrong. Please try again." };
   }
 

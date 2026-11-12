@@ -155,3 +155,19 @@ describe("updatePassword", () => {
     expect(result).toEqual({ error: "Password should contain a number." });
   });
 });
+
+// S3 follow-up (code review): the same code also means the project's email
+// quota ran out, so it is logged even though the answer stays neutral.
+describe("requestPasswordReset and Supabase's email limit", () => {
+  it("logs the code (never the email) while answering as usual", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    resetPasswordForEmailMock.mockResolvedValue({
+      error: { code: "over_email_send_rate_limit", message: "email rate limit exceeded" },
+    });
+    expect(await requestPasswordReset("jordan@example.com")).toEqual({});
+    const logged = JSON.stringify(consoleSpy.mock.calls);
+    expect(logged).toContain("over_email_send_rate_limit");
+    expect(logged).not.toContain("jordan@example.com");
+    consoleSpy.mockRestore();
+  });
+});
