@@ -29,8 +29,10 @@ export async function signIn(email: string, password: string): Promise<{ error?:
 
   // Valid credentials but no admin role claim — don't leave a signed-in
   // session that every admin surface would then refuse.
+  // "local" ends only this browser's session: a customer who tried their login
+  // here stays signed in to the customer portal on their other devices.
   if (data.user?.app_metadata?.role !== "admin") {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "local" });
     return { error: "This account is not authorized for the admin portal." };
   }
 
