@@ -2,7 +2,6 @@
 
 A booking and operations web app for **Angels of Clean**, a residential and commercial cleaning company in the Syracuse, NY area. Customers book a cleaning or request a commercial quote online and follow their visits and invoices in an account portal. The owner and staff run the business from an admin panel with a dashboard, a crew calendar, bookings, quotes and customers.
 
-Built as a course project for **CISY 5233 (Human-Computer Interaction)** for a real small business.
 
 **This is `v2`, the current working version** and the repository's default branch. (`main` is an older snapshot kept for a course write-up. Use `v2`.)
 
