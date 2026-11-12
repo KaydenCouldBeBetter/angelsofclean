@@ -50,12 +50,12 @@ Schema changes are **Supabase CLI migrations** in `supabase/migrations/`, named 
 Enum `booking_status`: `pending | confirmed | active | done | cancelled`.
 
 **Tables**
-- **employees** — `id uuid pk`, `name`, `initials`, `phone`, `hired_date date`, `created_at`. Seeded with 5 real employees (Marcus T., Ana V., Rosa C., Devon M., Lisa P.). No booking rows seeded.
+- **employees** — `id uuid pk`, `name`, `initials`, `phone`, `hired_date date`, `created_at`. Seeded with 5 sample employees (first name and initial, placeholder `555-01xx` phone numbers). The migration seeds no bookings; `supabase/seed.sql` adds invented demo data for the local stack only.
 - **bookings** — `id uuid pk`; `booking_number int identity` (starts at 1000, unique); `client_name`, `email`, `phone`; `service_type` (`standard|deep|moveinout`); `frequency` (`one-time|weekly|bi-weekly|monthly`); `address`, `city`, `zip`; `bedrooms smallint` (CHECK 1–5); `bathrooms numeric(2,1)` (CHECK 1–5 in steps of 0.5, since `20261019225200_half_bathrooms.sql`); `notes`; `scheduled_date date`; `time_slot` (`morning|afternoon`); `start_at`/`end_at timestamptz`; `status` (default `pending`); `submitted_at`, `created_at`, `updated_at`. Index on `start_at`.
 - **booking_employees** — join table; PK `(booking_id, employee_id)`; `booking_id` FK → bookings **ON DELETE CASCADE**, `employee_id` FK → employees **ON DELETE RESTRICT**; `assigned_at`. Index on `employee_id`.
 - **activity_log** — `id`, `booking_id` FK → bookings ON DELETE CASCADE, `description`, `created_at`. Index on `booking_id`.
 
-**RLS (as originally shipped):** enabled on all four tables, granting access on `auth.role() = 'authenticated'` — any signed-in account could read all customer PII. Deliberately **no INSERT/DELETE policy on bookings** (customer inserts go through the service-role client, which bypasses RLS). Replaced by the next migration.
+**RLS (first version, superseded):** enabled on all four tables, with a policy keyed on any signed-in user. It was replaced by the admin-role policies in `20260918194509_admin_role_rls.sql` below, which are the ones in force. Deliberately **no INSERT/DELETE policy on bookings** (customer inserts go through the service-role client, which bypasses RLS).
 
 ### `20260918194509_admin_role_rls.sql` (tightens the first; the effective policy base)
 Drops the `authenticated`-based policies and recreates them keyed on the JWT claim `app_metadata.role = 'admin'`:
@@ -287,8 +287,8 @@ Rows are mapped to the UI `Job`/`Employee`/`ActivityEntry` shapes from `lib/admi
 
 - **Half-bathrooms (B42):** `__tests__/half-bathrooms.test.tsx` (the bathrooms stepper goes 1, 1.5 … 5 and announces "1.5 bathrooms", stops at both ends and saves 2.5; bedrooms stay whole; Review and the confirmation show "2.5 Bathrooms" and keep "1 Bathroom" singular; Review and the admin New Booking form send 2.5, and the form offers every half step), the bathroom cases in `submitBooking.test.ts` (half steps accepted and stored, out of range and non-half values like 1.49 refused before the insert, NaN/Infinity refused as malformed), `formatBathroomCount` / `BATHROOM_LIMITS` / `BATHROOM_OPTIONS` in `constants.test.ts`, and the admin detail/list text in `queries.test.ts`. pgTAP: `supabase/tests/database/half_bathrooms.test.sql` (column type, CHECK validated, every half step accepted, 0/0.5/5.5/1.3/2.7/1.25 refused, 10 overflows). ✅ passing (pgTAP not run in CI).
 
-### Current test status: 910 passing (64 of 64 files green)
-From a fresh `npm test` on v2 at `3d17b54` (2026-10-20), under the default `TZ=UTC`. The count changes with every PR, so rerun `npm test` rather than trusting this line. CI runs lint, `tsc`, tests and a build on every pull request (§1).
+### Current test status: 1525 passing (99 of 99 files green)
+From a fresh `npm test` on v2 at `e863848` (2026-11-12), under the default `TZ=UTC`, plus 229 pgTAP assertions in 6 files (`npx supabase test db`, on an unseeded local database). The count changes with every PR, so rerun `npm test` rather than trusting this line. CI runs lint, `tsc`, tests and a build on every pull request (§1).
 
 **History — the B16 ZIP swap.** Commit `fe85cd2` meant to change Camillus from `13035` (actually Cazenovia) to `13031`, but edited the Cicero line instead (`13039` → `13031`), which rejected Cicero customers and turned 26 tests red. Corrected 2026-10-13: Cicero is `13039`, Camillus is `13031`, and `13035` is no longer served.
 
@@ -302,7 +302,7 @@ From a fresh `npm test` on v2 at `3d17b54` (2026-10-20), under the default `TZ=U
 4. **The original backend plan was never built** — it described Prisma + Vercel/Neon Postgres + Auth.js/NextAuth + Zod + Resend/Twilio. The app actually uses Supabase (Postgres + Auth) with generated database types and no ORM/email/SMS. The plan is archived locally at `docs/archive/BACKEND_PLAN.md` (untracked) with a banner saying so (backlog B51).
 5. **Fake availability & dead controls.** The datetime step hardcodes the 3rd offered day as "Full" (`isFull: i === 2`, a Figma placeholder). Admin buttons that are not built are disabled and labelled "Coming soon" (Reschedule, Send Client Message, Print / Export, Add Employee, View Schedule, and the bookings list's All Status / All Employees filters). The customer-side Log In and Create Account are real now (customer portal, below). On the residential confirmation page the calendar buttons work (Google Calendar link, `.ics` download).
 6. **Settings are a placeholder** — `/admin/settings` shows email/SMS notification toggles disabled and labeled "Coming soon" (backlog B49). Building them needs outbound email/SMS first.
-7. Backlog work is tracked as **B1–B52** in `docs/BACKLOG.md`; recent commits (B5/B12/B14/B15/B30/B43/B47 and earlier) reference those IDs. Design rationale lives in `docs/DECISIONS.md`; Figma mapping in `docs/FIGMA_MAP.md`.
+7. Backlog work is tracked as **B1–B52** in a backlog file the owner keeps locally (not in this repository); commit messages and code comments (B5/B12/B14/B15/B30/B43/B47 and earlier) reference those IDs. Design rationale lives in `docs/DECISIONS.md`.
 
 ---
 
