@@ -45,8 +45,13 @@ select lives_ok(format('select test_new_booking(%s)', v),
                 format('%s bathrooms is accepted', v))
   from unnest(array[1, 1.5, 2, 2.5, 3, 4.5, 5]::numeric[]) v;
 
+-- Insert first, read back in a later statement: a statement can't see a row
+-- that a function it calls inserts, so doing both at once always read NULL.
+create temp table half_bath_row on commit drop as
+  select test_new_booking(2.5) as id;
+
 select is(
-         (select bathrooms from bookings where id = test_new_booking(2.5)),
+         (select bathrooms from bookings where id = (select id from half_bath_row)),
          2.5::numeric,
          '2.5 bathrooms is stored as 2.5'
        );
