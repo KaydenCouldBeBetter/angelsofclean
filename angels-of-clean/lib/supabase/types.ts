@@ -115,6 +115,10 @@ export type SetEmployeeArchivedResult =
   | { status: "has_upcoming"; booking_numbers: number[] }
   | { status: "not_found" };
 
+// jsonb returned by save_admin_preferences
+// (supabase/migrations/20261113202614_admin_preferences.sql).
+export type SaveAdminPreferencesResult = { status: "saved" };
+
 // The generated Database with the narrowed tables and function result swapped
 // in. Passed to createServerClient / createClient so queries return these types.
 export type Database = Omit<GeneratedDatabase, "public"> & {
@@ -142,6 +146,7 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
       | "set_booking_access"
       | "create_employee"
       | "set_employee_archived"
+      | "save_admin_preferences"
     > & {
       assign_booking_employees: {
         Args: GeneratedPublic["Functions"]["assign_booking_employees"]["Args"];
@@ -162,6 +167,10 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
       set_employee_archived: {
         Args: GeneratedPublic["Functions"]["set_employee_archived"]["Args"];
         Returns: SetEmployeeArchivedResult;
+      };
+      save_admin_preferences: {
+        Args: GeneratedPublic["Functions"]["save_admin_preferences"]["Args"];
+        Returns: SaveAdminPreferencesResult;
       };
     };
   };

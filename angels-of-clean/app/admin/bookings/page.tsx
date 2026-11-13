@@ -1,4 +1,6 @@
 import { getJobsByDateFilter, getEmployees } from "@/lib/supabase/queries";
+import { getAdminPreferencesOrDefaults } from "@/lib/supabase/admin-preferences";
+import { isBookingsFilter } from "@/lib/admin-preferences";
 import { NewBookingButton } from "../NewBookingModal";
 import { formatNy } from "@/lib/datetime";
 import { toStaffMap } from "@/lib/admin-types";
@@ -11,7 +13,11 @@ export default async function AdminBookingsPage({
   searchParams: Promise<{ filter?: string }>;
 }) {
   const params = await searchParams;
-  const activeTab: FilterTab = (params.filter as FilterTab) || "today";
+  // An explicit ?filter= (the tabs) wins; with none, or one we don't know, the
+  // admin's own default from Settings applies.
+  const activeTab: FilterTab = isBookingsFilter(params.filter)
+    ? params.filter
+    : (await getAdminPreferencesOrDefaults()).bookingsDefaultFilter;
 
   const [jobs, employees] = await Promise.all([getJobsByDateFilter(activeTab), getEmployees()]);
 

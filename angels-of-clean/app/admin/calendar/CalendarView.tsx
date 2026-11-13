@@ -12,6 +12,14 @@ import { STATUS_CONFIG } from "../status-config";
 import type { Job, StaffMember } from "@/lib/admin-types";
 import NewBookingModal from "../NewBookingModal";
 import {
+  DEFAULT_ADMIN_PREFERENCES,
+  TRAY_COLLAPSED_KEY,
+  calendarSlotTimes,
+  firstDayNumber,
+  hourLabel,
+  type AdminPreferences,
+} from "@/lib/admin-preferences";
+import {
   formatNy,
   formatNyTimeRange,
   formatWallClockTime,
@@ -20,31 +28,45 @@ import {
   nyWallClockISO,
 } from "@/lib/datetime";
 
-// Whether the admin last hid the Unassigned list. Remembered per browser so it
-// stays hidden between visits; storage can be blocked or throw, so every access
-// is guarded and the list simply defaults to shown.
-export const TRAY_COLLAPSED_KEY = "admin-calendar-unassigned-collapsed";
+// Whether the admin last hid or showed the Unassigned list on this browser. It
+// overrides the Settings default for this browser; storage can be blocked or
+// throw, so every access is guarded and `null` means "no choice, use the default".
+export { TRAY_COLLAPSED_KEY };
 
-function readTrayCollapsed(): boolean {
+function readTrayCollapsed(): boolean | null {
   try {
-    return window.localStorage.getItem(TRAY_COLLAPSED_KEY) === "1";
+    const stored = window.localStorage.getItem(TRAY_COLLAPSED_KEY);
+    if (stored === "1") return true;
+    if (stored === "0") return false;
+    return null;
   } catch {
-    return false;
+    return null;
   }
 }
 
-function writeTrayCollapsed(collapsed: boolean) {
+// A choice that matches the Settings default needs no override, except that
+// "shown" must be remembered when the default is hidden.
+function writeTrayCollapsed(collapsed: boolean, defaultCollapsed: boolean) {
   try {
     if (collapsed) window.localStorage.setItem(TRAY_COLLAPSED_KEY, "1");
+    else if (defaultCollapsed) window.localStorage.setItem(TRAY_COLLAPSED_KEY, "0");
     else window.localStorage.removeItem(TRAY_COLLAPSED_KEY);
   } catch {
     // Not remembered; the toggle still works for this visit.
   }
 }
 
+// The part of the admin's Settings the calendar uses.
+export type CalendarPreferences = Pick<
+  AdminPreferences,
+  "calendarView" | "weekStartsOn" | "calendarStartHour" | "calendarEndHour" | "unassignedListCollapsed"
+>;
+
 interface CalendarViewProps {
   jobs: Job[];
   employeeMap: Record<string, StaffMember>;
+  // Omitted, the calendar looks as it did before Settings existed.
+  preferences?: CalendarPreferences;
 }
 
 // FullCalendar is configured with timeZone="UTC" (UTC-coercion — no timezone
@@ -84,6 +106,33 @@ export function unassignedByDay(jobs: Job[]): Map<string, Job[]> {
     byDay.set(day, [...(byDay.get(day) ?? []), job]);
   }
   return byDay;
+}
+
+// Minutes since midnight of a New York wall-clock string "YYYY-MM-DDTHH:MM:SS".
+function wallClockMinutes(iso: string): number {
+  return Number(iso.slice(11, 13)) * 60 + Number(iso.slice(14, 16));
+}
+
+// Jobs on the visible dates (end exclusive) that the week grid would cut off:
+// they start before the first visible hour or end after the last one. The grid
+// draws only its own hours, so without this a job could vanish from the week.
+export function jobsOutsideHours(
+  jobs: Job[],
+  from: string,
+  to: string,
+  startHour: number,
+  endHour: number,
+): Job[] {
+  return jobs.filter((job) => {
+    const start = nyWallClockISO(job.start);
+    const end = nyWallClockISO(job.end);
+    const day = start.slice(0, 10);
+    if (day < from || day >= to) return false;
+    // A job that runs into the next day keeps counting past midnight (a job
+    // ending exactly at midnight is still inside a grid that runs to midnight).
+    const endMinutes = (end.slice(0, 10) > day ? 24 * 60 : 0) + wallClockMinutes(end);
+    return wallClockMinutes(start) < startHour * 60 || endMinutes > endHour * 60;
+  });
 }
 
 function jobsLabel(count: number): string {
@@ -251,7 +300,11 @@ function JobCard({ info }: { info: EventContentArg }) {
   );
 }
 
-export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
+export default function CalendarView({
+  jobs,
+  employeeMap,
+  preferences = DEFAULT_ADMIN_PREFERENCES,
+}: CalendarViewProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [allJobs, setAllJobs] = useState<Job[]>(jobs);
   // Set when jobs for the visible dates failed to load, so blank days aren't
@@ -262,7 +315,9 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
   // The server render has no view yet, so the tray never renders on the server
   // and this can read browser storage straight away without a hydration mismatch.
   const [trayCollapsed, setTrayCollapsed] = useState(() =>
-    typeof window === "undefined" ? false : readTrayCollapsed(),
+    typeof window === "undefined"
+      ? preferences.unassignedListCollapsed
+      : (readTrayCollapsed() ?? preferences.unassignedListCollapsed),
   );
   // The visible view and its dates (end exclusive), for the Unassigned tray.
   const [view, setView] = useState<{ type: string; from: string; to: string } | null>(null);
@@ -325,14 +380,20 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
   function toggleTray() {
     const next = !trayCollapsed;
     setTrayCollapsed(next);
-    writeTrayCollapsed(next);
+    writeTrayCollapsed(next, preferences.unassignedListCollapsed);
   }
 
-  // The grid fills whatever room the tray leaves, so tell it to re-measure when
-  // the tray opens or closes.
+  const outsideHours =
+    view?.type === "timeGridWeek"
+      ? jobsOutsideHours(allJobs, view.from, view.to, preferences.calendarStartHour, preferences.calendarEndHour)
+      : [];
+  const hoursNoticeShown = outsideHours.length > 0;
+
+  // The grid fills whatever room the tray and the hours notice leave, so tell it
+  // to re-measure when either appears, opens or closes.
   useEffect(() => {
     calendarRef.current?.getApi().updateSize();
-  }, [trayCollapsed]);
+  }, [trayCollapsed, hoursNoticeShown]);
 
   const fcEvents = allJobs.map((job) => ({
     id: job.id,
@@ -353,6 +414,7 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
   }));
 
   const unassigned = unassignedByDay(allJobs);
+  const { slotMinTime, slotMaxTime } = calendarSlotTimes(preferences);
 
   return (
     <div className="flex h-full flex-col">
@@ -373,6 +435,23 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
         </button>
       </div>
     )}
+    {outsideHours.length > 0 && (
+      <p
+        role="status"
+        className="flex-shrink-0 border-b border-[#b45309] bg-[#fef3c7] px-8 py-2 text-[13px] text-[#1c1c1e]"
+      >
+        <span className="font-semibold">
+          {outsideHours.length} job{outsideHours.length !== 1 ? "s" : ""} this week{" "}
+          {outsideHours.length !== 1 ? "run" : "runs"} outside the hours shown
+        </span>{" "}
+        ({hourLabel(preferences.calendarStartHour)} to {hourLabel(preferences.calendarEndHour)}), so{" "}
+        {outsideHours.length !== 1 ? "they are" : "it is"} cut off or missing from the grid. Change the hours in{" "}
+        <Link href="/admin/settings" className="font-semibold underline">
+          Settings
+        </Link>
+        .
+      </p>
+    )}
     {view?.type === "timeGridWeek" && (
       <UnassignedTray
         byDay={unassigned}
@@ -386,7 +465,8 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
     <FullCalendar
       ref={calendarRef}
       plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
-      initialView="timeGridWeek"
+      initialView={preferences.calendarView === "month" ? "dayGridMonth" : "timeGridWeek"}
+      firstDay={firstDayNumber(preferences.weekStartsOn)}
       // Events carry New York wall-clock times (offset stripped); UTC-coercion
       // then places them at their New York clock position for every viewer.
       timeZone="UTC"
@@ -424,8 +504,8 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
       dayCellContent={(arg) => (
         <DayCell arg={arg} count={unassigned.get(toDateStr(arg.date))?.length ?? 0} />
       )}
-      slotMinTime="07:00:00"
-      slotMaxTime="17:00:00"
+      slotMinTime={slotMinTime}
+      slotMaxTime={slotMaxTime}
       slotDuration="01:00:00"
       slotLabelFormat={(arg) => formatWallClockTime(arg.date.marker)}
       allDaySlot={false}

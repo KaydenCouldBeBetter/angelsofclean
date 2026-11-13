@@ -177,6 +177,42 @@ export type Database = {
           },
         ]
       }
+      admin_preferences: {
+        Row: {
+          bookings_default_filter: string
+          calendar_end_hour: number
+          calendar_start_hour: number
+          calendar_view: string
+          landing_page: string
+          unassigned_list_collapsed: boolean
+          updated_at: string
+          user_id: string
+          week_starts_on: string
+        }
+        Insert: {
+          bookings_default_filter?: string
+          calendar_end_hour?: number
+          calendar_start_hour?: number
+          calendar_view?: string
+          landing_page?: string
+          unassigned_list_collapsed?: boolean
+          updated_at?: string
+          user_id: string
+          week_starts_on?: string
+        }
+        Update: {
+          bookings_default_filter?: string
+          calendar_end_hour?: number
+          calendar_start_hour?: number
+          calendar_view?: string
+          landing_page?: string
+          unassigned_list_collapsed?: boolean
+          updated_at?: string
+          user_id?: string
+          week_starts_on?: string
+        }
+        Relationships: []
+      }
       booking_access: {
         Row: {
           booking_id: string
@@ -644,6 +680,18 @@ export type Database = {
       }
       remove_account_member: { Args: { p_user_id: string }; Returns: Json }
       revoke_account_invite: { Args: { p_invite_id: string }; Returns: Json }
+      save_admin_preferences: {
+        Args: {
+          p_bookings_default_filter: string
+          p_calendar_end_hour: number
+          p_calendar_start_hour: number
+          p_calendar_view: string
+          p_landing_page: string
+          p_unassigned_list_collapsed: boolean
+          p_week_starts_on: string
+        }
+        Returns: Json
+      }
       set_booking_access: {
         Args: { p_booking_id: string; p_instructions: string }
         Returns: Json
