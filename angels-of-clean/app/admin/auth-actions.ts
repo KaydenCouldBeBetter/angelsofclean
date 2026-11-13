@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/supabase/require-admin";
 import { FIELD_MAX_LENGTHS, PASSWORD_MIN_LENGTH } from "@/lib/constants";
+import { DEFAULT_ADMIN_PREFERENCES, landingPath } from "@/lib/admin-preferences";
+import { readAdminPreferences } from "@/lib/supabase/admin-preferences";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -36,7 +38,16 @@ export async function signIn(email: string, password: string): Promise<{ error?:
     return { error: "This account is not authorized for the admin portal." };
   }
 
-  redirect("/admin/dashboard");
+  // The admin's own start page from Settings. Never worth failing a sign-in for:
+  // if it can't be read, they land on the dashboard like everyone else.
+  let landing = landingPath(DEFAULT_ADMIN_PREFERENCES.landingPage);
+  try {
+    const prefs = await readAdminPreferences(supabase);
+    if (prefs.ok) landing = landingPath(prefs.data.landingPage);
+  } catch {
+    // keep the dashboard
+  }
+  redirect(landing);
 }
 
 export async function signOut() {

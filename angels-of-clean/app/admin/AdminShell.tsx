@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { signOut } from "./auth-actions";
+import { ADMIN_DISPLAY_NAME_EVENT, displayNameFor } from "@/lib/admin-display-name";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/admin/dashboard" },
@@ -30,13 +31,18 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     supabase.auth.getSession().then(({ data }) => {
       const user = data.session?.user;
       if (!user) return;
-      const name =
-        user.user_metadata?.full_name ||
-        user.user_metadata?.name ||
-        user.email?.split("@")[0] ||
-        "Admin";
-      setUserLabel(name);
+      setUserLabel(displayNameFor(user));
     });
+  }, []);
+
+  // Settings announces a new display name so the sidebar updates without a reload.
+  useEffect(() => {
+    function onNameChanged(event: Event) {
+      const label = (event as CustomEvent<unknown>).detail;
+      if (typeof label === "string" && label !== "") setUserLabel(label);
+    }
+    window.addEventListener(ADMIN_DISPLAY_NAME_EVENT, onNameChanged);
+    return () => window.removeEventListener(ADMIN_DISPLAY_NAME_EVENT, onNameChanged);
   }, []);
 
   // Sign-in and password reset render their own full-page layout — no sidebar
