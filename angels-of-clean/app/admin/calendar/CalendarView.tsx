@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -18,6 +19,28 @@ import {
   nyTodayStr,
   nyWallClockISO,
 } from "@/lib/datetime";
+
+// Whether the admin last hid the Unassigned list. Remembered per browser so it
+// stays hidden between visits; storage can be blocked or throw, so every access
+// is guarded and the list simply defaults to shown.
+export const TRAY_COLLAPSED_KEY = "admin-calendar-unassigned-collapsed";
+
+function readTrayCollapsed(): boolean {
+  try {
+    return window.localStorage.getItem(TRAY_COLLAPSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeTrayCollapsed(collapsed: boolean) {
+  try {
+    if (collapsed) window.localStorage.setItem(TRAY_COLLAPSED_KEY, "1");
+    else window.localStorage.removeItem(TRAY_COLLAPSED_KEY);
+  } catch {
+    // Not remembered; the toggle still works for this visit.
+  }
+}
 
 interface CalendarViewProps {
   jobs: Job[];
@@ -73,30 +96,54 @@ interface UnassignedTrayProps {
   // The visible week: first day inclusive, last day exclusive ("YYYY-MM-DD").
   from: string;
   to: string;
+  // When hidden, only the heading, the count and the Show button remain, so
+  // the count can't be missed. Omit onToggle and there is no button. The button
+  // is an arrow: down when the list can be opened, up when it can be closed.
+  collapsed?: boolean;
+  onToggle?: () => void;
 }
 
 // Pinned above the weekly grid so a job with no crew can't be missed. Every
 // job is a real link to its booking, where the crew is assigned, so the tray
-// works with Tab and Enter and needs no custom key handling.
-export function UnassignedTray({ byDay, from, to }: UnassignedTrayProps) {
+// works with Tab and Enter and needs no custom key handling. The admin can
+// hide the list to give the grid the room; the heading and count stay.
+export function UnassignedTray({ byDay, from, to, collapsed = false, onToggle }: UnassignedTrayProps) {
   const days = [...byDay.keys()].filter((day) => day >= from && day < to).sort();
   const count = days.reduce((n, day) => n + byDay.get(day)!.length, 0);
 
   return (
     <section
       aria-labelledby="unassigned-heading"
-      className="flex-shrink-0 max-h-[30vh] overflow-y-auto border-b border-zinc-200 bg-white px-4 py-3"
+      className="flex-shrink-0 border-b border-zinc-200 bg-white px-4 py-3"
     >
-      <h2 id="unassigned-heading" className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
-        Unassigned
-        <span
-          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-            count > 0 ? "bg-[#feefee] text-[#c0392b]" : "bg-zinc-100 text-zinc-600"
-          }`}
-        >
-          {count}
-        </span>
-      </h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 id="unassigned-heading" className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
+          Unassigned
+          <span
+            className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+              count > 0 ? "bg-[#feefee] text-[#c0392b]" : "bg-zinc-100 text-zinc-600"
+            }`}
+          >
+            {count}
+          </span>
+        </h2>
+        {onToggle && (
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={!collapsed}
+            aria-controls="unassigned-list"
+            aria-label={collapsed ? "Show unassigned list" : "Hide unassigned list"}
+            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-zinc-300 bg-white text-zinc-700 transition-colors hover:bg-zinc-50"
+          >
+            <ChevronDown
+              aria-hidden="true"
+              className={`h-4 w-4 transition-transform ${collapsed ? "" : "rotate-180"}`}
+            />
+          </button>
+        )}
+      </div>
+      <div id="unassigned-list" hidden={collapsed} className="max-h-[30vh] overflow-y-auto">
       {count === 0 ? (
         <p className="mt-1 text-[13px] text-zinc-600">Every job this week has a crew.</p>
       ) : (
@@ -131,6 +178,7 @@ export function UnassignedTray({ byDay, from, to }: UnassignedTrayProps) {
           ))}
         </div>
       )}
+      </div>
     </section>
   );
 }
@@ -210,6 +258,12 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
   // read as "nothing scheduled".
   const [loadFailed, setLoadFailed] = useState(false);
   const lastDatesSet = useRef<DatesSetArg | null>(null);
+  const calendarRef = useRef<FullCalendar>(null);
+  // The server render has no view yet, so the tray never renders on the server
+  // and this can read browser storage straight away without a hydration mismatch.
+  const [trayCollapsed, setTrayCollapsed] = useState(() =>
+    typeof window === "undefined" ? false : readTrayCollapsed(),
+  );
   // The visible view and its dates (end exclusive), for the Unassigned tray.
   const [view, setView] = useState<{ type: string; from: string; to: string } | null>(null);
 
@@ -268,6 +322,18 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
     }
   }, []);
 
+  function toggleTray() {
+    const next = !trayCollapsed;
+    setTrayCollapsed(next);
+    writeTrayCollapsed(next);
+  }
+
+  // The grid fills whatever room the tray leaves, so tell it to re-measure when
+  // the tray opens or closes.
+  useEffect(() => {
+    calendarRef.current?.getApi().updateSize();
+  }, [trayCollapsed]);
+
   const fcEvents = allJobs.map((job) => ({
     id: job.id,
     title: job.client,
@@ -308,10 +374,17 @@ export default function CalendarView({ jobs, employeeMap }: CalendarViewProps) {
       </div>
     )}
     {view?.type === "timeGridWeek" && (
-      <UnassignedTray byDay={unassigned} from={view.from} to={view.to} />
+      <UnassignedTray
+        byDay={unassigned}
+        from={view.from}
+        to={view.to}
+        collapsed={trayCollapsed}
+        onToggle={toggleTray}
+      />
     )}
     <div className="min-h-0 flex-1">
     <FullCalendar
+      ref={calendarRef}
       plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
       initialView="timeGridWeek"
       // Events carry New York wall-clock times (offset stripped); UTC-coercion

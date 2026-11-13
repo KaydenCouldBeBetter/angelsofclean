@@ -8,7 +8,7 @@ import { STATUS_CONFIG } from "../../status-config";
 // The modal pulls in server actions; the calendar never opens it here.
 vi.mock("../../NewBookingModal", () => ({ default: () => null }));
 
-import CalendarView, { UnassignedTray, isUnassigned, unassignedByDay } from "../CalendarView";
+import CalendarView, { TRAY_COLLAPSED_KEY, UnassignedTray, isUnassigned, unassignedByDay } from "../CalendarView";
 
 const MARCUS: Employee = { id: "e-1", name: "Marcus T.", initials: "MT", phone: "", hiredDate: "Mar 2024" };
 
@@ -115,6 +115,51 @@ describe("UnassignedTray", () => {
   });
 });
 
+describe("UnassignedTray hide/show", () => {
+  const jobs = [job("a", "2026-10-20"), job("b", "2026-10-22")];
+
+  function trayWith(collapsed: boolean, withToggle = true) {
+    const html = renderToStaticMarkup(
+      <UnassignedTray
+        byDay={unassignedByDay(jobs)}
+        from="2026-10-18"
+        to="2026-10-25"
+        collapsed={collapsed}
+        onToggle={withToggle ? () => {} : undefined}
+      />,
+    );
+    return new DOMParser().parseFromString(html, "text/html");
+  }
+
+  it("offers an arrow button that says the list is open and points at it", () => {
+    const doc = trayWith(false);
+    const button = doc.querySelector("button")!;
+    expect(button.getAttribute("aria-label")).toBe("Hide unassigned list");
+    expect(button.textContent).toBe(""); // an icon, not words
+    expect(button.querySelector("svg")!.getAttribute("class")).toContain("rotate-180"); // points up
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+    const list = doc.getElementById(button.getAttribute("aria-controls")!)!;
+    expect(list.hasAttribute("hidden")).toBe(false);
+    expect(list.querySelectorAll("li")).toHaveLength(2);
+  });
+
+  it("when hidden, hides the list but keeps the heading and count", () => {
+    const doc = trayWith(true);
+    const button = doc.querySelector("button")!;
+    expect(button.getAttribute("aria-label")).toBe("Show unassigned list");
+    expect(button.querySelector("svg")!.getAttribute("class")).not.toContain("rotate-180"); // points down
+    expect(button.getAttribute("aria-expanded")).toBe("false");
+    expect(doc.getElementById(button.getAttribute("aria-controls")!)!.hasAttribute("hidden")).toBe(true);
+    const heading = doc.getElementById("unassigned-heading")!;
+    expect(heading.textContent).toContain("Unassigned");
+    expect(heading.textContent).toContain("2");
+  });
+
+  it("has no button when nothing handles the toggle", () => {
+    expect(trayWith(false, false).querySelector("button")).toBeNull();
+  });
+});
+
 describe("CalendarView", () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -191,5 +236,76 @@ describe("CalendarView", () => {
     const tray = container.querySelector("section[aria-labelledby='unassigned-heading']")!;
     expect(tray.textContent).toContain("Client next-week");
     expect(tray.textContent).not.toContain("Client this-week");
+  });
+
+  describe("hiding the Unassigned list", () => {
+    const toggle = () =>
+      container.querySelector<HTMLButtonElement>("section[aria-labelledby='unassigned-heading'] button")!;
+    const list = () => container.querySelector<HTMLElement>("#unassigned-list")!;
+
+    beforeEach(() => window.localStorage.clear());
+    afterEach(() => window.localStorage.clear());
+
+    it("shows the list by default", () => {
+      mount();
+      expect(toggle().getAttribute("aria-expanded")).toBe("true");
+      expect(list().hidden).toBe(false);
+    });
+
+    it("hides and re-shows the list, leaving the heading and count in place", () => {
+      mount();
+      click(toggle());
+      expect(list().hidden).toBe(true);
+      expect(toggle().getAttribute("aria-label")).toBe("Show unassigned list");
+      expect(toggle().getAttribute("aria-expanded")).toBe("false");
+      const heading = container.querySelector("#unassigned-heading")!;
+      expect(heading.textContent).toContain("1");
+      // The calendar grid itself is untouched.
+      expect(container.querySelector(".fc-timegrid-event")).not.toBeNull();
+
+      click(toggle());
+      expect(list().hidden).toBe(false);
+      expect(toggle().getAttribute("aria-label")).toBe("Hide unassigned list");
+    });
+
+    it("remembers the choice for the next visit", () => {
+      mount();
+      click(toggle());
+      expect(window.localStorage.getItem(TRAY_COLLAPSED_KEY)).toBe("1");
+
+      act(() => root.unmount());
+      root = createRoot(container);
+      mount();
+      expect(list().hidden).toBe(true);
+
+      click(toggle());
+      expect(window.localStorage.getItem(TRAY_COLLAPSED_KEY)).toBeNull();
+    });
+
+    it("keeps hidden across week and month navigation", () => {
+      mount();
+      click(toggle());
+      click(container.querySelector(".fc-dayGridMonth-button")!);
+      click(container.querySelector(".fc-timeGridWeek-button")!);
+      expect(list().hidden).toBe(true);
+    });
+
+    it("still works when browser storage is blocked", () => {
+      const blocked = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+        throw new Error("blocked");
+      });
+      const blockedSet = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+        throw new Error("blocked");
+      });
+      try {
+        mount();
+        expect(list().hidden).toBe(false);
+        click(toggle());
+        expect(list().hidden).toBe(true);
+      } finally {
+        blocked.mockRestore();
+        blockedSet.mockRestore();
+      }
+    });
   });
 });
