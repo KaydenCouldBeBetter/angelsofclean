@@ -12,6 +12,15 @@ export interface Employee {
   initials: string;
   phone: string;
   hiredDate: string; // e.g. "Mar 2024"
+  // Null while active. Archived employees stay in the roster for the record
+  // and for the names on past jobs, but can't be put on new ones.
+  archivedAt: string | null; // ISO instant
+}
+
+export interface EmployeeHistoryEntry {
+  action: "hired" | "archived" | "reactivated";
+  actor: string | null;
+  at: string; // ISO instant
 }
 
 // What client components need to show and assign staff. Server pages pass

@@ -131,6 +131,13 @@ export async function assignEmployees(
         error: "Someone else changed this crew since you opened the page. Check the current crew and try again.",
       };
 
+    case "archived":
+      revalidateBookingPaths(bookingId);
+      return {
+        success: false,
+        error: `${listFormat.format(result.employees)} ${result.employees.length === 1 ? "has" : "have"} been archived and can't be assigned to jobs.`,
+      };
+
     case "conflicts":
       return { success: false, conflicts: result.conflicts.map(describeConflict) };
 

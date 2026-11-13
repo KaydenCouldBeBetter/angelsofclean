@@ -1,5 +1,5 @@
 import { createClient } from "./server";
-import type { Employee, Job, ActivityEntry, JobStatus } from "@/lib/admin-types";
+import type { Employee, EmployeeHistoryEntry, Job, ActivityEntry, JobStatus } from "@/lib/admin-types";
 import {
   SERVICE_LABELS,
   FREQUENCY_LABELS,
@@ -49,7 +49,7 @@ const CALENDAR_BOOKING_COLUMNS =
 const LIST_BOOKING_COLUMNS =
   "id,booking_number,client_name,email,phone,service_type,frequency,address,city,bedrooms,bathrooms,start_at,end_at,status,submitted_at,booking_employees(employee_id)" as const;
 
-const EMPLOYEE_COLUMNS = "id,name,initials,phone,hired_date" as const;
+const EMPLOYEE_COLUMNS = "id,name,initials,phone,hired_date,archived_at" as const;
 
 // Log only the Postgres error code plus a correlation id — full Supabase
 // error objects can echo row data (customer PII) into server logs.
@@ -66,6 +66,31 @@ export type QueryResult<T> = { ok: true; data: T } | { ok: false };
 
 const FAILED = { ok: false } as const;
 
+type EmployeeDbRow = {
+  id: string;
+  name: string;
+  initials: string;
+  phone: string;
+  hired_date: string;
+  archived_at: string | null;
+};
+
+function mapEmployee(row: EmployeeDbRow): Employee {
+  return {
+    id: row.id,
+    name: row.name,
+    initials: row.initials,
+    phone: row.phone,
+    hiredDate: formatHiredDate(row.hired_date),
+    archivedAt: row.archived_at,
+  };
+}
+
+/**
+ * The whole roster, active and archived. Archived employees are included on
+ * purpose: past jobs still name them. Anything that offers someone for a new
+ * job must drop them (`archivedAt !== null`).
+ */
 export async function getEmployees(): Promise<QueryResult<Employee[]>> {
   const supabase = await createClient();
   const { data, error } = await supabase.from("employees").select(EMPLOYEE_COLUMNS).order("name");
@@ -75,15 +100,66 @@ export async function getEmployees(): Promise<QueryResult<Employee[]>> {
     return FAILED;
   }
 
+  return { ok: true, data: data.map(mapEmployee) };
+}
+
+// `data: null` means no such employee; a failed lookup is { ok: false }.
+export async function getEmployeeById(id: string): Promise<QueryResult<Employee | null>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("employees")
+    .select(EMPLOYEE_COLUMNS)
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    logQueryError("getEmployeeById", error);
+    return FAILED;
+  }
+
+  return { ok: true, data: data ? mapEmployee(data) : null };
+}
+
+// Hired / archived / reactivated, oldest first.
+export async function getEmployeeHistory(
+  employeeId: string,
+): Promise<QueryResult<EmployeeHistoryEntry[]>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("employee_history")
+    .select("action,actor,created_at")
+    .eq("employee_id", employeeId)
+    .order("created_at");
+
+  if (error || !data) {
+    logQueryError("getEmployeeHistory", error);
+    return FAILED;
+  }
+
   return {
     ok: true,
     data: data.map((row) => ({
-      id: row.id,
-      name: row.name,
-      initials: row.initials,
-      phone: row.phone,
-      hiredDate: formatHiredDate(row.hired_date),
+      action: row.action as EmployeeHistoryEntry["action"],
+      actor: row.actor,
+      at: row.created_at,
     })),
+  };
+}
+
+/**
+ * One employee's jobs between two "YYYY-MM-DD" dates (inclusive), cancelled
+ * jobs left out. The calendar projection, so no contact details or notes.
+ */
+export async function getEmployeeJobsInRange(
+  employeeId: string,
+  from: string,
+  to: string,
+): Promise<QueryResult<Job[]>> {
+  const jobs = await getJobsInRange(from, to);
+  if (!jobs.ok) return jobs;
+  return {
+    ok: true,
+    data: jobs.data.filter((job) => job.status !== "cancelled" && job.employeeIds.includes(employeeId)),
   };
 }
 
@@ -284,10 +360,11 @@ export async function getDashboardStats(): Promise<QueryResult<DashboardStats>> 
       .gte("scheduled_date", weekStart)
       .lte("scheduled_date", weekEnd),
 
-    // Total employees
+    // Total active employees (archived ones no longer work here)
     supabase
       .from("employees")
-      .select("id", { count: "exact", head: true }),
+      .select("id", { count: "exact", head: true })
+      .is("archived_at", null),
   ]);
 
   // One failed query fails the whole dashboard: a card showing 0 beside real

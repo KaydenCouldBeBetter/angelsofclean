@@ -403,8 +403,41 @@ export type Database = {
           },
         ]
       }
+      employee_history: {
+        Row: {
+          action: string
+          actor: string | null
+          created_at: string
+          employee_id: string
+          id: string
+        }
+        Insert: {
+          action: string
+          actor?: string | null
+          created_at?: string
+          employee_id: string
+          id?: string
+        }
+        Update: {
+          action?: string
+          actor?: string | null
+          created_at?: string
+          employee_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_history_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
+          archived_at: string | null
           created_at: string
           hired_date: string
           id: string
@@ -413,6 +446,7 @@ export type Database = {
           phone: string
         }
         Insert: {
+          archived_at?: string | null
           created_at?: string
           hired_date: string
           id?: string
@@ -421,6 +455,7 @@ export type Database = {
           phone: string
         }
         Update: {
+          archived_at?: string | null
           created_at?: string
           hired_date?: string
           id?: string
@@ -598,6 +633,15 @@ export type Database = {
         Args: { p_email: string; p_token_hash: string }
         Returns: Json
       }
+      create_employee: {
+        Args: {
+          p_hired_date: string
+          p_initials: string
+          p_name: string
+          p_phone: string
+        }
+        Returns: Json
+      }
       remove_account_member: { Args: { p_user_id: string }; Returns: Json }
       revoke_account_invite: { Args: { p_invite_id: string }; Returns: Json }
       set_booking_access: {
@@ -610,6 +654,10 @@ export type Database = {
           p_description: string
           p_status: Database["public"]["Enums"]["booking_status"]
         }
+        Returns: Json
+      }
+      set_employee_archived: {
+        Args: { p_archived: boolean; p_employee_id: string }
         Returns: Json
       }
     }

@@ -19,6 +19,10 @@ const COLUMN_LIMITS: Record<string, Record<string, keyof typeof FIELD_MAX_LENGTH
   booking_access: {
     instructions: "accessInstructions",
   },
+  employees: {
+    name: "name",
+    phone: "phone",
+  },
   // An account's name is a person's name or a business name, both capped at 100.
   accounts: {
     name: "businessName",

@@ -186,6 +186,18 @@ describe("assignEmployees", () => {
     expect(activityLogInsertMock).not.toHaveBeenCalled();
   });
 
+  it("refuses to add an archived employee and names them", async () => {
+    rpcReturns({ status: "archived", employees: ["Lisa P.", "Rosa C."] });
+
+    const result = await assignEmployees("b-1", ["e-1", "e-2"], []);
+
+    expect(result).toEqual({
+      success: false,
+      error: "Lisa P. and Rosa C. have been archived and can't be assigned to jobs.",
+    });
+    expect(activityLogInsertMock).not.toHaveBeenCalled();
+  });
+
   it("reports a missing booking", async () => {
     rpcReturns({ status: "not_found" });
 

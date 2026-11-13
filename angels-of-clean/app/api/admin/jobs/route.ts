@@ -4,7 +4,8 @@ import {
   AUTH_UNAVAILABLE_ERROR,
   NOT_SIGNED_IN_ERROR,
 } from "@/lib/supabase/require-admin";
-import { getJobsInRange } from "@/lib/supabase/queries";
+import { getEmployeeJobsInRange, getJobsInRange } from "@/lib/supabase/queries";
+import { isUuid } from "@/lib/admin-customers";
 import { isValidDateStr } from "@/lib/datetime";
 
 export async function GET(req: NextRequest) {
@@ -40,7 +41,14 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const jobs = await getJobsInRange(from, to);
+  // `employee` narrows the list to that person's jobs on the server, so the
+  // employee schedule calendar never receives everyone else's customers.
+  const employee = searchParams.get("employee");
+  if (employee !== null && !isUuid(employee)) {
+    return NextResponse.json({ error: "Invalid 'employee' id" }, { status: 400 });
+  }
+
+  const jobs = employee ? await getEmployeeJobsInRange(employee, from, to) : await getJobsInRange(from, to);
 
   // A failed query must not look like an empty range to the calendar.
   if (!jobs.ok) {
