@@ -39,6 +39,12 @@ const COLUMN_LIMITS: Record<string, Record<string, keyof typeof FIELD_MAX_LENGTH
     city: "city",
     notes: "notes",
   },
+  booking_settings: {
+    pause_message: "pauseMessage",
+  },
+  blackout_dates: {
+    label: "blackoutLabel",
+  },
   commercial_quotes: {
     business_name: "businessName",
     contact_name: "name",

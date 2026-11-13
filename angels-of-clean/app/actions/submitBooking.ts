@@ -2,7 +2,6 @@
 
 import {
   BATHROOM_LIMITS,
-  BOOKING_MAX_DAYS_AHEAD,
   FIELD_MAX_LENGTHS,
   FREQUENCY_LABELS,
   SERVICE_AREA_ZIPS,
@@ -12,14 +11,10 @@ import {
 import { looksLikeBot, type BotCheck } from "@/lib/bot-check";
 import { allowPublicSubmission } from "@/lib/rate-limit";
 import { createServiceRoleClient } from "@/lib/supabase/service";
+import { getPublicBookingRules } from "@/lib/supabase/booking-rules";
+import { checkBookable, pauseText, verdictMessage, type BookingRules } from "@/lib/booking-rules";
 import { requireAdmin, type AdminContext } from "@/lib/supabase/require-admin";
-import {
-  addDaysToDateStr,
-  isNyWallClockInFuture,
-  isValidDateStr,
-  nyTodayStr,
-  nyWallClockToInstant,
-} from "@/lib/datetime";
+import { isNyWallClockInFuture, isValidDateStr, nyWallClockToInstant } from "@/lib/datetime";
 
 export interface BookingData {
   service: string;
@@ -114,9 +109,10 @@ interface BookingPath {
   // insert path for signed-out customers. Admin: the admin's own session, so
   // RLS applies.
   client: () => BookingClient;
-  // Public path only: the latest day a customer may book, counted from today
-  // in New York. Admins book recurring and custom visits further out.
-  maxDaysAhead?: number;
+  // Public path only: apply the admin's online booking rules (pause, closed
+  // days, how far ahead, minimum notice). Admins book custom windows and
+  // recurring visits, so the admin path is never held to them.
+  enforceRules: boolean;
 }
 
 // Shared by submitBooking and adminCreateBooking so validation and insert
@@ -127,6 +123,19 @@ async function createBooking(data: BookingData, path: BookingPath): Promise<Book
   // Server-side validation
   if (!hasBookingShape(data)) {
     return { success: false, error: "Invalid booking details." };
+  }
+
+  // The rules are read first: while booking is paused a customer should be told
+  // so, not that their ZIP is wrong. If they can't be read at all the booking is
+  // refused as unavailable (the insert would be failing too), never let through.
+  let rules: BookingRules | null = null;
+  if (path.enforceRules) {
+    const result = await getPublicBookingRules();
+    if (!result.ok) {
+      return { success: false, error: "Something went wrong. Please try again.", unavailable: true };
+    }
+    rules = result.data;
+    if (rules.paused) return { success: false, error: pauseText(rules) };
   }
 
   for (const [field, label] of LENGTH_LIMITED_FIELDS) {
@@ -194,12 +203,10 @@ async function createBooking(data: BookingData, path: BookingPath): Promise<Book
     };
   }
 
-  // YYYY-MM-DD strings compare correctly as text.
-  if (path.maxDaysAhead !== undefined && data.date > addDaysToDateStr(nyTodayStr(), path.maxDaysAhead)) {
-    return {
-      success: false,
-      error: `Please choose a date within the next ${path.maxDaysAhead} days.`,
-    };
+  // Closed days, how far ahead, and minimum notice (public path only).
+  if (rules) {
+    const verdict = checkBookable(rules, data.date, window.start);
+    if (!verdict.ok) return { success: false, error: verdictMessage(verdict, rules) };
   }
 
   if (!data.name.trim()) {
@@ -309,7 +316,7 @@ export async function submitBooking(data: BookingData, botCheck: BotCheck): Prom
     rateLimited: true,
     acceptsAccessInstructions: true,
     client: createServiceRoleClient,
-    maxDaysAhead: BOOKING_MAX_DAYS_AHEAD,
+    enforceRules: true,
   });
 }
 
@@ -330,5 +337,6 @@ export async function adminCreateBooking(data: BookingData): Promise<BookingResu
     rateLimited: false,
     acceptsAccessInstructions: false,
     client: () => auth.supabase,
+    enforceRules: false,
   });
 }

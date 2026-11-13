@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { getDashboardStats, getEmployees } from "@/lib/supabase/queries";
+import { getBookingSettings } from "@/lib/supabase/booking-settings";
 import { DASHBOARD_STATUS } from "../status-config";
 import type { Job, JobStatus } from "@/lib/admin-types";
 import { NewBookingButton } from "../NewBookingModal";
@@ -22,7 +24,13 @@ function StatusChip({ status }: { status: JobStatus }) {
 }
 
 export default async function AdminDashboardPage() {
-  const [stats, employees] = await Promise.all([getDashboardStats(), getEmployees()]);
+  const [stats, employees, bookingSettings] = await Promise.all([
+    getDashboardStats(),
+    getEmployees(),
+    getBookingSettings(),
+  ]);
+  // A failed lookup just means no banner: the dashboard doesn't depend on it.
+  const bookingPaused = bookingSettings.ok && bookingSettings.data.paused;
 
   const displayDate = formatNy(new Date(), {
     weekday: "short", month: "long", day: "numeric", year: "numeric",
@@ -93,6 +101,24 @@ export default async function AdminDashboardPage() {
       {/* Content */}
       <div className="flex-1 overflow-auto bg-[#f7f9f8]">
         <div className="p-8">
+          {/* Customers can't book while this is on, so it is shown here, where the
+              office looks first, rather than left for someone to remember. */}
+          {bookingPaused && (
+            <p
+              role="status"
+              className="mb-5 flex items-center justify-between gap-4 rounded-xl border border-[#b45309] bg-[#fef3c7] px-5 py-3 text-[13px] text-[#1c1c1e]"
+            >
+              <span>
+                <span aria-hidden="true">&#9888; </span>
+                <span className="font-semibold">Online booking is paused.</span> Customers see a notice instead of
+                the booking steps.
+              </span>
+              <Link href="/admin/settings" className="flex-shrink-0 font-semibold underline">
+                Resume in Settings
+              </Link>
+            </p>
+          )}
+
           {/* Stat Cards */}
           <div className="grid grid-cols-4 gap-5">
             {STAT_CARDS.map((card) => (

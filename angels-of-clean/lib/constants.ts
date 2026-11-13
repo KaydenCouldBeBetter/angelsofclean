@@ -111,6 +111,10 @@ export const FIELD_MAX_LENGTHS = {
   notes: 1000,
   // Entry instructions (door code, gate, pets), stored in booking_access.
   accessInstructions: 500,
+  // Admin Settings: the message customers see while online booking is paused,
+  // and the label on a blackout date (admins only).
+  pauseMessage: 200,
+  blackoutLabel: 100,
 } as const;
 
 // Bathrooms per booking: 1 to 5 in half steps (2.5 = two full baths and a

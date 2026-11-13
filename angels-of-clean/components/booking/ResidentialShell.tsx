@@ -4,6 +4,8 @@ import { usePathname } from "next/navigation";
 import DesktopNavbar from "@/components/booking/DesktopNavbar";
 import DesktopStepper from "@/components/booking/DesktopStepper";
 import BookingSummary from "@/components/booking/BookingSummary";
+import BookingPausedNotice from "@/components/booking/BookingPausedNotice";
+import { BookingRulesProvider, useBookingRules } from "@/components/booking/BookingRulesProvider";
 
 const RESIDENTIAL_STEPS = ["Service", "Address", "Property", "Date & Time", "Contact", "Review"];
 
@@ -19,15 +21,16 @@ const PATH_TO_STEP: Record<string, number> = {
 const NO_SIDEBAR_PATHS = ["/residential/review", "/residential/confirmation", "/residential/error"];
 const NO_STEPPER_PATHS = ["/residential/confirmation", "/residential/error"];
 
-export default function ResidentialShell({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+// While an admin has paused online booking, the six steps give way to a notice.
+// The confirmation and error pages don't: someone who just booked still needs
+// to see that it worked.
+function ResidentialShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { status, rules } = useBookingRules();
+  const paused = status === "ready" && rules.paused && pathname in PATH_TO_STEP;
   const currentStep = PATH_TO_STEP[pathname] ?? 0;
-  const showStepper = currentStep > 0 && !NO_STEPPER_PATHS.includes(pathname);
-  const showSidebar = currentStep > 0 && !NO_SIDEBAR_PATHS.includes(pathname);
+  const showStepper = currentStep > 0 && !NO_STEPPER_PATHS.includes(pathname) && !paused;
+  const showSidebar = currentStep > 0 && !NO_SIDEBAR_PATHS.includes(pathname) && !paused;
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
@@ -51,12 +54,20 @@ export default function ResidentialShell({
           }`}
         >
           <div className={showSidebar ? "lg:flex-1 lg:min-w-0" : ""}>
-            {children}
+            {paused ? <BookingPausedNotice rules={rules} /> : children}
           </div>
 
           {showSidebar && <BookingSummary />}
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ResidentialShell({ children }: { children: React.ReactNode }) {
+  return (
+    <BookingRulesProvider>
+      <ResidentialShellContent>{children}</ResidentialShellContent>
+    </BookingRulesProvider>
   );
 }
