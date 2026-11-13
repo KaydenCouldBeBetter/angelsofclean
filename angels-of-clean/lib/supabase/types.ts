@@ -119,6 +119,15 @@ export type SetEmployeeArchivedResult =
 // (supabase/migrations/20261113202614_admin_preferences.sql).
 export type SaveAdminPreferencesResult = { status: "saved" };
 
+// jsonb returned by save_booking_settings, add_blackout_date and
+// remove_blackout_date (supabase/migrations/20261113205039_booking_controls.sql).
+// get_booking_rules is left as Json on purpose: parseBookingRules checks it.
+export type SaveBookingSettingsResult =
+  | { status: "saved"; changes: string[] }
+  | { status: "unchanged" };
+export type AddBlackoutDateResult = { status: "added" | "exists" | "past" | "too_far" };
+export type RemoveBlackoutDateResult = { status: "removed" | "not_found" };
+
 // The generated Database with the narrowed tables and function result swapped
 // in. Passed to createServerClient / createClient so queries return these types.
 export type Database = Omit<GeneratedDatabase, "public"> & {
@@ -147,6 +156,9 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
       | "create_employee"
       | "set_employee_archived"
       | "save_admin_preferences"
+      | "save_booking_settings"
+      | "add_blackout_date"
+      | "remove_blackout_date"
     > & {
       assign_booking_employees: {
         Args: GeneratedPublic["Functions"]["assign_booking_employees"]["Args"];
@@ -171,6 +183,18 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
       save_admin_preferences: {
         Args: GeneratedPublic["Functions"]["save_admin_preferences"]["Args"];
         Returns: SaveAdminPreferencesResult;
+      };
+      save_booking_settings: {
+        Args: GeneratedPublic["Functions"]["save_booking_settings"]["Args"];
+        Returns: SaveBookingSettingsResult;
+      };
+      add_blackout_date: {
+        Args: GeneratedPublic["Functions"]["add_blackout_date"]["Args"];
+        Returns: AddBlackoutDateResult;
+      };
+      remove_blackout_date: {
+        Args: GeneratedPublic["Functions"]["remove_blackout_date"]["Args"];
+        Returns: RemoveBlackoutDateResult;
       };
     };
   };

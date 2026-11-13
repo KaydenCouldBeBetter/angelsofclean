@@ -213,6 +213,27 @@ export type Database = {
         }
         Relationships: []
       }
+      blackout_dates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          day: string
+          label: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          day: string
+          label?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          day?: string
+          label?: string
+        }
+        Relationships: []
+      }
       booking_access: {
         Row: {
           booking_id: string
@@ -271,6 +292,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      booking_settings: {
+        Row: {
+          id: boolean
+          max_days_ahead: number
+          min_notice_hours: number
+          online_booking_paused: boolean
+          pause_message: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: boolean
+          max_days_ahead?: number
+          min_notice_hours?: number
+          online_booking_paused?: boolean
+          pause_message?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: boolean
+          max_days_ahead?: number
+          min_notice_hours?: number
+          online_booking_paused?: boolean
+          pause_message?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
       }
       bookings: {
         Row: {
@@ -645,12 +696,40 @@ export type Database = {
           },
         ]
       }
+      settings_audit: {
+        Row: {
+          actor: string | null
+          area: string
+          created_at: string
+          description: string
+          id: string
+        }
+        Insert: {
+          actor?: string | null
+          area: string
+          created_at?: string
+          description: string
+          id?: string
+        }
+        Update: {
+          actor?: string | null
+          area?: string
+          created_at?: string
+          description?: string
+          id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
       accept_account_invite: { Args: { p_token_hash: string }; Returns: Json }
+      add_blackout_date: {
+        Args: { p_day: string; p_label: string }
+        Returns: Json
+      }
       assign_booking_employees: {
         Args: {
           p_allow_overlap?: boolean
@@ -678,7 +757,9 @@ export type Database = {
         }
         Returns: Json
       }
+      get_booking_rules: { Args: never; Returns: Json }
       remove_account_member: { Args: { p_user_id: string }; Returns: Json }
+      remove_blackout_date: { Args: { p_day: string }; Returns: Json }
       revoke_account_invite: { Args: { p_invite_id: string }; Returns: Json }
       save_admin_preferences: {
         Args: {
@@ -689,6 +770,15 @@ export type Database = {
           p_landing_page: string
           p_unassigned_list_collapsed: boolean
           p_week_starts_on: string
+        }
+        Returns: Json
+      }
+      save_booking_settings: {
+        Args: {
+          p_max_days_ahead: number
+          p_min_notice_hours: number
+          p_pause_message: string
+          p_paused: boolean
         }
         Returns: Json
       }

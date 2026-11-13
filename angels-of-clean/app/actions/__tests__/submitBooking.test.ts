@@ -47,7 +47,16 @@ vi.mock("@/lib/rate-limit", () => ({
   allowPublicSubmission: (kind: string) => allowPublicBookingMock(kind),
 }));
 
+// The online booking rules (pause, closed days, notice, how far ahead) are read
+// through the signed-out client; here they are whatever each test says.
+type RulesResult = { ok: true; data: BookingRules } | { ok: false };
+const getPublicBookingRulesMock = vi.fn<() => Promise<RulesResult>>();
+vi.mock("@/lib/supabase/booking-rules", () => ({
+  getPublicBookingRules: () => getPublicBookingRulesMock(),
+}));
+
 import { submitBooking, adminCreateBooking, type BookingData } from "../submitBooking";
+import { DEFAULT_BOOKING_RULES, type BookingRules } from "@/lib/booking-rules";
 import { requireAdmin } from "@/lib/supabase/require-admin";
 import { BOOKING_MAX_DAYS_AHEAD, FIELD_MAX_LENGTHS } from "@/lib/constants";
 import { MIN_FILL_MS, type BotCheck } from "@/lib/bot-check";
@@ -89,7 +98,18 @@ beforeEach(() => {
   bookingsDeleteEqMock.mockImplementation(() => Promise.resolve({ error: null }));
   singleMock.mockResolvedValue({ data: null, error: null });
   allowPublicBookingMock.mockResolvedValue(true);
+  // The fixtures book up to Mar 2027, so unless a test says otherwise customers
+  // may book as far ahead as the server always allowed (3 months), with no
+  // closed days and no minimum notice.
+  withRules({});
 });
+
+function withRules(over: Partial<BookingRules>) {
+  getPublicBookingRulesMock.mockResolvedValue({
+    ok: true,
+    data: { ...DEFAULT_BOOKING_RULES, maxDaysAhead: BOOKING_MAX_DAYS_AHEAD, ...over },
+  });
+}
 
 afterEach(() => {
   vi.useRealTimers();
@@ -761,5 +781,141 @@ describe("how far ahead a customer can book", () => {
   it("doesn't limit admins, who book recurring and custom visits", async () => {
     singleMock.mockResolvedValue({ data: { id: "abc-123", booking_number: 1042 }, error: null });
     expect((await adminCreateBooking({ ...VALID_INPUT, date: "2027-03-01" })).success).toBe(true);
+  });
+});
+
+// Admin Settings (phase 2a): the rules an admin sets apply to customers only,
+// and the server decides whatever the pages showed.
+describe("online booking rules", () => {
+  // NOW is 10:00 AM EDT on Wed 2026-07-15.
+  const book = (over: Partial<BookingData> = {}) => submitBooking({ ...VALID_INPUT, ...over }, HUMAN);
+  const ok = () =>
+    singleMock.mockResolvedValue({ data: { id: "abc-123", booking_number: 1042 }, error: null });
+
+  describe("paused", () => {
+    it("refuses with the admin's message and stores nothing", async () => {
+      withRules({ paused: true, pauseMessage: "We're closed for renovations until Monday." });
+      expect(await book()).toEqual({ success: false, error: "We're closed for renovations until Monday." });
+      expect(bookingsInsertMock).not.toHaveBeenCalled();
+    });
+
+    it("falls back to a message with the phone number when none was written", async () => {
+      withRules({ paused: true, pauseMessage: "  " });
+      const result = await book();
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("paused");
+      expect(result.error).toContain("(315) 516-1266");
+    });
+
+    it("is answered before any other check, and before the rate limit is used", async () => {
+      withRules({ paused: true });
+      const result = await book({ zip: "99999", email: "nope" });
+      expect(result.error).toContain("paused");
+      expect(allowPublicBookingMock).not.toHaveBeenCalled();
+    });
+
+    it("never stops an admin, who also never reads the rules", async () => {
+      withRules({ paused: true });
+      ok();
+      expect((await adminCreateBooking(VALID_INPUT)).success).toBe(true);
+      expect(getPublicBookingRulesMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("closed days", () => {
+    it("refuses a closed day before inserting, and still books the day after", async () => {
+      withRules({ blackoutDates: ["2026-08-01"] });
+      expect(await book({ date: "2026-08-01" })).toEqual({
+        success: false,
+        error: "We're not taking bookings on that date. Please choose another day.",
+      });
+      expect(bookingsInsertMock).not.toHaveBeenCalled();
+
+      ok();
+      expect((await book({ date: "2026-08-02" })).success).toBe(true);
+    });
+
+    it("doesn't stop an admin from booking a closed day", async () => {
+      withRules({ blackoutDates: ["2026-08-01"] });
+      ok();
+      expect((await adminCreateBooking({ ...VALID_INPUT, date: "2026-08-01" })).success).toBe(true);
+    });
+  });
+
+  describe("minimum notice", () => {
+    it("refuses a slot that starts sooner than the notice, with a message that says how much", async () => {
+      withRules({ minNoticeHours: 4 });
+      // Today's afternoon slot starts at noon, two hours from now.
+      expect(await book({ date: "2026-07-15", timeSlot: "afternoon" })).toEqual({
+        success: false,
+        error: "We need at least 4 hours' notice. Please choose a later date or time.",
+      });
+      expect(bookingsInsertMock).not.toHaveBeenCalled();
+    });
+
+    it("accepts a slot exactly at the notice, and one later", async () => {
+      ok();
+      withRules({ minNoticeHours: 2 });
+      expect((await book({ date: "2026-07-15", timeSlot: "afternoon" })).success).toBe(true);
+      withRules({ minNoticeHours: 12 });
+      expect((await book({ date: "2026-07-16", timeSlot: "morning" })).success).toBe(true); // 22 hours out
+    });
+
+    it("counts a whole day of notice as 24 hours, not as 'tomorrow'", async () => {
+      withRules({ minNoticeHours: 24 });
+      expect((await book({ date: "2026-07-16", timeSlot: "morning" })).success).toBe(false); // 22 hours out
+      ok();
+      expect((await book({ date: "2026-07-16", timeSlot: "afternoon" })).success).toBe(true); // 26 hours out
+    });
+
+    it("still says 'already passed' for a slot that has started, not 'notice'", async () => {
+      withRules({ minNoticeHours: 24 });
+      expect((await book({ date: "2026-07-15", timeSlot: "morning" })).error).toBe(
+        "That time has already passed. Please choose a later date or time.",
+      );
+    });
+
+    it("doesn't apply to admins", async () => {
+      withRules({ minNoticeHours: 72 });
+      ok();
+      expect((await adminCreateBooking({ ...VALID_INPUT, date: "2026-07-15", timeSlot: "afternoon" })).success).toBe(true);
+    });
+  });
+
+  describe("how far ahead", () => {
+    it("follows the admin's setting, not the old fixed 92 days", async () => {
+      withRules({ maxDaysAhead: 6 });
+      ok();
+      expect((await book({ date: "2026-07-21" })).success).toBe(true); // today + 6
+      expect(await book({ date: "2026-07-22" })).toEqual({
+        success: false,
+        error: "Please choose a date within the next 6 days.",
+      });
+    });
+  });
+
+  describe("when the rules can't be read", () => {
+    it("refuses as unavailable, and neither stores nor uses up the rate limit", async () => {
+      getPublicBookingRulesMock.mockResolvedValue({ ok: false });
+      expect(await book()).toEqual({
+        success: false,
+        error: "Something went wrong. Please try again.",
+        unavailable: true,
+      });
+      expect(bookingsInsertMock).not.toHaveBeenCalled();
+      expect(allowPublicBookingMock).not.toHaveBeenCalled();
+    });
+
+    it("doesn't stop an admin, who doesn't need the rules", async () => {
+      getPublicBookingRulesMock.mockResolvedValue({ ok: false });
+      ok();
+      expect((await adminCreateBooking(VALID_INPUT)).success).toBe(true);
+    });
+  });
+
+  it("reads the rules once per customer booking", async () => {
+    ok();
+    await book();
+    expect(getPublicBookingRulesMock).toHaveBeenCalledTimes(1);
   });
 });
