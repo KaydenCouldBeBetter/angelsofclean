@@ -1,11 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import Link from "next/link";
 import { DASHBOARD_STATUS } from "../status-config";
 import type { Job, JobStatus, StaffMember } from "@/lib/admin-types";
 import { formatNy, formatNyTimeRange, nyDateStr, nyTodayStr } from "@/lib/datetime";
 import BookingsSearch from "./BookingsSearch";
+import {
+  STATUS_FILTER_ORDER,
+  UNASSIGNED,
+  filterJobs,
+  hasActiveDropdownFilter,
+  isStatusFilter,
+  type EmployeeFilter,
+  type StatusFilter,
+} from "./filter-jobs";
 
 export type FilterTab = "today" | "upcoming" | "past" | "all";
 
@@ -32,19 +41,38 @@ function groupJobsByDate(jobs: Job[]): { date: string; label: string; jobs: Job[
     }));
 }
 
-// Not built yet: shown disabled and labelled, like BookingActions' Reschedule.
-function ComingSoonFilter({ children }: { children: string }) {
+// A native <select> so keyboard, screen-reader and mobile pickers all work.
+// The visible text is the first option ("All Status"); the label is for
+// assistive tech and names what the control filters.
+function FilterSelect({
+  label,
+  value,
+  onChange,
+  children,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  children: React.ReactNode;
+}) {
+  const id = useId();
+  const active = value !== "all";
   return (
-    <button
-      type="button"
-      disabled
-      className="h-8 px-3 rounded-md border border-[#e2e8e6] bg-[#f7f9f8] text-[#5c5c5e] text-[12px] font-medium cursor-not-allowed flex items-center gap-2"
-    >
-      <span>{children}</span>
-      <span className="rounded-full bg-[#fef3c7] px-2 py-0.5 text-[11px] font-semibold text-[#92400e]">
-        Coming soon
-      </span>
-    </button>
+    <div>
+      <label htmlFor={id} className="sr-only">
+        {label}
+      </label>
+      <select
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={`h-8 rounded-md border px-2.5 text-[12px] font-medium text-[#1c1c1e] ${
+          active ? "border-primary bg-[#eef6f4]" : "border-[#e2e8e6] bg-white"
+        }`}
+      >
+        {children}
+      </select>
+    </div>
   );
 }
 
@@ -175,29 +203,25 @@ export default function BookingsList({
   // emails/phone numbers would end up in server/CDN logs.
   const [search, setSearch] = useState("");
   const searchQuery = search.trim().toLowerCase();
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [employeeFilter, setEmployeeFilter] = useState<EmployeeFilter>("all");
 
   const todayStr = nyTodayStr();
 
-  // Date filtering + sorting is handled by the query.
-  // Only client-side search filtering remains.
-  const filteredJobs = searchQuery
-    ? jobs.filter((job) => {
-        const employeeNames = job.employeeIds
-          .map((id) => employeeMap[id]?.name ?? "")
-          .join(" ")
-          .toLowerCase();
-        return (
-          job.client.toLowerCase().includes(searchQuery) ||
-          job.address.toLowerCase().includes(searchQuery) ||
-          job.service.toLowerCase().includes(searchQuery) ||
-          job.status.toLowerCase().includes(searchQuery) ||
-          String(job.bookingNumber).includes(searchQuery) ||
-          (job.email?.toLowerCase().includes(searchQuery) ?? false) ||
-          (job.phone?.includes(searchQuery) ?? false) ||
-          employeeNames.includes(searchQuery)
-        );
-      })
-    : jobs;
+  // Date filtering + sorting is handled by the query. Status, employee and
+  // search narrow that list in the browser.
+  const filteredJobs = filterJobs(
+    jobs,
+    { status: statusFilter, employee: employeeFilter, search: searchQuery },
+    employeeMap,
+  );
+  const filtersActive = hasActiveDropdownFilter({ status: statusFilter, employee: employeeFilter });
+  const employeeOptions = Object.values(employeeMap).sort((a, b) => a.name.localeCompare(b.name));
+  function clearFilters() {
+    setStatusFilter("all");
+    setEmployeeFilter("all");
+    setSearch("");
+  }
   const dayGroups = groupJobsByDate(filteredJobs);
 
   return (
@@ -219,24 +243,67 @@ export default function BookingsList({
         </TabLink>
 
 
-        {/* Dropdown filters: not built yet */}
+        {/* Dropdown filters */}
         <div className="ml-2 flex items-center gap-2">
-          <ComingSoonFilter>All Status</ComingSoonFilter>
-          <ComingSoonFilter>All Employees</ComingSoonFilter>
+          <FilterSelect
+            label="Filter by status"
+            value={statusFilter}
+            onChange={(v) => setStatusFilter(isStatusFilter(v) ? v : "all")}
+          >
+            <option value="all">All Status</option>
+            {STATUS_FILTER_ORDER.map((status) => (
+              <option key={status} value={status}>
+                {DASHBOARD_STATUS[status].label}
+              </option>
+            ))}
+          </FilterSelect>
+          <FilterSelect
+            label="Filter by employee"
+            value={employeeFilter}
+            onChange={setEmployeeFilter}
+          >
+            <option value="all">All Employees</option>
+            <option value={UNASSIGNED}>Unassigned</option>
+            {employeeOptions.map((emp) => (
+              <option key={emp.id} value={emp.id}>
+                {emp.name}
+              </option>
+            ))}
+          </FilterSelect>
         </div>
 
         {/* Search */}
         <BookingsSearch value={search} onChange={setSearch} />
       </div>
 
+      {/* Announces the new result count to screen readers when a filter changes */}
+      <p className="sr-only" role="status">
+        {filteredJobs.length} booking{filteredJobs.length !== 1 ? "s" : ""} shown
+      </p>
+
       {/* Content */}
       <div className="flex-1 overflow-auto bg-[#f7f9f8]">
         <div className="p-8">
           {dayGroups.length === 0 ? (
             <div className="py-16 text-center text-sm text-[#5c5c5e]">
-              {searchQuery
-                ? `No bookings matching "${search.trim()}".`
-                : emptyMessages[activeTab]}
+              {filtersActive || searchQuery ? (
+                <>
+                  <p>
+                    {searchQuery && !filtersActive
+                      ? `No bookings matching "${search.trim()}".`
+                      : "No bookings match the selected filters."}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="mt-3 text-[13px] font-semibold text-primary underline underline-offset-2"
+                  >
+                    Clear filters
+                  </button>
+                </>
+              ) : (
+                emptyMessages[activeTab]
+              )}
             </div>
           ) : (
             dayGroups.map((group, groupIdx) => {
