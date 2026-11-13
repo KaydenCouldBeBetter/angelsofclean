@@ -11,7 +11,7 @@ function makeSupabaseStub(...results: QueryResult[]) {
   const recorded: {
     table?: string;
     columns?: string;
-    queries: { table: string; columns?: string; eq: [string, unknown][] }[];
+    queries: { table: string; columns?: string; eq: [string, unknown][]; is: [string, unknown][] }[];
   } = { queries: [] };
   let call = 0;
 
@@ -24,6 +24,10 @@ function makeSupabaseStub(...results: QueryResult[]) {
     }
     builder.eq = vi.fn((column: string, value: unknown) => {
       query.eq.push([column, value]);
+      return builder;
+    });
+    builder.is = vi.fn((column: string, value: unknown) => {
+      query.is.push([column, value]);
       return builder;
     });
     builder.select = vi.fn((columns: string) => {
@@ -41,7 +45,7 @@ function makeSupabaseStub(...results: QueryResult[]) {
   const client = {
     from: vi.fn((table: string) => {
       recorded.table = table;
-      recorded.queries.push({ table, eq: [] });
+      recorded.queries.push({ table, eq: [], is: [] });
       const result = results[Math.min(call, results.length - 1)];
       call += 1;
       return makeBuilder(result);
@@ -82,6 +86,9 @@ import {
   getBookingAccess,
   getCommercialQuotes,
   getDashboardStats,
+  getEmployeeById,
+  getEmployeeHistory,
+  getEmployeeJobsInRange,
   getEmployees,
   getJobById,
   getJobs,
@@ -365,7 +372,7 @@ describe("getBookingAccess (booking detail page only)", () => {
 
     expect(result).toEqual({ ok: true, data: "Side gate code 4412" });
     expect(recorded.queries).toEqual([
-      { table: "booking_access", columns: "instructions", eq: [["booking_id", "b-1"]] },
+      { table: "booking_access", columns: "instructions", eq: [["booking_id", "b-1"]], is: [] },
     ]);
   });
 
@@ -407,5 +414,114 @@ describe("bathroom count on the admin booking detail and lists", () => {
 
     createClientMock.mockResolvedValue(makeSupabaseStub({ data: [row], error: null }).client);
     expect(await getJobs()).toMatchObject({ ok: true, data: [{ property }] });
+  });
+});
+
+describe("employee roster queries", () => {
+  const EMPLOYEE_ROW = {
+    id: "e-1",
+    name: "Ana V.",
+    initials: "AV",
+    phone: "(315) 555-0101",
+    hired_date: "2024-06-01",
+    archived_at: null,
+  };
+
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("getEmployees returns archived people too, with archivedAt", async () => {
+    const archived = { ...EMPLOYEE_ROW, id: "e-2", archived_at: "2026-10-01T16:00:00+00:00" };
+    const { recorded, client } = makeSupabaseStub({ data: [EMPLOYEE_ROW, archived], error: null });
+    createClientMock.mockResolvedValue(client);
+
+    const result = await getEmployees();
+
+    expect(recorded.columns!.split(",")).toContain("archived_at");
+    expect(recorded.queries[0].is).toEqual([]); // no filter: past jobs still name them
+    expect(result).toMatchObject({
+      ok: true,
+      data: [
+        { id: "e-1", archivedAt: null, hiredDate: "Jun 2024" },
+        { id: "e-2", archivedAt: "2026-10-01T16:00:00+00:00" },
+      ],
+    });
+  });
+
+  it("getEmployeeById finds one employee, or reports none", async () => {
+    const { recorded, client } = makeSupabaseStub({ data: EMPLOYEE_ROW, error: null });
+    createClientMock.mockResolvedValue(client);
+    expect(await getEmployeeById("e-1")).toMatchObject({ ok: true, data: { id: "e-1", name: "Ana V." } });
+    expect(recorded.queries[0].eq).toEqual([["id", "e-1"]]);
+
+    createClientMock.mockResolvedValue(makeSupabaseStub({ data: null, error: null }).client);
+    expect(await getEmployeeById("e-9")).toEqual({ ok: true, data: null });
+  });
+
+  it("getEmployeeById reports a failed lookup as failed, not as missing", async () => {
+    createClientMock.mockResolvedValue(makeSupabaseStub(DB_DOWN).client);
+    expect(await getEmployeeById("e-1")).toEqual({ ok: false });
+  });
+
+  it("getEmployeeHistory maps the rows and fails closed", async () => {
+    createClientMock.mockResolvedValue(
+      makeSupabaseStub({
+        data: [{ action: "hired", actor: "admin@example.com", created_at: "2024-06-01T15:00:00+00:00" }],
+        error: null,
+      }).client,
+    );
+    expect(await getEmployeeHistory("e-1")).toEqual({
+      ok: true,
+      data: [{ action: "hired", actor: "admin@example.com", at: "2024-06-01T15:00:00+00:00" }],
+    });
+
+    createClientMock.mockResolvedValue(makeSupabaseStub(DB_DOWN).client);
+    expect(await getEmployeeHistory("e-1")).toEqual({ ok: false });
+  });
+
+  it("getEmployeeJobsInRange keeps only that employee's jobs and drops cancelled ones", async () => {
+    const row = (id: string, status: string, crew: string[]) => ({
+      ...BOOKING_ROW,
+      id,
+      status,
+      booking_employees: crew.map((employee_id) => ({ employee_id })),
+    });
+    const { recorded, client } = makeSupabaseStub({
+      data: [
+        row("mine", "confirmed", ["e-1"]),
+        row("shared", "pending", ["e-1", "e-2"]),
+        row("theirs", "confirmed", ["e-2"]),
+        row("nobody", "pending", []),
+        row("cancelled", "cancelled", ["e-1"]),
+      ],
+      error: null,
+    });
+    createClientMock.mockResolvedValue(client);
+
+    const result = await getEmployeeJobsInRange("e-1", "2026-11-09", "2026-11-15");
+
+    expect(result.ok && result.data.map((j) => j.id)).toEqual(["mine", "shared"]);
+    // The calendar projection: no contact details or notes.
+    expect(recorded.columns!.split(",")).not.toContain("email");
+    expect(recorded.columns!.split(",")).not.toContain("notes");
+  });
+
+  it("getEmployeeJobsInRange fails when the jobs can't be loaded", async () => {
+    createClientMock.mockResolvedValue(makeSupabaseStub(DB_DOWN).client);
+    expect(await getEmployeeJobsInRange("e-1", "2026-11-09", "2026-11-15")).toEqual({ ok: false });
+  });
+
+  it("the dashboard counts only active employees", async () => {
+    const { recorded, client } = makeSupabaseStub({ data: [], error: null, count: 0 });
+    createClientMock.mockResolvedValue(client);
+
+    await getDashboardStats();
+
+    const employeeQuery = recorded.queries.find((q) => q.table === "employees")!;
+    expect(employeeQuery.is).toEqual([["archived_at", null]]);
   });
 });

@@ -13,6 +13,7 @@ const MARCUS: Employee = {
   initials: "MT",
   phone: STAFF_PHONE,
   hiredDate: "Mar 2024",
+  archivedAt: null,
 };
 
 const JOB: Job = {

@@ -84,6 +84,7 @@ export type AssignBookingEmployeesResult =
   | { status: "conflicts"; conflicts: AssignmentConflictRow[] }
   | { status: "stale" }
   | { status: "closed"; booking_status: BookingStatus }
+  | { status: "archived"; employees: string[] }
   | { status: "not_found" };
 
 // jsonb returned by set_booking_status
@@ -99,6 +100,19 @@ export type SetBookingAccessResult =
   | { status: "saved" }
   | { status: "removed" }
   | { status: "unchanged" }
+  | { status: "not_found" };
+
+// jsonb returned by create_employee and set_employee_archived
+// (supabase/migrations/20261113181527_employee_roster.sql).
+export type CreateEmployeeResult =
+  | { status: "created"; id: string }
+  | { status: "duplicate_phone"; employee_name: string; archived: boolean };
+
+export type SetEmployeeArchivedResult =
+  | { status: "archived" }
+  | { status: "reactivated" }
+  | { status: "unchanged" }
+  | { status: "has_upcoming"; booking_numbers: number[] }
   | { status: "not_found" };
 
 // The generated Database with the narrowed tables and function result swapped
@@ -123,7 +137,11 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
     };
     Functions: Omit<
       GeneratedPublic["Functions"],
-      "assign_booking_employees" | "set_booking_status" | "set_booking_access"
+      | "assign_booking_employees"
+      | "set_booking_status"
+      | "set_booking_access"
+      | "create_employee"
+      | "set_employee_archived"
     > & {
       assign_booking_employees: {
         Args: GeneratedPublic["Functions"]["assign_booking_employees"]["Args"];
@@ -136,6 +154,14 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
       set_booking_access: {
         Args: GeneratedPublic["Functions"]["set_booking_access"]["Args"];
         Returns: SetBookingAccessResult;
+      };
+      create_employee: {
+        Args: GeneratedPublic["Functions"]["create_employee"]["Args"];
+        Returns: CreateEmployeeResult;
+      };
+      set_employee_archived: {
+        Args: GeneratedPublic["Functions"]["set_employee_archived"]["Args"];
+        Returns: SetEmployeeArchivedResult;
       };
     };
   };

@@ -9,8 +9,10 @@ vi.mock("@/lib/supabase/require-admin", () => ({
 }));
 
 const getJobsInRangeMock = vi.fn();
+const getEmployeeJobsInRangeMock = vi.fn();
 vi.mock("@/lib/supabase/queries", () => ({
   getJobsInRange: (...args: unknown[]) => getJobsInRangeMock(...args),
+  getEmployeeJobsInRange: (...args: unknown[]) => getEmployeeJobsInRangeMock(...args),
 }));
 
 import { GET } from "../route";
@@ -93,5 +95,44 @@ describe("GET /api/admin/jobs — submission check", () => {
     getJobsInRangeMock.mockResolvedValue({ ok: true, data: [] });
     const res = await GET(request("?from=2026-09-01&to=2026-09-30"));
     expect(res.headers.get("Cache-Control")).toBe("private, no-store");
+  });
+
+  describe("with ?employee=", () => {
+    const ID = "11111111-1111-4111-8111-111111111111";
+
+    it("returns only that employee's jobs, from the employee query", async () => {
+      getEmployeeJobsInRangeMock.mockResolvedValue({ ok: true, data: [{ id: "mine" }] });
+
+      const res = await GET(request(`?from=2026-09-01&to=2026-09-30&employee=${ID}`));
+
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual([{ id: "mine" }]);
+      expect(getEmployeeJobsInRangeMock).toHaveBeenCalledWith(ID, "2026-09-01", "2026-09-30");
+      expect(getJobsInRangeMock).not.toHaveBeenCalled();
+    });
+
+    it("answers 400 to an id that isn't a UUID, without querying", async () => {
+      const res = await GET(request("?from=2026-09-01&to=2026-09-30&employee=abc"));
+      expect(res.status).toBe(400);
+      expect(getEmployeeJobsInRangeMock).not.toHaveBeenCalled();
+      expect(getJobsInRangeMock).not.toHaveBeenCalled();
+    });
+
+    it("answers 400 to an empty id rather than returning everyone's jobs", async () => {
+      const res = await GET(request("?from=2026-09-01&to=2026-09-30&employee="));
+      expect(res.status).toBe(400);
+      expect(getJobsInRangeMock).not.toHaveBeenCalled();
+    });
+
+    it("returns 503, not an empty list, when the query fails", async () => {
+      getEmployeeJobsInRangeMock.mockResolvedValue({ ok: false });
+      expect((await GET(request(`?from=2026-09-01&to=2026-09-30&employee=${ID}`))).status).toBe(503);
+    });
+
+    it("still answers 403 to a non-admin without querying", async () => {
+      requireAdminMock.mockResolvedValue({ ok: false, error: "You are not authorized to do this." });
+      expect((await GET(request(`?from=2026-09-01&to=2026-09-30&employee=${ID}`))).status).toBe(403);
+      expect(getEmployeeJobsInRangeMock).not.toHaveBeenCalled();
+    });
   });
 });

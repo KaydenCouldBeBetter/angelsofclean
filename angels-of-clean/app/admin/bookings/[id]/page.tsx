@@ -173,7 +173,14 @@ export default async function BookingDetailPage({
               </div>
               <div className="h-px bg-[#e2e8e6] mx-6" />
               <div className="px-6 py-4">
-                <BookingActions job={job} employees={employees.map(toStaffMember)} />
+                <BookingActions
+                  job={job}
+                  // Archived staff can't be added to a job, but one already on it
+                  // stays in the list so the admin can take them off.
+                  employees={employees
+                    .filter((e) => e.archivedAt === null || job.employeeIds.includes(e.id))
+                    .map(toStaffMember)}
+                />
               </div>
             </div>
 

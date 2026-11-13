@@ -10,7 +10,7 @@ vi.mock("../../NewBookingModal", () => ({ default: () => null }));
 
 import CalendarView, { TRAY_COLLAPSED_KEY, UnassignedTray, isUnassigned, unassignedByDay } from "../CalendarView";
 
-const MARCUS: Employee = { id: "e-1", name: "Marcus T.", initials: "MT", phone: "", hiredDate: "Mar 2024" };
+const MARCUS: Employee = { id: "e-1", name: "Marcus T.", initials: "MT", phone: "", hiredDate: "Mar 2024", archivedAt: null };
 
 // 8 AM–12 PM New York (EDT, UTC-4) on the given date.
 function job(id: string, date: string, over: Partial<Job> = {}): Job {
