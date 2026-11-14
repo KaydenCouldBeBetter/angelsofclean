@@ -3,6 +3,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { TIME_SLOT_WINDOWS } from "@/lib/constants";
 import { isNyWallClockInFuture, isValidDateStr, nyDateStr } from "@/lib/datetime";
+import type { HomeSize } from "@/lib/home-size";
 
 // Residential types
 export type ServiceType = "standard" | "deep" | "moveinout" | null;
@@ -46,6 +47,8 @@ interface BookingState {
   bedrooms: number;
   // Half steps allowed: 1, 1.5 … 5 (BATHROOM_LIMITS in lib/constants.ts).
   bathrooms: number;
+  // About how big the home is; null until the customer chooses (or says "Not sure").
+  homeSize: HomeSize | null;
   notes: string;
   // Entry instructions (door code, gate, pets). Sent to booking_access, never
   // to notes; cleared with everything else on the confirmation page.
@@ -94,7 +97,8 @@ interface BookingState {
     bedrooms: number,
     bathrooms: number,
     notes: string,
-    accessInstructions: string
+    accessInstructions: string,
+    homeSize: HomeSize | null
   ) => void;
   setStep4: (date: string, timeSlot: TimeSlot) => void;
   setStep5: (name: string, email: string, phone: string) => void;
@@ -146,6 +150,7 @@ const defaultState = {
   zip: "",
   bedrooms: 2,
   bathrooms: 1,
+  homeSize: null as HomeSize | null,
   notes: "",
   accessInstructions: "",
   date: "",
@@ -180,8 +185,8 @@ export const useBookingStore = create<BookingState>()(
       setStep1: (service, frequency) =>
         set((state) => ({ service, frequency, formStartedAt: state.formStartedAt ?? Date.now() })),
       setStep2: (address, city, zip) => set({ address, city, zip }),
-      setStep3: (bedrooms, bathrooms, notes, accessInstructions) =>
-        set({ bedrooms, bathrooms, notes, accessInstructions }),
+      setStep3: (bedrooms, bathrooms, notes, accessInstructions, homeSize) =>
+        set({ bedrooms, bathrooms, notes, accessInstructions, homeSize }),
       setStep4: (date, timeSlot) => set({ date, timeSlot, dateExpired: false }),
       setStep5: (name, email, phone) => set({ name, email, phone }),
 
@@ -227,6 +232,7 @@ export const useBookingStore = create<BookingState>()(
         zip: state.zip,
         bedrooms: state.bedrooms,
         bathrooms: state.bathrooms,
+        homeSize: state.homeSize,
         notes: state.notes,
         accessInstructions: state.accessInstructions,
         date: state.date,

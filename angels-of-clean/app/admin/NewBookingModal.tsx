@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog } from "@base-ui/react/dialog";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,9 @@ import {
   SERVICE_LABELS,
   TIME_LABELS,
 } from "@/lib/constants";
+import { HOME_SIZE_OPTIONS, type HomeSize } from "@/lib/home-size";
+import { coerceBookingRules } from "@/lib/booking-rules";
+import { RULES_URL } from "@/components/booking/BookingRulesProvider";
 
 // Same options, labels and order (least to most frequent) as the customer flows.
 const SERVICES = Object.entries(SERVICE_LABELS).map(([value, label]) => ({ value, label }));
@@ -44,15 +47,38 @@ export default function NewBookingModal({ open, onClose }: NewBookingModalProps)
   const [zip, setZip] = useState("");
   const [bedrooms, setBedrooms] = useState(1);
   const [bathrooms, setBathrooms] = useState(1);
+  // "Not sure" until the office asks: it counts as a large home, so it never
+  // makes a day look emptier than it is.
+  const [homeSize, setHomeSize] = useState<HomeSize>("unsure");
   const [date, setDate] = useState("");
   const [timeSlot, setTimeSlot] = useState("morning");
   const [notes, setNotes] = useState("");
+  // Days customers can't book (set in Settings). Admins can still book them, so
+  // this only warns. Read from the same public route the booking pages use.
+  const [closedDays, setClosedDays] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    fetch(RULES_URL)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((raw: unknown) => {
+        const rules = coerceBookingRules(raw);
+        if (!cancelled && rules) setClosedDays(rules.blackoutDates);
+      })
+      .catch(() => {
+        // No warning if the closed days can't be fetched; booking works as before.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   function resetForm() {
     setName(""); setEmail(""); setPhone("");
     setService("standard"); setFrequency("one-time");
     setAddress(""); setCity(""); setZip("");
-    setBedrooms(1); setBathrooms(1);
+    setBedrooms(1); setBathrooms(1); setHomeSize("unsure");
     setDate(""); setTimeSlot("morning"); setNotes("");
     setError(null);
   }
@@ -68,7 +94,7 @@ export default function NewBookingModal({ open, onClose }: NewBookingModalProps)
 
     startTransition(async () => {
       const result = await adminCreateBooking(
-        { service, frequency, address, city, zip, bedrooms, bathrooms, notes, date, timeSlot, name, email, phone },
+        { service, frequency, address, city, zip, bedrooms, bathrooms, homeSize, notes, date, timeSlot, name, email, phone },
       );
 
       if (!result.success) {
@@ -205,6 +231,17 @@ export default function NewBookingModal({ open, onClose }: NewBookingModalProps)
                     {BATHROOM_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
                   </select>
                 </div>
+                <div className="col-span-2">
+                  <Label htmlFor="nb-size" className="text-[13px] text-[#1c1c1e] mb-1">Home size</Label>
+                  <select
+                    id="nb-size"
+                    value={homeSize}
+                    onChange={(e) => setHomeSize(e.target.value as HomeSize)}
+                    className="h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
+                  >
+                    {HOME_SIZE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -228,6 +265,13 @@ export default function NewBookingModal({ open, onClose }: NewBookingModalProps)
                   </select>
                 </div>
               </div>
+              {/* Always in the dialog, so a screen reader announces the text when it appears. */}
+              <p
+                role="status"
+                className={closedDays.includes(date) ? "mt-2 rounded-lg border border-[#b45309] bg-[#fef3c7] px-3 py-2 text-[13px] text-[#1c1c1e]" : "sr-only"}
+              >
+                {closedDays.includes(date) ? "Customers can't book this day online (it is closed in Settings). You can still book it here." : ""}
+              </p>
             </div>
 
             {/* ── Notes ── */}

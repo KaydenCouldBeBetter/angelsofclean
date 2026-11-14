@@ -40,6 +40,7 @@ const RESIDENTIAL = {
   address: "1 Test St",
   city: "Cicero",
   zip: "13039",
+  homeSize: "under-1800" as const,
   date: "2026-11-02",
   timeSlot: "morning" as const,
   name: "Jane Doe",

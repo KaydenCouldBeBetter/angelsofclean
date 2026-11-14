@@ -12,6 +12,7 @@ import SubmitErrorAlert from "@/components/booking/SubmitErrorAlert";
 import ServiceUnavailable from "@/components/booking/ServiceUnavailable";
 import { useBookingStore, useBookingHydrated } from "@/store/bookingStore";
 import { SERVICE_LABELS, FREQUENCY_LABELS, TIME_LABELS, PRICE_NOTE, formatBathroomCount } from "@/lib/constants";
+import { homeSizeLabel } from "@/lib/home-size";
 import { formatBookingDate } from "@/lib/booking-date";
 import { submitBooking, type BookingResult } from "@/app/actions/submitBooking";
 
@@ -25,7 +26,7 @@ export default function ReviewPage() {
   const {
     service, frequency,
     address, city, zip,
-    bedrooms, bathrooms, notes, accessInstructions,
+    bedrooms, bathrooms, homeSize, notes, accessInstructions,
     date, timeSlot,
     name, email, phone,
     formStartedAt, honeypot,
@@ -43,7 +44,10 @@ export default function ReviewPage() {
     else if (!service || !address || !date || !name || formStartedAt === null) {
       router.replace("/residential");
     }
-  }, [hydrated, service, address, date, name, formStartedAt, dateExpired, router]);
+    // A booking started before home size was asked has none: ask it now rather
+    // than send a booking the server would refuse.
+    else if (homeSize === null) router.replace("/residential/property?returnTo=review");
+  }, [hydrated, service, address, date, name, formStartedAt, homeSize, dateExpired, router]);
 
   const formattedDate = formatBookingDate(date, "long");
 
@@ -59,7 +63,7 @@ export default function ReviewPage() {
         service: service ?? "",
         frequency: frequency ?? "",
         address, city, zip,
-        bedrooms, bathrooms, notes, accessInstructions,
+        bedrooms, bathrooms, homeSize: homeSize ?? "", notes, accessInstructions,
         date,
         timeSlot: timeSlot ?? "",
         name, email, phone,
@@ -113,6 +117,7 @@ export default function ReviewPage() {
       editHref: "/residential/property?returnTo=review",
       lines: [
         `${bedrooms} ${bedrooms === 1 ? "Bedroom" : "Bedrooms"}, ${formatBathroomCount(bathrooms)}`,
+        homeSize ? `Home size: ${homeSizeLabel(homeSize)}` : null,
         notes ? `Notes: ${notes}` : null,
         accessInstructions ? `Entry instructions: ${accessInstructions}` : null,
       ].filter(Boolean) as string[],

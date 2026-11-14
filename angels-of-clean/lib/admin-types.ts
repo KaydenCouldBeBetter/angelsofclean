@@ -1,6 +1,7 @@
 // Shapes the admin pages work with, built from database rows by
 // lib/supabase/queries.ts. Row types themselves live in lib/supabase/types.ts.
 import type { BookingStatus } from "./supabase/types";
+import type { HomeSize } from "@/lib/home-size";
 
 export type JobStatus = BookingStatus;
 
@@ -51,6 +52,9 @@ export interface Job {
   phone?: string;
   frequency?: string;
   property?: string;
+  // About how big the home is; null on bookings made before it was asked.
+  // Absent on the list and calendar projections, which never need it.
+  homeSize?: HomeSize | null;
   notes?: string;
   submittedAt?: string;
 }

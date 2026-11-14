@@ -7,7 +7,10 @@ import StepHeader from "@/components/booking/StepHeader";
 import ProgressDots from "@/components/booking/ProgressDots";
 import BottomCTA from "@/components/booking/BottomCTA";
 import WhenHydrated from "@/components/booking/WhenHydrated";
+import Selectable, { SelectableGroup } from "@/components/booking/Selectable";
+import FieldError from "@/components/booking/FieldError";
 import { useBookingStore } from "@/store/bookingStore";
+import { HOME_SIZE_OPTIONS, type HomeSize } from "@/lib/home-size";
 import { BATHROOM_LIMITS, FIELD_MAX_LENGTHS } from "@/lib/constants";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -71,9 +74,17 @@ function PropertyPageContent() {
   const [bathrooms, setBathrooms] = useState(store.bathrooms);
   const [notes, setNotes] = useState(store.notes);
   const [accessInstructions, setAccessInstructions] = useState(store.accessInstructions);
+  const [homeSize, setHomeSize] = useState<HomeSize | null>(store.homeSize);
+  const [sizeError, setSizeError] = useState(false);
 
   function handleNext() {
-    setStep3(bedrooms, bathrooms, notes, accessInstructions);
+    // The crew limit counts homes by size, so it is asked every time. "Not sure"
+    // is an answer: nobody has to guess.
+    if (homeSize === null) {
+      setSizeError(true);
+      return;
+    }
+    setStep3(bedrooms, bathrooms, notes, accessInstructions, homeSize);
     router.push(returnTo === "review" ? "/residential/review" : "/residential/datetime");
   }
 
@@ -113,6 +124,34 @@ function PropertyPageContent() {
               onChange={setBathrooms}
             />
           </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label id="home-size-label">About how big is your home?</Label>
+          <p id="home-size-hint" className="text-sm text-zinc-600">
+            A rough guess is fine. It helps us plan the crew and the time.
+          </p>
+          <SelectableGroup
+            type="radio"
+            aria-labelledby="home-size-label"
+            className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+          >
+            {HOME_SIZE_OPTIONS.map((option) => (
+              <Selectable
+                key={option.value}
+                value={option.value}
+                selected={homeSize === option.value}
+                onSelect={() => {
+                  setHomeSize(option.value);
+                  setSizeError(false);
+                }}
+                className="flex min-h-14 items-center px-4 py-3 text-left"
+              >
+                {option.label}
+              </Selectable>
+            ))}
+          </SelectableGroup>
+          {sizeError && <FieldError id="home-size-error">Choose your home&apos;s size, or Not sure.</FieldError>}
         </div>
 
         <div className="flex flex-col gap-2">

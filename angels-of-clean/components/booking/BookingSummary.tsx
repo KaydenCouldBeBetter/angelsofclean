@@ -1,6 +1,7 @@
 "use client";
 
 import { useBookingStore } from "@/store/bookingStore";
+import { homeSizeLabel } from "@/lib/home-size";
 import { FREQUENCY_LABELS, SERVICE_LABELS, TIME_LABELS } from "@/lib/constants";
 import { formatBookingDate } from "@/lib/booking-date";
 
@@ -37,6 +38,7 @@ export default function BookingSummary() {
       label: "Property",
       value: `${store.bedrooms} Bed, ${store.bathrooms} Bath`,
     });
+    if (store.homeSize) rows.push({ label: "Home size", value: homeSizeLabel(store.homeSize) });
   }
 
   // Date & Time (after step 4)

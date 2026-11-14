@@ -17,6 +17,8 @@ type BookingColumns = {
   service_type: "standard" | "deep" | "moveinout";
   frequency: "one-time" | "weekly" | "bi-weekly" | "monthly";
   time_slot: "morning" | "afternoon";
+  // Null on bookings made before it was asked (see lib/home-size.ts).
+  home_size: "under-1800" | "1800-2500" | "over-2500" | "unsure" | null;
 };
 
 type CommercialQuoteColumns = {
@@ -128,6 +130,14 @@ export type SaveBookingSettingsResult =
 export type AddBlackoutDateResult = { status: "added" | "exists" | "past" | "too_far" };
 export type RemoveBlackoutDateResult = { status: "removed" | "not_found" };
 
+// jsonb returned by set_booking_home_size
+// (supabase/migrations/20261113221252_booking_home_size.sql).
+export type SetBookingHomeSizeResult =
+  | { status: "saved" }
+  | { status: "unchanged" }
+  | { status: "closed"; booking_status: BookingStatus }
+  | { status: "not_found" };
+
 // The generated Database with the narrowed tables and function result swapped
 // in. Passed to createServerClient / createClient so queries return these types.
 export type Database = Omit<GeneratedDatabase, "public"> & {
@@ -159,6 +169,7 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
       | "save_booking_settings"
       | "add_blackout_date"
       | "remove_blackout_date"
+      | "set_booking_home_size"
     > & {
       assign_booking_employees: {
         Args: GeneratedPublic["Functions"]["assign_booking_employees"]["Args"];
@@ -195,6 +206,10 @@ export type Database = Omit<GeneratedDatabase, "public"> & {
       remove_blackout_date: {
         Args: GeneratedPublic["Functions"]["remove_blackout_date"]["Args"];
         Returns: RemoveBlackoutDateResult;
+      };
+      set_booking_home_size: {
+        Args: GeneratedPublic["Functions"]["set_booking_home_size"]["Args"];
+        Returns: SetBookingHomeSizeResult;
       };
     };
   };

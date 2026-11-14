@@ -11,6 +11,7 @@ import {
   formatBathroomCount,
 } from "@/lib/constants";
 import type { ServiceType, Frequency } from "@/store/bookingStore";
+import type { HomeSize } from "@/lib/home-size";
 import { formatNy, formatNyDateTime, nyTodayStr } from "@/lib/datetime";
 
 // hired_date is a plain date (no time). Anchor it at noon UTC — safely inside
@@ -35,7 +36,7 @@ function shiftMonths(dateStr: string, n: number): string {
 
 // Explicit column lists — avoids transferring columns the app never reads.
 const BOOKING_COLUMNS =
-  "id,booking_number,client_name,email,phone,service_type,frequency,address,city,bedrooms,bathrooms,notes,start_at,end_at,status,submitted_at,booking_employees(employee_id)" as const;
+  "id,booking_number,client_name,email,phone,service_type,frequency,address,city,bedrooms,bathrooms,home_size,notes,start_at,end_at,status,submitted_at,booking_employees(employee_id)" as const;
 
 // Calendar projection — the calendar UI renders no contact info, so email,
 // phone, and notes must never leave the server for that surface (the API
@@ -180,6 +181,8 @@ type BookingWithEmployees = {
   bedrooms: number;
   // numeric(2,1): PostgREST returns it as a JSON number, so 2.5 arrives as 2.5.
   bathrooms: number;
+  // Only on the full projection (BOOKING_COLUMNS); null before it was asked.
+  home_size?: HomeSize | null;
   notes?: string | null;
   start_at: string;
   end_at: string;
@@ -207,6 +210,7 @@ function mapBookingToJob(row: BookingWithEmployees): Job {
     phone: row.phone,
     frequency: FREQUENCY_LABELS[row.frequency as NonNullable<Frequency>] ?? row.frequency,
     property: `${pluralize(row.bedrooms, "Bedroom")} · ${formatBathroomCount(row.bathrooms)}`,
+    ...(row.home_size !== undefined ? { homeSize: row.home_size } : {}),
     notes: row.notes ?? undefined,
     submittedAt: row.submitted_at,
   };

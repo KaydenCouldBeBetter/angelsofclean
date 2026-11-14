@@ -5,6 +5,7 @@ import { formatNy, formatNyTime, formatNyTimeRange } from "@/lib/datetime";
 import { toStaffMember } from "@/lib/admin-types";
 import BookingActions from "./BookingActions";
 import EntryInstructions from "./EntryInstructions";
+import HomeSizeCard from "./HomeSizeCard";
 import LoadError from "../../LoadError";
 
 function formatDetailDate(iso: string) {
@@ -156,6 +157,12 @@ export default async function BookingDetailPage({
                 {cfg.label} {assignedEmployees.length > 0 ? `· Employee: ${employeeLabel}` : ""}
               </p>
             </div>
+
+            <HomeSizeCard
+              bookingId={job.id}
+              homeSize={job.homeSize ?? null}
+              editable={job.status !== "done" && job.status !== "cancelled"}
+            />
 
             <EntryInstructions
               bookingId={job.id}

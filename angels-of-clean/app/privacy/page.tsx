@@ -31,7 +31,7 @@ export default function PrivacyPage() {
         <LegalList>
           <li>the service you choose and how often you want it</li>
           <li>the address, city and ZIP code of the home</li>
-          <li>the number of bedrooms and bathrooms</li>
+          <li>the number of bedrooms and bathrooms, and about how big the home is (a size range you choose)</li>
           <li>any notes you add</li>
           <li>
             any entry instructions you add, such as a door or gate code or a note about pets. We

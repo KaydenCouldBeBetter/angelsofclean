@@ -525,3 +525,56 @@ describe("employee roster queries", () => {
     expect(employeeQuery.is).toEqual([["archived_at", null]]);
   });
 });
+
+// Admin Settings phase 2b, step 1: the booking's home size is shown on its detail
+// page, so only the full projection asks for it. The list and calendar
+// projections stay as slim as they were.
+describe("home size in the bookings queries", () => {
+  const columnsOf = (stub: ReturnType<typeof makeSupabaseStub>) => stub.recorded.columns!.split(",");
+
+  beforeEach(() => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  it.each([
+    ["getJobById", () => getJobById("b-1")],
+    ["getJobs", () => getJobs()],
+  ])("%s asks for home_size", async (_name, run) => {
+    const stub = makeSupabaseStub({ data: _name === "getJobs" ? [BOOKING_ROW] : BOOKING_ROW, error: null });
+    createClientMock.mockResolvedValue(stub.client);
+    await run();
+    expect(columnsOf(stub)).toContain("home_size");
+  });
+
+  it.each([
+    ["getJobsByDateFilter (the list)", () => getJobsByDateFilter("all")],
+    ["getJobsInRange (the calendar)", () => getJobsInRange("2026-09-01", "2026-09-30")],
+  ])("%s does not", async (_name, run) => {
+    const stub = makeSupabaseStub({ data: [], error: null });
+    createClientMock.mockResolvedValue(stub.client);
+    await run();
+    expect(columnsOf(stub)).not.toContain("home_size");
+  });
+
+  it("maps a recorded size onto the job", async () => {
+    createClientMock.mockResolvedValue(
+      makeSupabaseStub({ data: { ...BOOKING_ROW, home_size: "over-2500" }, error: null }).client,
+    );
+    const result = await getJobById("b-1");
+    expect(result.ok && result.data?.homeSize).toBe("over-2500");
+  });
+
+  it("maps a booking made before size was asked as null, not as a guess", async () => {
+    createClientMock.mockResolvedValue(
+      makeSupabaseStub({ data: { ...BOOKING_ROW, home_size: null }, error: null }).client,
+    );
+    const result = await getJobById("b-1");
+    expect(result.ok && result.data?.homeSize).toBeNull();
+  });
+
+  it("leaves it off the job entirely when the projection didn't select it", async () => {
+    createClientMock.mockResolvedValue(makeSupabaseStub({ data: [BOOKING_ROW], error: null }).client);
+    const result = await getJobsInRange("2026-09-01", "2026-09-30");
+    expect(result.ok && "homeSize" in result.data[0]).toBe(false);
+  });
+});

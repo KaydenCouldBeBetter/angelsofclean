@@ -41,6 +41,7 @@ const RESIDENTIAL = {
   zip: "13039",
   bedrooms: 4,
   bathrooms: 1,
+  homeSize: "under-1800" as const,
   notes: "Gate code 1234",
   date: "2026-11-02",
   timeSlot: "afternoon" as const,

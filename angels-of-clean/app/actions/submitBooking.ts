@@ -13,6 +13,7 @@ import { allowPublicSubmission } from "@/lib/rate-limit";
 import { createServiceRoleClient } from "@/lib/supabase/service";
 import { getPublicBookingRules } from "@/lib/supabase/booking-rules";
 import { checkBookable, pauseText, verdictMessage, type BookingRules } from "@/lib/booking-rules";
+import { isHomeSize } from "@/lib/home-size";
 import { requireAdmin, type AdminContext } from "@/lib/supabase/require-admin";
 import { isNyWallClockInFuture, isValidDateStr, nyWallClockToInstant } from "@/lib/datetime";
 
@@ -24,6 +25,8 @@ export interface BookingData {
   zip: string;
   bedrooms: number;
   bathrooms: number;
+  // About how big the home is: one of HOME_SIZE_OPTIONS (lib/home-size.ts).
+  homeSize: string;
   notes: string;
   date: string;
   timeSlot: string;
@@ -54,7 +57,7 @@ const VALID_FREQUENCIES = Object.keys(FREQUENCY_LABELS);
 const VALID_TIME_SLOTS = Object.keys(TIME_SLOT_WINDOWS);
 
 const STRING_FIELDS = [
-  "service", "frequency", "address", "city", "zip", "notes", "date", "timeSlot", "name", "email", "phone",
+  "service", "frequency", "address", "city", "zip", "homeSize", "notes", "date", "timeSlot", "name", "email", "phone",
 ] as const;
 
 const LENGTH_LIMITED_FIELDS: [keyof typeof FIELD_MAX_LENGTHS & keyof BookingData, string][] = [
@@ -176,6 +179,11 @@ async function createBooking(data: BookingData, path: BookingPath): Promise<Book
     return { success: false, error: "Bedroom and bathroom count must be between 1 and 5." };
   }
 
+  // The crew limit counts homes by size, so every booking says (or says "not sure").
+  if (!isHomeSize(data.homeSize)) {
+    return { success: false, error: "Please choose your home's size, or Not sure." };
+  }
+
   // numeric(2,1) would quietly round 1.49 to 1.5, so anything that isn't an
   // exact half step is refused here rather than stored as something else.
   if (!Number.isInteger(data.bathrooms / BATHROOM_LIMITS.step)) {
@@ -252,6 +260,7 @@ async function createBooking(data: BookingData, path: BookingPath): Promise<Book
       zip: data.zip.trim(),
       bedrooms: data.bedrooms,
       bathrooms: data.bathrooms,
+      home_size: data.homeSize,
       notes: data.notes.trim() || null,
       scheduled_date: data.date,
       time_slot: data.timeSlot as "morning" | "afternoon",

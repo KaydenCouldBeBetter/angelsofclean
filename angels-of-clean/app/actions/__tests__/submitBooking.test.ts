@@ -72,6 +72,7 @@ const VALID_INPUT: BookingData = {
   zip: "13039",
   bedrooms: 2,
   bathrooms: 1,
+  homeSize: "under-1800",
   notes: "",
   date: "2026-08-01",
   timeSlot: "morning",
@@ -917,5 +918,41 @@ describe("online booking rules", () => {
     ok();
     await book();
     expect(getPublicBookingRulesMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+// Admin Settings phase 2b, step 1: every booking says how big the home is, so the
+// crew limit has something to count. Both paths share the check.
+describe.each(ACTIONS)("%s home size", (_name, action) => {
+  const ok = () =>
+    singleMock.mockResolvedValue({ data: { id: "abc-123", booking_number: 1042 }, error: null });
+
+  it.each(["under-1800", "1800-2500", "over-2500", "unsure"])("stores %s with the booking", async (homeSize) => {
+    ok();
+    expect((await action({ ...VALID_INPUT, homeSize })).success).toBe(true);
+    expect(bookingsInsertMock).toHaveBeenCalledWith(expect.objectContaining({ home_size: homeSize }));
+  });
+
+  it.each([
+    ["an unknown size", "huge"],
+    ["a label instead of a value", "Not sure"],
+    ["an empty size", ""],
+    ["different case", "UNSURE"],
+  ])("refuses %s before touching the database", async (_case, homeSize) => {
+    expect(await action({ ...VALID_INPUT, homeSize })).toEqual({
+      success: false,
+      error: "Please choose your home's size, or Not sure.",
+    });
+    expect(bookingsInsertMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses a booking that sends no size at all, or a size that isn't text", async () => {
+    const { homeSize: _omit, ...withoutSize } = VALID_INPUT;
+    void _omit;
+    for (const input of [withoutSize, { ...VALID_INPUT, homeSize: 1800 }, { ...VALID_INPUT, homeSize: null }]) {
+      const result = await action(input as unknown as BookingData);
+      expect(result.success).toBe(false);
+    }
+    expect(bookingsInsertMock).not.toHaveBeenCalled();
   });
 });

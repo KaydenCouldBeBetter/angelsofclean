@@ -50,6 +50,7 @@ vi.mock("@/app/admin/bookings/[id]/BookingActions", () => ({
   default: (props: unknown) => ((received.BookingActions = props), null),
 }));
 vi.mock("@/app/admin/bookings/[id]/EntryInstructions", () => ({ default: () => null }));
+vi.mock("@/app/admin/bookings/[id]/HomeSizeCard", () => ({ default: () => null }));
 vi.mock("@/app/admin/NewBookingModal", () => ({ NewBookingButton: () => null }));
 
 import AdminCalendarPage from "@/app/admin/calendar/page";
