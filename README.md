@@ -17,7 +17,7 @@ _All screenshots come from a local run with invented demo data (see [Run it loca
 
 ## Live demo
 
-**Site: https://TODO-LIVE-URL**
+**Site: https://angelsofcleandemo.vercel.app**
 
 Everything on the live site is invented demo data. Sign in with any of these accounts (the password for all three is `DemoPass-2026!`):
 
