@@ -7,6 +7,20 @@ import AccountSection from "./AccountSection";
 import NotificationsCard from "./NotificationsCard";
 import OnlineBookingSection from "./OnlineBookingSection";
 import PreferencesForm from "./PreferencesForm";
+import SettingsSummary from "./SettingsSummary";
+
+// The label above one column of cards. Visible text, and the name of the group
+// around that column for a screen reader.
+function GroupHeading({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p id={id} className="text-xs font-semibold uppercase tracking-wide text-primary-pressed">
+        {title}
+      </p>
+      <p className="mt-0.5 text-[13px] text-[#5c5c5e]">{children}</p>
+    </div>
+  );
+}
 
 export default async function SettingsPage() {
   // One verified Auth call for this page: it gives the email and the saved
@@ -35,33 +49,45 @@ export default async function SettingsPage() {
       ) : (
         /* Content */
         <div className="flex-1 overflow-auto bg-[#f7f9f8]">
-          <div className="p-8 max-w-2xl flex flex-col gap-6">
-            <p className="text-[13px] text-[#5c5c5e]">
-              Your preferences change how the panel looks for you only. The online booking settings are shared:
-              they apply to every admin and to what customers can book.
-            </p>
+          <div className="mx-auto flex max-w-[1400px] flex-col gap-6 p-8">
+            {controls?.ok && <SettingsSummary controls={controls.data} />}
 
-            {prefs?.ok ? (
-              <PreferencesForm initial={prefs.data} />
-            ) : (
-              <ErrorAlert
-                title="We couldn't load your preferences"
-                message="This is a problem reaching the database. The rest of the panel still works with the standard settings. Reload to try again."
-              />
-            )}
+            {/* Side by side from xl up (the sidebar already takes 240px); one column below. */}
+            <div className="grid items-start gap-8 xl:grid-cols-2">
+              <div role="group" aria-labelledby="mine-heading" className="flex flex-col gap-6">
+                <GroupHeading id="mine-heading" title="Your preferences">
+                  These change how the panel looks for you only.
+                </GroupHeading>
 
-            {controls?.ok ? (
-              <OnlineBookingSection controls={controls.data} today={today} />
-            ) : (
-              <ErrorAlert
-                title="We couldn't load the online booking settings"
-                message="This is a problem reaching the database. Customers can still book as before. Reload to try again."
-              />
-            )}
+                {prefs?.ok ? (
+                  <PreferencesForm initial={prefs.data} />
+                ) : (
+                  <ErrorAlert
+                    title="We couldn't load your preferences"
+                    message="This is a problem reaching the database. The rest of the panel still works with the standard settings. Reload to try again."
+                  />
+                )}
 
-            <AccountSection email={auth.user.email ?? ""} displayName={displayName} />
+                <AccountSection email={auth.user.email ?? ""} displayName={displayName} />
+              </div>
 
-            <NotificationsCard />
+              <div role="group" aria-labelledby="shared-heading" className="flex flex-col gap-6">
+                <GroupHeading id="shared-heading" title="Shared with every admin">
+                  These apply to every admin and to what customers can book.
+                </GroupHeading>
+
+                {controls?.ok ? (
+                  <OnlineBookingSection controls={controls.data} today={today} />
+                ) : (
+                  <ErrorAlert
+                    title="We couldn't load the online booking settings"
+                    message="This is a problem reaching the database. Customers can still book as before. Reload to try again."
+                  />
+                )}
+
+                <NotificationsCard />
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -88,11 +88,22 @@ describe("SettingsPage", () => {
       "Start page",
       "Calendar",
       "Bookings",
+      "Account & security",
       "Online booking",
       "Closed days",
       "Recent changes",
-      "Account & security",
     ]);
+  });
+
+  it("summarises the booking rules at the top and splits the cards into two named groups", async () => {
+    const doc = await render();
+    const tiles = [...doc.querySelectorAll("dl dt")].map((dt) => dt.textContent);
+    expect(tiles).toEqual(["Online booking", "Minimum notice", "Booking window", "Closed days"]);
+    expect(doc.querySelector("dl")!.textContent).toContain("Paused");
+    const groups = [...doc.querySelectorAll('[role="group"][aria-labelledby]')].map(
+      (g) => doc.getElementById(g.getAttribute("aria-labelledby")!)!.textContent,
+    );
+    expect(groups).toEqual(["Your preferences", "Shared with every admin"]);
   });
 
   it("reads the preferences with the admin's own session", async () => {
