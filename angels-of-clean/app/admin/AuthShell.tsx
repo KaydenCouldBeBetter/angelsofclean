@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 // Shared frame for the signed-out admin screens: sign in, forgot password,
 // and choosing a new password.
 export default function AuthShell({ children }: { children: React.ReactNode }) {
@@ -8,9 +10,14 @@ export default function AuthShell({ children }: { children: React.ReactNode }) {
       <div className="flex-1 flex items-center justify-center px-4">
         <div className="w-full max-w-[400px] bg-white rounded-xl shadow-sm p-8">
           <div className="flex flex-col items-center">
-            <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center">
-              <span className="text-white text-2xl font-bold">A</span>
-            </div>
+            <Image
+              src="/AngelsOfCleanLogoSVG.svg"
+              alt=""
+              width={220}
+              height={100}
+              className="h-[72px] w-auto"
+              priority
+            />
             <h1 className="mt-4 text-xl font-bold text-zinc-900">Angels of Clean</h1>
             <p className="text-sm text-zinc-500 mt-1">Admin Portal</p>
           </div>
