@@ -336,6 +336,7 @@ export type Database = {
           email: string
           end_at: string
           frequency: string
+          home_size: string | null
           id: string
           notes: string | null
           phone: string
@@ -361,6 +362,7 @@ export type Database = {
           email: string
           end_at: string
           frequency: string
+          home_size?: string | null
           id?: string
           notes?: string | null
           phone: string
@@ -386,6 +388,7 @@ export type Database = {
           email?: string
           end_at?: string
           frequency?: string
+          home_size?: string | null
           id?: string
           notes?: string | null
           phone?: string
@@ -784,6 +787,10 @@ export type Database = {
       }
       set_booking_access: {
         Args: { p_booking_id: string; p_instructions: string }
+        Returns: Json
+      }
+      set_booking_home_size: {
+        Args: { p_booking_id: string; p_home_size: string }
         Returns: Json
       }
       set_booking_status: {

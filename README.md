@@ -15,6 +15,29 @@ A booking and operations web app for **Angels of Clean**, a residential and comm
 
 _All screenshots come from a local run with invented demo data (see [Run it locally](#run-it-locally-in-about-10-minutes))._
 
+## Live demo
+
+**Site: https://TODO-LIVE-URL**
+
+Everything on the live site is invented demo data. Sign in with any of these accounts (the password for all three is `DemoPass-2026!`):
+
+| Role | Sign in at | Email |
+|---|---|---|
+| Admin | `/admin` | `demo-admin@example.com` |
+| Residential customer | `/login` | `demo-customer@example.com` |
+| Business customer (team owner) | `/login` | `demo-business@example.com` |
+
+**Suggested tour (about 10 minutes)**
+
+1. **Book a cleaning.** Go to `/residential` and finish the six steps as a visitor. No account is needed.
+2. **Request a commercial quote** at `/commercial`.
+3. **Run the business.** Sign in at `/admin`. The new booking and quote appear on the dashboard and in the Bookings and Quotes lists.
+4. **Schedule it.** Open the calendar, assign crew to a booking, then move its status from pending to confirmed.
+5. **See the customer's side.** Sign out and sign in as `demo-customer@example.com`. The account portal shows visits, the service plan and invoices. Then try `demo-business@example.com` for quotes, locations and team invites.
+6. **Try the guards.** While signed in as a customer, open `/admin`. You are turned away. The role is checked in the proxy, in every server action and in the database.
+
+The demo data can be reset at any time, so feel free to click around. New sign-ups on the live site need an email confirmation, which is why the demo logins above exist.
+
 ## Features
 
 **For customers**
